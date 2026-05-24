@@ -1,0 +1,51 @@
+name: digaudio
+description: "digaudio — a lightweight, modern, high-quality audio player (local + Subsonic)."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.5.4
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+  # State + nav
+  flutter_riverpod: ^2.5.1
+  go_router: ^14.2.7
+
+  # Audio
+  just_audio: ^0.9.40
+  just_audio_background: ^0.0.1-beta.13
+  audio_session: ^0.1.21
+
+  # Network + crypto (Subsonic)
+  dio: ^5.7.0
+  crypto: ^3.0.5
+
+  # Local media permissions (MediaStore is queried via our own channel
+  # `digaudio/media_store` — see android/.../MediaStoreChannel.kt).
+  permission_handler: ^11.3.1
+
+  # Storage
+  drift: ^2.20.2
+  sqlite3_flutter_libs: ^0.5.24
+  path_provider: ^2.1.4
+  path: ^1.9.0
+  flutter_secure_storage: ^9.2.2
+  shared_preferences: ^2.3.2
+
+  # UI
+  cached_network_image: ^3.4.1
+  palette_generator: ^0.3.3+5
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  drift_dev: ^2.20.2
+  build_runner: ^2.4.13
+
+flutter:
+  uses-material-design: true

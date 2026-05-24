@@ -1,0 +1,125 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../audio/providers.dart';
+import '../domain.dart';
+import 'widgets/album_card.dart';
+import 'widgets/track_tile.dart';
+
+class HomePage extends ConsumerWidget {
+  const HomePage({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final newestAlbums = ref.watch(newestAlbumsProvider);
+    final random = ref.watch(randomSongsProvider);
+    final subsonicConfigured = ref.watch(subsonicProvider) != null;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('digaudio'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            onPressed: () => context.push('/settings'),
+          ),
+        ],
+      ),
+      body: !subsonicConfigured
+          ? _SetupHint(onConfigure: () => context.push('/settings'))
+          : RefreshIndicator(
+              onRefresh: () async {
+                ref.invalidate(newestAlbumsProvider);
+                ref.invalidate(randomSongsProvider);
+              },
+              child: ListView(
+                padding: const EdgeInsets.only(bottom: 24),
+                children: [
+                  _Section(title: 'Newest releases', child: _AlbumRow(state: newestAlbums)),
+                  _Section(title: 'Random picks', child: _TracksColumn(state: random)),
+                ],
+              ),
+            ),
+    );
+  }
+}
+
+class _SetupHint extends StatelessWidget {
+  final VoidCallback onConfigure;
+  const _SetupHint({required this.onConfigure});
+  @override
+  Widget build(BuildContext context) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.cloud_off, size: 48, color: Colors.white38),
+              const SizedBox(height: 12),
+              const Text('No Subsonic server configured.',
+                  style: TextStyle(color: Colors.white70)),
+              const SizedBox(height: 4),
+              const Text('Your local library still works — set up a server to stream.',
+                  textAlign: TextAlign.center, style: TextStyle(color: Colors.white38, fontSize: 12)),
+              const SizedBox(height: 16),
+              FilledButton(onPressed: onConfigure, child: const Text('Configure server')),
+            ],
+          ),
+        ),
+      );
+}
+
+class _Section extends StatelessWidget {
+  final String title;
+  final Widget child;
+  const _Section({required this.title, required this.child});
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 12),
+            child,
+          ],
+        ),
+      );
+}
+
+class _AlbumRow extends StatelessWidget {
+  final AsyncValue<List<Album>> state;
+  const _AlbumRow({required this.state});
+  @override
+  Widget build(BuildContext context) => SizedBox(
+        height: 200,
+        child: state.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => Text('$e', style: const TextStyle(color: Colors.redAccent)),
+          data: (albums) => albums.isEmpty
+              ? const Text('Nothing here yet.', style: TextStyle(color: Colors.white54))
+              : ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: albums.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 12),
+                  itemBuilder: (_, i) => AlbumCard(album: albums[i]),
+                ),
+        ),
+      );
+}
+
+class _TracksColumn extends StatelessWidget {
+  final AsyncValue<List<Track>> state;
+  const _TracksColumn({required this.state});
+  @override
+  Widget build(BuildContext context) => state.when(
+        loading: () => const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator())),
+        error: (e, _) => Text('$e', style: const TextStyle(color: Colors.redAccent)),
+        data: (tracks) => Column(
+          children: [
+            for (var i = 0; i < tracks.length; i++) TrackTile(queue: tracks, index: i),
+          ],
+        ),
+      );
+}

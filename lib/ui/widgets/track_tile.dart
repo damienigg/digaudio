@@ -1,0 +1,64 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../audio/providers.dart';
+import '../../domain.dart';
+import 'artwork.dart';
+
+/// One row in any list of tracks. Tapping plays from this index in the given
+/// queue (so playback context — album/playlist — is preserved). Long-press
+/// reveals a sheet with track actions.
+class TrackTile extends ConsumerWidget {
+  final List<Track> queue;
+  final int index;
+  final VoidCallback? onMore;
+
+  const TrackTile({super.key, required this.queue, required this.index, this.onMore});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = queue[index];
+    final engine = ref.watch(audioEngineProvider);
+    return InkWell(
+      onTap: () => engine.setQueue(queue, initialIndex: index),
+      onLongPress: onMore,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Row(
+          children: [
+            Artwork(coverArt: t.coverArt, origin: t.origin, size: 48),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(t.title, maxLines: 1, overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                  const SizedBox(height: 2),
+                  Text(t.displayArtist, maxLines: 1, overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: Colors.white60, fontSize: 12)),
+                ],
+              ),
+            ),
+            if (t.duration != null)
+              Padding(
+                padding: const EdgeInsets.only(left: 8),
+                child: Text(_fmt(t.duration!),
+                    style: const TextStyle(color: Colors.white54, fontSize: 12, fontFeatures: [FontFeature.tabularFigures()])),
+              ),
+            IconButton(
+              icon: const Icon(Icons.more_vert, color: Colors.white54),
+              onPressed: onMore,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+String _fmt(Duration d) {
+  final m = d.inMinutes;
+  final s = d.inSeconds % 60;
+  return '$m:${s.toString().padLeft(2, '0')}';
+}
