@@ -7,6 +7,21 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.8.1] — 2026-05-24
+
+Documentation pass.
+
+### Changed
+- **README rewritten** to reflect the full feature surface as of v0.8.0
+  (was last accurate at v0.1.0): multi-server, multi-format streaming,
+  offline downloads, equalizer, favorites, playlists (editable + export +
+  import + missing-entries), wishlist, similarity-based auto-queue +
+  suggestions, full-library Subsonic cache, CI pipeline, where data lives
+  on the device. Added build / release badges and the launcher icon.
+- **iOS support removed** from advertised features. Pure-Dart code remains
+  iOS-compatible, but Apple's toolchain lock-in means we're not investing
+  in shipping an iOS build. Android-only is the supported target.
+
 ## [0.8.0] — 2026-05-24
 
 Full Subsonic library cache (no more random sample), plus a CI fix for
