@@ -1,14 +1,44 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:just_audio/just_audio.dart';
 
 import '../audio/providers.dart';
 import '../core/settings.dart';
 
-/// Settings = list of Subsonic servers. One is active at a time.
-/// The built-in entry (URL baked at build time) is seeded once on first run.
-class SettingsPage extends ConsumerWidget {
+/// Top-level Settings hub. Subpages handle the actual configuration.
+class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(title: const Text('Settings')),
+        body: ListView(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.cloud_outlined),
+              title: const Text('Servers'),
+              subtitle: const Text('Subsonic servers and credentials'),
+              trailing: const Icon(Icons.chevron_right, color: Colors.white38),
+              onTap: () => context.push('/settings/servers'),
+            ),
+            const Divider(height: 1, color: Colors.white12),
+            ListTile(
+              leading: const Icon(Icons.equalizer),
+              title: const Text('Playback'),
+              subtitle: const Text('Equalizer'),
+              trailing: const Icon(Icons.chevron_right, color: Colors.white38),
+              onTap: () => context.push('/settings/playback'),
+            ),
+          ],
+        ),
+      );
+}
+
+/// List of Subsonic servers. One is active at a time. The built-in entry
+/// (URL baked at build time) is seeded once on first run.
+class ServersPage extends ConsumerWidget {
+  const ServersPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -16,7 +46,7 @@ class SettingsPage extends ConsumerWidget {
     final activeAsync = ref.watch(activeServerProvider);
     final activeId = activeAsync.valueOrNull?.id;
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
+      appBar: AppBar(title: const Text('Servers')),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push('/settings/server/new'),
         icon: const Icon(Icons.add),
@@ -294,6 +324,183 @@ class _ServerEditPageState extends ConsumerState<ServerEditPage> {
                 ],
               ],
             ),
+    );
+  }
+}
+
+/// Playback settings. Today: equalizer only. Crossfade lives here once the
+/// audio_service refactor lands (true two-player overlap, see CHANGELOG).
+class PlaybackPage extends ConsumerStatefulWidget {
+  const PlaybackPage({super.key});
+  @override
+  ConsumerState<PlaybackPage> createState() => _PlaybackPageState();
+}
+
+class _PlaybackPageState extends ConsumerState<PlaybackPage> {
+  AndroidEqualizerParameters? _params;
+  List<double> _gainsDb = const [];
+  bool _enabled = false;
+  bool _ready = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _hydrate();
+  }
+
+  Future<void> _hydrate() async {
+    final prefs = ref.read(playbackPrefsProvider);
+    await prefs.load();
+    final engine = ref.read(audioEngineProvider);
+    final params = await engine.eqParameters;
+    final stored = List<double>.from(prefs.eqGainsDb);
+    while (stored.length < params.bands.length) {
+      stored.add(0);
+    }
+    setState(() {
+      _params = params;
+      _enabled = prefs.eqEnabled;
+      _gainsDb = stored;
+      _ready = true;
+    });
+  }
+
+  Future<void> _toggleEnabled(bool v) async {
+    setState(() => _enabled = v);
+    final prefs = ref.read(playbackPrefsProvider);
+    prefs.eqEnabled = v;
+    await prefs.save();
+    await ref.read(audioEngineProvider).setEqEnabled(v);
+  }
+
+  Future<void> _setBandGain(int i, double db) async {
+    setState(() => _gainsDb[i] = db);
+    final prefs = ref.read(playbackPrefsProvider);
+    prefs.eqGainsDb = List.of(_gainsDb);
+    await prefs.save();
+    final engine = ref.read(audioEngineProvider);
+    final params = _params!;
+    await params.bands[i].setGain(db.clamp(params.minDecibels, params.maxDecibels));
+    if (!_enabled) {
+      // Auto-enable when the user starts moving sliders — otherwise the gains
+      // wouldn't actually do anything, which is confusing UX.
+      await _toggleEnabled(true);
+      await engine.applyEqGains(_gainsDb);
+    }
+  }
+
+  Future<void> _resetFlat() async {
+    final params = _params!;
+    final flat = List<double>.filled(params.bands.length, 0);
+    setState(() => _gainsDb = flat);
+    final prefs = ref.read(playbackPrefsProvider);
+    prefs.eqGainsDb = flat;
+    await prefs.save();
+    await ref.read(audioEngineProvider).applyEqGains(flat);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_ready) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    final params = _params!;
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Playback'),
+        actions: [
+          TextButton(onPressed: _resetFlat, child: const Text('Flat')),
+        ],
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          SwitchListTile.adaptive(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Equalizer', style: TextStyle(fontWeight: FontWeight.w700)),
+            subtitle: Text(
+              params.bands.isEmpty
+                  ? 'No equalizer available on this device.'
+                  : '${params.bands.length} bands · '
+                      '${params.minDecibels.toStringAsFixed(0)} to ${params.maxDecibels.toStringAsFixed(0)} dB',
+              style: const TextStyle(color: Colors.white54, fontSize: 12),
+            ),
+            value: _enabled,
+            onChanged: params.bands.isEmpty ? null : _toggleEnabled,
+          ),
+          const SizedBox(height: 8),
+          for (var i = 0; i < params.bands.length; i++)
+            _BandRow(
+              band: params.bands[i],
+              gainDb: _gainsDb[i],
+              minDb: params.minDecibels,
+              maxDb: params.maxDecibels,
+              enabled: _enabled,
+              onChanged: (v) => _setBandGain(i, v),
+            ),
+          const SizedBox(height: 24),
+          const Text(
+            'Note: equalizer applies on Android only for now. '
+            'iOS support is planned (AVAudioUnitEQ).',
+            style: TextStyle(color: Colors.white38, fontSize: 11),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BandRow extends StatelessWidget {
+  final AndroidEqualizerBand band;
+  final double gainDb;
+  final double minDb;
+  final double maxDb;
+  final bool enabled;
+  final ValueChanged<double> onChanged;
+  const _BandRow({
+    required this.band,
+    required this.gainDb,
+    required this.minDb,
+    required this.maxDb,
+    required this.enabled,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final hz = band.centerFrequency;
+    final label = hz >= 1000 ? '${(hz / 1000).toStringAsFixed(hz % 1000 == 0 ? 0 : 1)} kHz'
+                              : '${hz.toStringAsFixed(0)} Hz';
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 64,
+            child: Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+          ),
+          Expanded(
+            child: Slider(
+              value: gainDb.clamp(minDb, maxDb),
+              min: minDb,
+              max: maxDb,
+              onChanged: enabled ? onChanged : null,
+            ),
+          ),
+          SizedBox(
+            width: 56,
+            child: Text(
+              '${gainDb >= 0 ? '+' : ''}${gainDb.toStringAsFixed(1)} dB',
+              textAlign: TextAlign.end,
+              style: TextStyle(
+                color: enabled ? Colors.white70 : Colors.white30,
+                fontSize: 11,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

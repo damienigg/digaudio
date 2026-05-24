@@ -27,6 +27,8 @@ GoRouter buildRouter() => GoRouter(
           pageBuilder: (_, state) => MaterialPage(fullscreenDialog: true, child: const NowPlayingPage(), key: state.pageKey),
         ),
         GoRoute(path: '/settings', builder: (_, __) => const SettingsPage()),
+        GoRoute(path: '/settings/servers', builder: (_, __) => const ServersPage()),
+        GoRoute(path: '/settings/playback', builder: (_, __) => const PlaybackPage()),
         GoRoute(
           path: '/settings/server/:id',
           builder: (_, s) => ServerEditPage(id: s.pathParameters['id']!),

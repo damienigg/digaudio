@@ -7,6 +7,32 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-05-24
+
+Equalizer (Android) + Settings restructured as a hub.
+
+### Added
+- **Android equalizer** wired through `just_audio`'s `AndroidEqualizer`
+  (attached to the player's `AudioPipeline`). Engine exposes
+  `setEqEnabled`, `applyEqGains`, `eqParameters`.
+- **`PlaybackPrefs`** (in `lib/core/playback_prefs.dart`) persists the EQ
+  enabled state and per-band gains (dB) via `shared_preferences`. Restored
+  on app startup, written on every change.
+- **`PlaybackPage`** (`/settings/playback`) — toggle the EQ, drag per-band
+  gain sliders (band count and frequency range come from the device's
+  reported parameters at runtime), and a "Flat" action to reset.
+- **Settings hub** — `/settings` is now a two-tile navigator into
+  `/settings/servers` (the existing list) and `/settings/playback`.
+
+### Notes
+- iOS equalizer support is **deferred** — would need `AVAudioUnitEQ` via a
+  platform channel; tracked for a future commit.
+- True crossfade (audio overlap between tracks) is **deferred** — would
+  require running two players concurrently, which conflicts with
+  `just_audio_background`'s single-player MediaSession integration. A
+  follow-up commit will refactor onto `audio_service` directly when this
+  becomes worth the architectural cost.
+
 ## [0.2.0] — 2026-05-24
 
 Multi-server support and a baked-in default server URL.

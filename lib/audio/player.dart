@@ -17,7 +17,10 @@ import '../subsonic/client.dart';
 class AudioEngine {
   final SubsonicClient? Function() _subsonic;
   final String? Function(Track) _downloadPathFor;
-  final AudioPlayer _player = AudioPlayer();
+  final AndroidEqualizer _equalizer = AndroidEqualizer();
+  late final AudioPlayer _player = AudioPlayer(
+    audioPipeline: AudioPipeline(androidAudioEffects: [_equalizer]),
+  );
   ConcatenatingAudioSource? _queue;
   List<Track> _tracks = const [];
 
@@ -28,11 +31,31 @@ class AudioEngine {
         _downloadPathFor = downloadPathFor;
 
   AudioPlayer get raw => _player;
+  AndroidEqualizer get equalizer => _equalizer;
   List<Track> get currentQueue => _tracks;
 
   Future<void> init() async {
     final session = await AudioSession.instance;
     await session.configure(const AudioSessionConfiguration.music());
+  }
+
+  // --- Equalizer (Android; iOS is a no-op until we add AVAudioUnitEQ) ------
+
+  /// Read-only access to the actual band layout the OS reports (band count
+  /// and center frequencies are device-dependent — Android typically returns
+  /// 5 bands centered around 60Hz / 230Hz / 910Hz / 3.6kHz / 14kHz).
+  Future<AndroidEqualizerParameters> get eqParameters => _equalizer.parameters;
+
+  Future<void> setEqEnabled(bool on) => _equalizer.setEnabled(on);
+
+  /// Applies a list of gains (dB) to the EQ bands, truncating / padding as
+  /// needed. Out-of-range bands are skipped silently.
+  Future<void> applyEqGains(List<double> gainsDb) async {
+    final params = await _equalizer.parameters;
+    for (var i = 0; i < params.bands.length; i++) {
+      final g = i < gainsDb.length ? gainsDb[i] : 0.0;
+      await params.bands[i].setGain(g.clamp(params.minDecibels, params.maxDecibels));
+    }
   }
 
   // --- Queue control -------------------------------------------------------

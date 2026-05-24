@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
 
 import '../core/db.dart';
+import '../core/playback_prefs.dart';
 import '../core/settings.dart';
 import '../domain.dart';
 import '../library/downloads.dart';
@@ -55,6 +56,8 @@ final audioEngineProvider = Provider<AudioEngine>((ref) {
   ref.onDispose(engine.dispose);
   return engine;
 });
+
+final playbackPrefsProvider = Provider<PlaybackPrefs>((_) => PlaybackPrefs());
 
 // ---- Player streams (cheap projections for UI) -----------------------------
 

@@ -17,10 +17,20 @@ class _DigaudioAppState extends ConsumerState<DigaudioApp> {
   @override
   void initState() {
     super.initState();
-    // Warm the engine + downloads cache as soon as the app is mounted.
+    // Warm the engine + downloads cache + playback prefs as soon as the app
+    // is mounted. EQ is applied only after a track starts playing (Android
+    // attaches the effect to the active audio session), but we restore the
+    // saved enabled-state + gains here so the first track honours them.
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await ref.read(audioEngineProvider).init();
+      final engine = ref.read(audioEngineProvider);
+      await engine.init();
       await ref.read(downloadsProvider).hydrate();
+      final prefs = ref.read(playbackPrefsProvider);
+      await prefs.load();
+      await engine.setEqEnabled(prefs.eqEnabled);
+      if (prefs.eqGainsDb.isNotEmpty) {
+        await engine.applyEqGains(prefs.eqGainsDb);
+      }
     });
   }
 
