@@ -42,19 +42,38 @@ See [`CHANGELOG.md`](CHANGELOG.md) for what shipped.
 - **iOS** — deployment target 12+. Code is iOS-compatible; building requires
   macOS + Xcode (CI or local Mac).
 
-## Build & run
+## Install
+
+### Android
+
+The easiest path: grab the latest APK from the
+[Releases page](https://github.com/damienigg/digaudio/releases/latest)
+(every `v*.*.*` tag publishes a fresh build via CI), then sideload it on
+your phone. Android will warn "unknown source" — the APK is signed with
+the debug keystore.
+
+To build locally instead:
 
 ```bash
 flutter pub get
 dart run build_runner build --delete-conflicting-outputs    # drift codegen
-flutter build apk --debug                                   # Android APK
-flutter install                                             # → connected device / emulator
+./tool/run.sh build                                         # APK with the
+                                                            # baked-in default
+                                                            # server URL
+adb install -r build/app/outputs/flutter-apk/app-release.apk
 ```
 
-To run against a live device or emulator:
+### iOS
+
+iOS requires a macOS build (Apple constraint). The code is iOS-compatible;
+the build pipeline for iOS is not wired yet.
+
+## Build & run from source
 
 ```bash
-flutter run
+flutter pub get
+dart run build_runner build --delete-conflicting-outputs
+flutter run                                                 # → connected device / emulator
 ```
 
 ## Project layout

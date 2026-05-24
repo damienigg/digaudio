@@ -1,0 +1,97 @@
+name: Build Android APK
+
+# Triggers:
+#   - push to main           → build + upload artifact (90-day retention)
+#   - push of a v*.*.* tag   → build + create a GitHub Release with the APK
+#   - manual via the UI      → workflow_dispatch
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+# Allow the job to write to Releases.
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.5'
+          channel: stable
+          cache: true
+
+      - name: Cache pub
+        uses: actions/cache@v4
+        with:
+          path: ~/.pub-cache
+          key: pub-${{ runner.os }}-${{ hashFiles('pubspec.lock') }}
+          restore-keys: pub-${{ runner.os }}-
+
+      - name: Cache gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('android/**/*.gradle*', 'android/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: gradle-${{ runner.os }}-
+
+      - run: flutter pub get
+      - run: dart run build_runner build --delete-conflicting-outputs
+      - run: flutter analyze
+
+      - name: Build release APK
+        env:
+          SUBSONIC_URL: ${{ secrets.SUBSONIC_URL }}
+          SUBSONIC_LABEL: ${{ secrets.SUBSONIC_LABEL }}
+        run: |
+          DEFINES=()
+          if [ -n "$SUBSONIC_URL" ]; then
+            DEFINES+=(--dart-define=SUBSONIC_URL="$SUBSONIC_URL")
+          fi
+          if [ -n "$SUBSONIC_LABEL" ]; then
+            DEFINES+=(--dart-define=SUBSONIC_LABEL="$SUBSONIC_LABEL")
+          fi
+          flutter build apk --release "${DEFINES[@]}"
+
+      - name: Rename APK with version
+        id: pkg
+        run: |
+          VERSION=$(grep '^version:' pubspec.yaml | awk '{print $2}' | cut -d+ -f1)
+          NAME="digaudio-v${VERSION}.apk"
+          cp build/app/outputs/flutter-apk/app-release.apk "$NAME"
+          {
+            echo "name=$NAME"
+            echo "version=$VERSION"
+            echo "size=$(du -h "$NAME" | cut -f1)"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Upload artifact (always)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.pkg.outputs.name }}
+          path: ${{ steps.pkg.outputs.name }}
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Publish GitHub Release (tags only)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.pkg.outputs.name }}
+          generate_release_notes: true
+          draft: false
+          prerelease: false

@@ -7,6 +7,32 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.6.0] — 2026-05-24
+
+CI: GitHub Actions builds and releases the Android APK automatically.
+
+### Added
+- **`.github/workflows/build-android.yml`** — runs on every push to `main`
+  and on every `v*.*.*` tag, plus a manual `workflow_dispatch` trigger:
+  - Set up JDK 17, Flutter 3.24.5, cached pub + gradle.
+  - `flutter pub get`, drift codegen, `flutter analyze`.
+  - `flutter build apk --release` with the default server URL injected
+    from repo secrets (`SUBSONIC_URL`, optional `SUBSONIC_LABEL`) via
+    `--dart-define` — same mechanism as the local `tool/run.sh`.
+  - Uploads the APK as a workflow artifact (90 d retention).
+  - On tag pushes (`v*.*.*`), publishes a **GitHub Release** with the APK
+    attached and auto-generated release notes — public download URL.
+
+### Notes
+- Repository secrets `SUBSONIC_URL` and `SUBSONIC_LABEL` configure the
+  baked-in default server; when unset, the build still succeeds but ships
+  with no pre-registered server (user adds one manually).
+- Release APKs are signed with the debug keystore for now (Flutter's
+  scaffolded default in `android/app/build.gradle`). Android will warn
+  "unknown source" on first install — fine for personal sideloading.
+  Switching to a proper release keystore is a one-line `build.gradle`
+  change + a base64-encoded keystore in a secret when needed.
+
 ## [0.5.1] — 2026-05-24
 
 Custom launcher icon — visual pun on "DIG" audio.
