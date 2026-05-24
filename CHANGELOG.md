@@ -7,6 +7,36 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-05-24
+
+Multi-server support and a baked-in default server URL.
+
+### Added
+- **Multi-server registry.** [`ServerConfig`] entries (id, label, url, user,
+  password, builtin) live as a single JSON blob in secure storage. One server
+  is "active" at a time; the audio engine streams from the active one.
+- **`SettingsStore`** rewritten around `servers()` / `active()` / `upsert()` /
+  `remove()` / `setActiveId()`.
+- **Built-in default server URL** baked at build time via
+  `--dart-define=SUBSONIC_URL=...` (+ optional `SUBSONIC_LABEL`). Seeded once
+  on first launch. **No credentials are baked** — the user fills them in
+  Settings on first use. See `tool/run.example.sh`.
+- **Settings UI** is now a list of servers with active/configured indicators,
+  built-in badge, add/edit/delete actions, and tap-to-activate.
+- **`/settings/server/:id` route** for adding (`id == "new"`) and editing.
+- **`tool/probe_subsonic.dart`** — standalone Dart probe that exercises the
+  Subsonic client (ping + browse + random songs) without touching the UI.
+  Useful for validating credentials end-to-end in the terminal.
+
+### Changed
+- `subsonicProvider` now derives from `activeServerProvider` (transparently —
+  callers still get a nullable `SubsonicClient`).
+- Bumped `pubspec.yaml` to `0.2.0+2`.
+
+### Removed
+- The single-server `serverConfigProvider` (replaced by
+  `serversProvider` + `activeServerProvider`).
+
 ## [0.1.0] — 2026-05-24
 
 First runnable build. Builds and launches on Android with full UI scaffolding

@@ -18,13 +18,20 @@ import 'player.dart';
 
 final settingsStoreProvider = Provider<SettingsStore>((_) => SettingsStore());
 
-final serverConfigProvider = FutureProvider<ServerConfig?>((ref) =>
-    ref.watch(settingsStoreProvider).load());
+/// All registered Subsonic servers (built-in + user-added).
+final serversProvider = FutureProvider<List<ServerConfig>>((ref) =>
+    ref.watch(settingsStoreProvider).servers());
 
-final subsonicProvider = Provider<SubsonicClient?>((ref) {
-  final cfg = ref.watch(serverConfigProvider).valueOrNull;
-  return cfg?.client();
+/// Active server (the one the engine streams from). Null if no server has
+/// credentials yet.
+final activeServerProvider = FutureProvider<ServerConfig?>((ref) async {
+  // Tie this to serversProvider so invalidating the list also refreshes here.
+  await ref.watch(serversProvider.future);
+  return ref.watch(settingsStoreProvider).active();
 });
+
+final subsonicProvider = Provider<SubsonicClient?>((ref) =>
+    ref.watch(activeServerProvider).valueOrNull?.client());
 
 final dbProvider = Provider<AppDb>((ref) {
   final db = AppDb();

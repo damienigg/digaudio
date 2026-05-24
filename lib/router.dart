@@ -28,6 +28,10 @@ GoRouter buildRouter() => GoRouter(
         ),
         GoRoute(path: '/settings', builder: (_, __) => const SettingsPage()),
         GoRoute(
+          path: '/settings/server/:id',
+          builder: (_, s) => ServerEditPage(id: s.pathParameters['id']!),
+        ),
+        GoRoute(
           path: '/album/:origin/:id',
           builder: (_, s) => AlbumPage(origin: s.pathParameters['origin']!, id: s.pathParameters['id']!),
         ),

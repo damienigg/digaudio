@@ -115,3 +115,9 @@ ios/Runner.xcodeproj/project.xcworkspace/xcuserdata/
 # IDE — JetBrains files at the project root (NOT inside .idea/, already covered)
 # ---------------------------------------------------------------------------
 android/*.iml
+
+# ---------------------------------------------------------------------------
+# Local build/run scripts (may contain server URLs / secrets).
+# Template lives at tool/run.example.sh — copy to tool/run.sh and edit.
+# ---------------------------------------------------------------------------
+tool/run.sh
