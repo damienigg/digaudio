@@ -7,6 +7,20 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.8.3] — 2026-05-24
+
+### Removed
+- **`ios/` directory deleted.** Android is the supported target;
+  carrying around the iOS scaffold (912 KB of Xcode project, plist,
+  Swift bridging header, …) only added noise. The Dart code stays
+  cross-platform-correct — an Apple-toolchain build would still work
+  after `flutter create --platforms=ios .` to regenerate the scaffold —
+  but it's not on the roadmap.
+- iOS gates from `pubspec.yaml` (`flutter_launcher_icons.ios`,
+  `remove_alpha_ios`), the iOS-block from `.gitignore`, and stale
+  "iOS support is planned" UI notes in `Settings → Playback` and code
+  comments.
+
 ## [0.8.2] — 2026-05-24
 
 ### Changed

@@ -520,12 +520,6 @@ class _PlaybackPageState extends ConsumerState<PlaybackPage> {
               enabled: _enabled,
               onChanged: (v) => _setBandGain(i, v),
             ),
-          const SizedBox(height: 24),
-          const Text(
-            'Note: equalizer applies on Android only for now. '
-            'iOS support is planned (AVAudioUnitEQ).',
-            style: TextStyle(color: Colors.white38, fontSize: 11),
-          ),
         ],
       ),
     );

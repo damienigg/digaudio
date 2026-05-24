@@ -1,7 +1,7 @@
 name: digaudio
 description: "digaudio — a lightweight, modern, high-quality audio player (local + Subsonic)."
 publish_to: 'none'
-version: 0.8.2+11
+version: 0.8.3+12
 
 environment:
   sdk: ^3.5.4
@@ -59,8 +59,6 @@ flutter:
 # PNGs in assets/icon/. Source PNGs are produced by `tool/make_icon.py`.
 flutter_launcher_icons:
   android: "ic_launcher"        # write to res/mipmap-*/ic_launcher.png
-  ios: true
-  remove_alpha_ios: true        # iOS forbids alpha in app icons
   image_path: "assets/icon/digaudio_icon.png"
   adaptive_icon_background: "#0A0A0B"
   adaptive_icon_foreground: "assets/icon/digaudio_icon_fg.png"

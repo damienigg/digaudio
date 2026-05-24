@@ -39,7 +39,7 @@ class AudioEngine {
     await session.configure(const AudioSessionConfiguration.music());
   }
 
-  // --- Equalizer (Android; iOS is a no-op until we add AVAudioUnitEQ) ------
+  // --- Equalizer ------------------------------------------------------------
 
   /// Read-only access to the actual band layout the OS reports (band count
   /// and center frequencies are device-dependent — Android typically returns
