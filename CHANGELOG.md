@@ -7,6 +7,22 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.8.2] — 2026-05-24
+
+### Changed
+- **New launcher icon** — golden shovel with embossed "DIG" on the blade
+  (replaces the previous in-house PIL drawing). Source PNG in
+  `assets/icon/digaudio_icon.png`; the script that built the prior icon
+  (`tool/make_icon.py`) is removed.
+- **`tool/make_adaptive_fg.py`** — small PIL script that scales the main
+  icon to ~68% on a transparent canvas to produce the Android adaptive
+  foreground (so launcher masks don't clip the shovel handle).
+
+Workflow when updating the icon: drop a new
+`assets/icon/digaudio_icon.png`, run `python3 tool/make_adaptive_fg.py`,
+then `dart run flutter_launcher_icons` to regenerate every platform
+asset.
+
 ## [0.8.1] — 2026-05-24
 
 Documentation pass.
