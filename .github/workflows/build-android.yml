@@ -14,6 +14,15 @@ on:
 permissions:
   contents: write
 
+# A tag push lands a fraction of a second after the matching `main` push, so
+# both triggers fire for the same SHA — without this we'd build twice. Group
+# runs by commit; cancel-in-progress means the tag-triggered run (richer
+# context — refs/tags/v*) kills the just-started main-triggered run, and a
+# single build proceeds. main-only pushes (no tag) still build normally.
+concurrency:
+  group: build-android-${{ github.sha }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest

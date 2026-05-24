@@ -7,6 +7,37 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.8.0] — 2026-05-24
+
+Full Subsonic library cache (no more random sample), plus a CI fix for
+the duplicate-build issue.
+
+### Added
+- **`CachedSubsonicSongs` table** (drift schema v3) — per-server slim
+  metadata index of every song on the server, sized by what the
+  similarity scorer needs (id, title, artist, album, year, duration,
+  genre, coverArt). Multi-server scoped via `serverId`.
+- **`SubsonicLibraryCache`** — `rebuild(client, serverId)` paginates
+  `getAlbumList2` to enumerate every album, then `getAlbum(id)` per album
+  to harvest songs, writing batches inside a single transaction.
+  Reports progress per album so the UI can show a live bar; supports
+  cancellation mid-sync.
+- **Settings → Playback → "Subsonic library cache"** section: shows
+  cached song count + last sync time for the active server, a
+  Sync / Re-sync button, and a cancellable progress bar during sync.
+- **`AutoQueueService` now scores against the FULL cached library** for
+  the active server. Falls back to a 200-song random sample only when
+  the cache is empty (graceful degradation before first sync). Pool
+  invalidates automatically when the active server changes; manual
+  `invalidatePool()` is called after every successful sync.
+
+### Fixed
+- **CI: duplicate-build on each release.** Pushing `main` then a `v*` tag
+  fired the workflow twice for the same SHA. Added a `concurrency:` block
+  keyed by `github.sha` with `cancel-in-progress: true` — the
+  tag-triggered run cancels the just-started main run and a single build
+  proceeds. main-only pushes (no tag) still build normally.
+
 ## [0.7.0] — 2026-05-24
 
 User-facing controls for the two features that previously had no UI:

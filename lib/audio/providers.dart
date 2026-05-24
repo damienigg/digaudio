@@ -10,6 +10,7 @@ import '../library/collections.dart';
 import '../library/downloads.dart';
 import '../library/importer.dart';
 import '../library/local.dart';
+import '../library/subsonic_cache.dart';
 import '../library/wishlist.dart';
 import '../subsonic/client.dart';
 import 'player.dart';
@@ -75,11 +76,16 @@ final trackResolverProvider = Provider<TrackResolver>((ref) => TrackResolver(
       playlists: ref.watch(playlistsProvider),
     ));
 
+final subsonicCacheProvider = Provider<SubsonicLibraryCache>((ref) =>
+    SubsonicLibraryCache(ref.watch(dbProvider)));
+
 final autoQueueProvider = Provider<AutoQueueService>((ref) {
   final svc = AutoQueueService(
     engine: ref.watch(audioEngineProvider),
     local: ref.watch(localLibraryProvider),
     subsonic: () => ref.read(subsonicProvider),
+    libraryCache: ref.watch(subsonicCacheProvider),
+    settings: ref.watch(settingsStoreProvider),
   );
   ref.onDispose(svc.dispose);
   return svc;

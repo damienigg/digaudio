@@ -341,6 +341,12 @@ class _PlaybackPageState extends ConsumerState<PlaybackPage> {
   List<double> _gainsDb = const [];
   bool _enabled = false;
   bool _ready = false;
+  int _cachedCount = 0;
+  DateTime? _lastSync;
+  bool _syncing = false;
+  int _syncDone = 0;
+  int _syncTotal = 0;
+  bool _cancelSync = false;
 
   @override
   void initState() {
@@ -357,12 +363,59 @@ class _PlaybackPageState extends ConsumerState<PlaybackPage> {
     while (stored.length < params.bands.length) {
       stored.add(0);
     }
+    await _refreshCacheStatus();
     setState(() {
       _params = params;
       _enabled = prefs.eqEnabled;
       _gainsDb = stored;
       _ready = true;
     });
+  }
+
+  Future<void> _refreshCacheStatus() async {
+    final active = await ref.read(settingsStoreProvider).active();
+    if (active == null) {
+      _cachedCount = 0;
+      _lastSync = null;
+      return;
+    }
+    final cache = ref.read(subsonicCacheProvider);
+    _cachedCount = await cache.count(active.id);
+    _lastSync = await cache.lastSync(active.id);
+  }
+
+  Future<void> _syncLibrary() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final active = await ref.read(settingsStoreProvider).active();
+    final client = ref.read(subsonicProvider);
+    if (active == null || client == null) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('No active Subsonic server.')),
+      );
+      return;
+    }
+    setState(() {
+      _syncing = true;
+      _syncDone = 0;
+      _syncTotal = 0;
+      _cancelSync = false;
+    });
+    try {
+      await ref.read(subsonicCacheProvider).rebuild(
+        client,
+        active.id,
+        onAlbum: (done, total) {
+          if (mounted) setState(() { _syncDone = done; _syncTotal = total; });
+        },
+        shouldCancel: () => _cancelSync,
+      );
+      ref.read(autoQueueProvider).invalidatePool();
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('Sync failed: $e')));
+    } finally {
+      await _refreshCacheStatus();
+      if (mounted) setState(() => _syncing = false);
+    }
   }
 
   Future<void> _toggleEnabled(bool v) async {
@@ -415,6 +468,16 @@ class _PlaybackPageState extends ConsumerState<PlaybackPage> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          _SubsonicCacheCard(
+            cachedCount: _cachedCount,
+            lastSync: _lastSync,
+            syncing: _syncing,
+            done: _syncDone,
+            total: _syncTotal,
+            onSync: _syncLibrary,
+            onCancel: () => setState(() => _cancelSync = true),
+          ),
+          const Divider(height: 32, color: Colors.white12),
           SwitchListTile.adaptive(
             contentPadding: EdgeInsets.zero,
             title: const Text('Auto-queue similar tracks',
@@ -466,6 +529,75 @@ class _PlaybackPageState extends ConsumerState<PlaybackPage> {
         ],
       ),
     );
+  }
+}
+
+class _SubsonicCacheCard extends StatelessWidget {
+  final int cachedCount;
+  final DateTime? lastSync;
+  final bool syncing;
+  final int done;
+  final int total;
+  final VoidCallback onSync;
+  final VoidCallback onCancel;
+  const _SubsonicCacheCard({
+    required this.cachedCount,
+    required this.lastSync,
+    required this.syncing,
+    required this.done,
+    required this.total,
+    required this.onSync,
+    required this.onCancel,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final status = syncing
+        ? (total > 0 ? 'Syncing — $done / $total albums' : 'Syncing — listing albums…')
+        : cachedCount == 0
+            ? 'Not synced yet · AutoQueue falls back to a 200-song random sample.'
+            : '$cachedCount songs cached${lastSync != null ? ' · synced ${_when(lastSync!)}' : ''}';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Subsonic library cache',
+            style: TextStyle(fontWeight: FontWeight.w700)),
+        const SizedBox(height: 4),
+        const Text(
+          'AutoQueue and "Suggested next" score against this cache instead of '
+          'a random sample. Sync once after configuring a server; refresh '
+          'when you add music server-side.',
+          style: TextStyle(color: Colors.white54, fontSize: 12),
+        ),
+        const SizedBox(height: 12),
+        Text(status, style: const TextStyle(fontSize: 12)),
+        if (syncing && total > 0) ...[
+          const SizedBox(height: 6),
+          LinearProgressIndicator(value: done / total),
+        ],
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            FilledButton.icon(
+              onPressed: syncing ? null : onSync,
+              icon: const Icon(Icons.sync),
+              label: Text(cachedCount == 0 ? 'Sync library' : 'Re-sync'),
+            ),
+            const SizedBox(width: 12),
+            if (syncing)
+              TextButton(onPressed: onCancel, child: const Text('Cancel')),
+          ],
+        ),
+      ],
+    );
+  }
+
+  static String _when(DateTime t) {
+    final d = DateTime.now().difference(t);
+    if (d.inMinutes < 1) return 'just now';
+    if (d.inMinutes < 60) return '${d.inMinutes} min ago';
+    if (d.inHours < 24) return '${d.inHours} h ago';
+    return '${d.inDays} d ago';
   }
 }
 

@@ -68,6 +68,28 @@ class Wishlist extends Table {
   TextColumn get notes => text().nullable()();
 }
 
+/// Per-server cache of every song in the Subsonic library — the slim set of
+/// fields the similarity scorer needs, so AutoQueue can pick from the WHOLE
+/// library instead of a 200-song random sample. Built once by syncing the
+/// server (paginated getAlbumList2 + getAlbum per album); refreshed when
+/// the user explicitly hits "Sync" again. Scoped by [serverId] so multiple
+/// servers coexist without cross-contamination.
+class CachedSubsonicSongs extends Table {
+  TextColumn get serverId => text()();
+  TextColumn get songId => text()();
+  TextColumn get title => text()();
+  TextColumn get artist => text().nullable()();
+  TextColumn get album => text().nullable()();
+  TextColumn get albumId => text().nullable()();
+  TextColumn get artistId => text().nullable()();
+  TextColumn get coverArt => text().nullable()();
+  IntColumn get year => integer().nullable()();
+  IntColumn get durationSec => integer().nullable()();
+  TextColumn get genre => text().nullable()();
+  @override
+  Set<Column> get primaryKey => {serverId, songId};
+}
+
 @DriftDatabase(tables: [
   Downloads,
   Favorites,
@@ -76,12 +98,13 @@ class Wishlist extends Table {
   RecentPlays,
   MissingTracks,
   Wishlist,
+  CachedSubsonicSongs,
 ])
 class AppDb extends _$AppDb {
   AppDb() : super(_open());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -90,6 +113,9 @@ class AppDb extends _$AppDb {
           if (from < 2) {
             await m.createTable(missingTracks);
             await m.createTable(wishlist);
+          }
+          if (from < 3) {
+            await m.createTable(cachedSubsonicSongs);
           }
         },
       );

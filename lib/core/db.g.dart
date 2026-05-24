@@ -1723,6 +1723,552 @@ class WishlistCompanion extends UpdateCompanion<WishlistData> {
   }
 }
 
+class $CachedSubsonicSongsTable extends CachedSubsonicSongs
+    with TableInfo<$CachedSubsonicSongsTable, CachedSubsonicSong> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CachedSubsonicSongsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _serverIdMeta =
+      const VerificationMeta('serverId');
+  @override
+  late final GeneratedColumn<String> serverId = GeneratedColumn<String>(
+      'server_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _songIdMeta = const VerificationMeta('songId');
+  @override
+  late final GeneratedColumn<String> songId = GeneratedColumn<String>(
+      'song_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  @override
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+      'title', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _artistMeta = const VerificationMeta('artist');
+  @override
+  late final GeneratedColumn<String> artist = GeneratedColumn<String>(
+      'artist', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _albumMeta = const VerificationMeta('album');
+  @override
+  late final GeneratedColumn<String> album = GeneratedColumn<String>(
+      'album', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _albumIdMeta =
+      const VerificationMeta('albumId');
+  @override
+  late final GeneratedColumn<String> albumId = GeneratedColumn<String>(
+      'album_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _artistIdMeta =
+      const VerificationMeta('artistId');
+  @override
+  late final GeneratedColumn<String> artistId = GeneratedColumn<String>(
+      'artist_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _coverArtMeta =
+      const VerificationMeta('coverArt');
+  @override
+  late final GeneratedColumn<String> coverArt = GeneratedColumn<String>(
+      'cover_art', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _yearMeta = const VerificationMeta('year');
+  @override
+  late final GeneratedColumn<int> year = GeneratedColumn<int>(
+      'year', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _durationSecMeta =
+      const VerificationMeta('durationSec');
+  @override
+  late final GeneratedColumn<int> durationSec = GeneratedColumn<int>(
+      'duration_sec', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _genreMeta = const VerificationMeta('genre');
+  @override
+  late final GeneratedColumn<String> genre = GeneratedColumn<String>(
+      'genre', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  @override
+  List<GeneratedColumn> get $columns => [
+        serverId,
+        songId,
+        title,
+        artist,
+        album,
+        albumId,
+        artistId,
+        coverArt,
+        year,
+        durationSec,
+        genre
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'cached_subsonic_songs';
+  @override
+  VerificationContext validateIntegrity(Insertable<CachedSubsonicSong> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('server_id')) {
+      context.handle(_serverIdMeta,
+          serverId.isAcceptableOrUnknown(data['server_id']!, _serverIdMeta));
+    } else if (isInserting) {
+      context.missing(_serverIdMeta);
+    }
+    if (data.containsKey('song_id')) {
+      context.handle(_songIdMeta,
+          songId.isAcceptableOrUnknown(data['song_id']!, _songIdMeta));
+    } else if (isInserting) {
+      context.missing(_songIdMeta);
+    }
+    if (data.containsKey('title')) {
+      context.handle(
+          _titleMeta, title.isAcceptableOrUnknown(data['title']!, _titleMeta));
+    } else if (isInserting) {
+      context.missing(_titleMeta);
+    }
+    if (data.containsKey('artist')) {
+      context.handle(_artistMeta,
+          artist.isAcceptableOrUnknown(data['artist']!, _artistMeta));
+    }
+    if (data.containsKey('album')) {
+      context.handle(
+          _albumMeta, album.isAcceptableOrUnknown(data['album']!, _albumMeta));
+    }
+    if (data.containsKey('album_id')) {
+      context.handle(_albumIdMeta,
+          albumId.isAcceptableOrUnknown(data['album_id']!, _albumIdMeta));
+    }
+    if (data.containsKey('artist_id')) {
+      context.handle(_artistIdMeta,
+          artistId.isAcceptableOrUnknown(data['artist_id']!, _artistIdMeta));
+    }
+    if (data.containsKey('cover_art')) {
+      context.handle(_coverArtMeta,
+          coverArt.isAcceptableOrUnknown(data['cover_art']!, _coverArtMeta));
+    }
+    if (data.containsKey('year')) {
+      context.handle(
+          _yearMeta, year.isAcceptableOrUnknown(data['year']!, _yearMeta));
+    }
+    if (data.containsKey('duration_sec')) {
+      context.handle(
+          _durationSecMeta,
+          durationSec.isAcceptableOrUnknown(
+              data['duration_sec']!, _durationSecMeta));
+    }
+    if (data.containsKey('genre')) {
+      context.handle(
+          _genreMeta, genre.isAcceptableOrUnknown(data['genre']!, _genreMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {serverId, songId};
+  @override
+  CachedSubsonicSong map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CachedSubsonicSong(
+      serverId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}server_id'])!,
+      songId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}song_id'])!,
+      title: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}title'])!,
+      artist: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}artist']),
+      album: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}album']),
+      albumId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}album_id']),
+      artistId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}artist_id']),
+      coverArt: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}cover_art']),
+      year: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}year']),
+      durationSec: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}duration_sec']),
+      genre: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}genre']),
+    );
+  }
+
+  @override
+  $CachedSubsonicSongsTable createAlias(String alias) {
+    return $CachedSubsonicSongsTable(attachedDatabase, alias);
+  }
+}
+
+class CachedSubsonicSong extends DataClass
+    implements Insertable<CachedSubsonicSong> {
+  final String serverId;
+  final String songId;
+  final String title;
+  final String? artist;
+  final String? album;
+  final String? albumId;
+  final String? artistId;
+  final String? coverArt;
+  final int? year;
+  final int? durationSec;
+  final String? genre;
+  const CachedSubsonicSong(
+      {required this.serverId,
+      required this.songId,
+      required this.title,
+      this.artist,
+      this.album,
+      this.albumId,
+      this.artistId,
+      this.coverArt,
+      this.year,
+      this.durationSec,
+      this.genre});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['server_id'] = Variable<String>(serverId);
+    map['song_id'] = Variable<String>(songId);
+    map['title'] = Variable<String>(title);
+    if (!nullToAbsent || artist != null) {
+      map['artist'] = Variable<String>(artist);
+    }
+    if (!nullToAbsent || album != null) {
+      map['album'] = Variable<String>(album);
+    }
+    if (!nullToAbsent || albumId != null) {
+      map['album_id'] = Variable<String>(albumId);
+    }
+    if (!nullToAbsent || artistId != null) {
+      map['artist_id'] = Variable<String>(artistId);
+    }
+    if (!nullToAbsent || coverArt != null) {
+      map['cover_art'] = Variable<String>(coverArt);
+    }
+    if (!nullToAbsent || year != null) {
+      map['year'] = Variable<int>(year);
+    }
+    if (!nullToAbsent || durationSec != null) {
+      map['duration_sec'] = Variable<int>(durationSec);
+    }
+    if (!nullToAbsent || genre != null) {
+      map['genre'] = Variable<String>(genre);
+    }
+    return map;
+  }
+
+  CachedSubsonicSongsCompanion toCompanion(bool nullToAbsent) {
+    return CachedSubsonicSongsCompanion(
+      serverId: Value(serverId),
+      songId: Value(songId),
+      title: Value(title),
+      artist:
+          artist == null && nullToAbsent ? const Value.absent() : Value(artist),
+      album:
+          album == null && nullToAbsent ? const Value.absent() : Value(album),
+      albumId: albumId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(albumId),
+      artistId: artistId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(artistId),
+      coverArt: coverArt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(coverArt),
+      year: year == null && nullToAbsent ? const Value.absent() : Value(year),
+      durationSec: durationSec == null && nullToAbsent
+          ? const Value.absent()
+          : Value(durationSec),
+      genre:
+          genre == null && nullToAbsent ? const Value.absent() : Value(genre),
+    );
+  }
+
+  factory CachedSubsonicSong.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CachedSubsonicSong(
+      serverId: serializer.fromJson<String>(json['serverId']),
+      songId: serializer.fromJson<String>(json['songId']),
+      title: serializer.fromJson<String>(json['title']),
+      artist: serializer.fromJson<String?>(json['artist']),
+      album: serializer.fromJson<String?>(json['album']),
+      albumId: serializer.fromJson<String?>(json['albumId']),
+      artistId: serializer.fromJson<String?>(json['artistId']),
+      coverArt: serializer.fromJson<String?>(json['coverArt']),
+      year: serializer.fromJson<int?>(json['year']),
+      durationSec: serializer.fromJson<int?>(json['durationSec']),
+      genre: serializer.fromJson<String?>(json['genre']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'serverId': serializer.toJson<String>(serverId),
+      'songId': serializer.toJson<String>(songId),
+      'title': serializer.toJson<String>(title),
+      'artist': serializer.toJson<String?>(artist),
+      'album': serializer.toJson<String?>(album),
+      'albumId': serializer.toJson<String?>(albumId),
+      'artistId': serializer.toJson<String?>(artistId),
+      'coverArt': serializer.toJson<String?>(coverArt),
+      'year': serializer.toJson<int?>(year),
+      'durationSec': serializer.toJson<int?>(durationSec),
+      'genre': serializer.toJson<String?>(genre),
+    };
+  }
+
+  CachedSubsonicSong copyWith(
+          {String? serverId,
+          String? songId,
+          String? title,
+          Value<String?> artist = const Value.absent(),
+          Value<String?> album = const Value.absent(),
+          Value<String?> albumId = const Value.absent(),
+          Value<String?> artistId = const Value.absent(),
+          Value<String?> coverArt = const Value.absent(),
+          Value<int?> year = const Value.absent(),
+          Value<int?> durationSec = const Value.absent(),
+          Value<String?> genre = const Value.absent()}) =>
+      CachedSubsonicSong(
+        serverId: serverId ?? this.serverId,
+        songId: songId ?? this.songId,
+        title: title ?? this.title,
+        artist: artist.present ? artist.value : this.artist,
+        album: album.present ? album.value : this.album,
+        albumId: albumId.present ? albumId.value : this.albumId,
+        artistId: artistId.present ? artistId.value : this.artistId,
+        coverArt: coverArt.present ? coverArt.value : this.coverArt,
+        year: year.present ? year.value : this.year,
+        durationSec: durationSec.present ? durationSec.value : this.durationSec,
+        genre: genre.present ? genre.value : this.genre,
+      );
+  CachedSubsonicSong copyWithCompanion(CachedSubsonicSongsCompanion data) {
+    return CachedSubsonicSong(
+      serverId: data.serverId.present ? data.serverId.value : this.serverId,
+      songId: data.songId.present ? data.songId.value : this.songId,
+      title: data.title.present ? data.title.value : this.title,
+      artist: data.artist.present ? data.artist.value : this.artist,
+      album: data.album.present ? data.album.value : this.album,
+      albumId: data.albumId.present ? data.albumId.value : this.albumId,
+      artistId: data.artistId.present ? data.artistId.value : this.artistId,
+      coverArt: data.coverArt.present ? data.coverArt.value : this.coverArt,
+      year: data.year.present ? data.year.value : this.year,
+      durationSec:
+          data.durationSec.present ? data.durationSec.value : this.durationSec,
+      genre: data.genre.present ? data.genre.value : this.genre,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CachedSubsonicSong(')
+          ..write('serverId: $serverId, ')
+          ..write('songId: $songId, ')
+          ..write('title: $title, ')
+          ..write('artist: $artist, ')
+          ..write('album: $album, ')
+          ..write('albumId: $albumId, ')
+          ..write('artistId: $artistId, ')
+          ..write('coverArt: $coverArt, ')
+          ..write('year: $year, ')
+          ..write('durationSec: $durationSec, ')
+          ..write('genre: $genre')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(serverId, songId, title, artist, album,
+      albumId, artistId, coverArt, year, durationSec, genre);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CachedSubsonicSong &&
+          other.serverId == this.serverId &&
+          other.songId == this.songId &&
+          other.title == this.title &&
+          other.artist == this.artist &&
+          other.album == this.album &&
+          other.albumId == this.albumId &&
+          other.artistId == this.artistId &&
+          other.coverArt == this.coverArt &&
+          other.year == this.year &&
+          other.durationSec == this.durationSec &&
+          other.genre == this.genre);
+}
+
+class CachedSubsonicSongsCompanion extends UpdateCompanion<CachedSubsonicSong> {
+  final Value<String> serverId;
+  final Value<String> songId;
+  final Value<String> title;
+  final Value<String?> artist;
+  final Value<String?> album;
+  final Value<String?> albumId;
+  final Value<String?> artistId;
+  final Value<String?> coverArt;
+  final Value<int?> year;
+  final Value<int?> durationSec;
+  final Value<String?> genre;
+  final Value<int> rowid;
+  const CachedSubsonicSongsCompanion({
+    this.serverId = const Value.absent(),
+    this.songId = const Value.absent(),
+    this.title = const Value.absent(),
+    this.artist = const Value.absent(),
+    this.album = const Value.absent(),
+    this.albumId = const Value.absent(),
+    this.artistId = const Value.absent(),
+    this.coverArt = const Value.absent(),
+    this.year = const Value.absent(),
+    this.durationSec = const Value.absent(),
+    this.genre = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CachedSubsonicSongsCompanion.insert({
+    required String serverId,
+    required String songId,
+    required String title,
+    this.artist = const Value.absent(),
+    this.album = const Value.absent(),
+    this.albumId = const Value.absent(),
+    this.artistId = const Value.absent(),
+    this.coverArt = const Value.absent(),
+    this.year = const Value.absent(),
+    this.durationSec = const Value.absent(),
+    this.genre = const Value.absent(),
+    this.rowid = const Value.absent(),
+  })  : serverId = Value(serverId),
+        songId = Value(songId),
+        title = Value(title);
+  static Insertable<CachedSubsonicSong> custom({
+    Expression<String>? serverId,
+    Expression<String>? songId,
+    Expression<String>? title,
+    Expression<String>? artist,
+    Expression<String>? album,
+    Expression<String>? albumId,
+    Expression<String>? artistId,
+    Expression<String>? coverArt,
+    Expression<int>? year,
+    Expression<int>? durationSec,
+    Expression<String>? genre,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (serverId != null) 'server_id': serverId,
+      if (songId != null) 'song_id': songId,
+      if (title != null) 'title': title,
+      if (artist != null) 'artist': artist,
+      if (album != null) 'album': album,
+      if (albumId != null) 'album_id': albumId,
+      if (artistId != null) 'artist_id': artistId,
+      if (coverArt != null) 'cover_art': coverArt,
+      if (year != null) 'year': year,
+      if (durationSec != null) 'duration_sec': durationSec,
+      if (genre != null) 'genre': genre,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CachedSubsonicSongsCompanion copyWith(
+      {Value<String>? serverId,
+      Value<String>? songId,
+      Value<String>? title,
+      Value<String?>? artist,
+      Value<String?>? album,
+      Value<String?>? albumId,
+      Value<String?>? artistId,
+      Value<String?>? coverArt,
+      Value<int?>? year,
+      Value<int?>? durationSec,
+      Value<String?>? genre,
+      Value<int>? rowid}) {
+    return CachedSubsonicSongsCompanion(
+      serverId: serverId ?? this.serverId,
+      songId: songId ?? this.songId,
+      title: title ?? this.title,
+      artist: artist ?? this.artist,
+      album: album ?? this.album,
+      albumId: albumId ?? this.albumId,
+      artistId: artistId ?? this.artistId,
+      coverArt: coverArt ?? this.coverArt,
+      year: year ?? this.year,
+      durationSec: durationSec ?? this.durationSec,
+      genre: genre ?? this.genre,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (serverId.present) {
+      map['server_id'] = Variable<String>(serverId.value);
+    }
+    if (songId.present) {
+      map['song_id'] = Variable<String>(songId.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (artist.present) {
+      map['artist'] = Variable<String>(artist.value);
+    }
+    if (album.present) {
+      map['album'] = Variable<String>(album.value);
+    }
+    if (albumId.present) {
+      map['album_id'] = Variable<String>(albumId.value);
+    }
+    if (artistId.present) {
+      map['artist_id'] = Variable<String>(artistId.value);
+    }
+    if (coverArt.present) {
+      map['cover_art'] = Variable<String>(coverArt.value);
+    }
+    if (year.present) {
+      map['year'] = Variable<int>(year.value);
+    }
+    if (durationSec.present) {
+      map['duration_sec'] = Variable<int>(durationSec.value);
+    }
+    if (genre.present) {
+      map['genre'] = Variable<String>(genre.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CachedSubsonicSongsCompanion(')
+          ..write('serverId: $serverId, ')
+          ..write('songId: $songId, ')
+          ..write('title: $title, ')
+          ..write('artist: $artist, ')
+          ..write('album: $album, ')
+          ..write('albumId: $albumId, ')
+          ..write('artistId: $artistId, ')
+          ..write('coverArt: $coverArt, ')
+          ..write('year: $year, ')
+          ..write('durationSec: $durationSec, ')
+          ..write('genre: $genre, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDb extends GeneratedDatabase {
   _$AppDb(QueryExecutor e) : super(e);
   $AppDbManager get managers => $AppDbManager(this);
@@ -1734,6 +2280,8 @@ abstract class _$AppDb extends GeneratedDatabase {
   late final $RecentPlaysTable recentPlays = $RecentPlaysTable(this);
   late final $MissingTracksTable missingTracks = $MissingTracksTable(this);
   late final $WishlistTable wishlist = $WishlistTable(this);
+  late final $CachedSubsonicSongsTable cachedSubsonicSongs =
+      $CachedSubsonicSongsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -1745,7 +2293,8 @@ abstract class _$AppDb extends GeneratedDatabase {
         localPlaylistTracks,
         recentPlays,
         missingTracks,
-        wishlist
+        wishlist,
+        cachedSubsonicSongs
       ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules(
@@ -2952,6 +3501,272 @@ typedef $$WishlistTableProcessedTableManager = ProcessedTableManager<
     (WishlistData, BaseReferences<_$AppDb, $WishlistTable, WishlistData>),
     WishlistData,
     PrefetchHooks Function()>;
+typedef $$CachedSubsonicSongsTableCreateCompanionBuilder
+    = CachedSubsonicSongsCompanion Function({
+  required String serverId,
+  required String songId,
+  required String title,
+  Value<String?> artist,
+  Value<String?> album,
+  Value<String?> albumId,
+  Value<String?> artistId,
+  Value<String?> coverArt,
+  Value<int?> year,
+  Value<int?> durationSec,
+  Value<String?> genre,
+  Value<int> rowid,
+});
+typedef $$CachedSubsonicSongsTableUpdateCompanionBuilder
+    = CachedSubsonicSongsCompanion Function({
+  Value<String> serverId,
+  Value<String> songId,
+  Value<String> title,
+  Value<String?> artist,
+  Value<String?> album,
+  Value<String?> albumId,
+  Value<String?> artistId,
+  Value<String?> coverArt,
+  Value<int?> year,
+  Value<int?> durationSec,
+  Value<String?> genre,
+  Value<int> rowid,
+});
+
+class $$CachedSubsonicSongsTableFilterComposer
+    extends Composer<_$AppDb, $CachedSubsonicSongsTable> {
+  $$CachedSubsonicSongsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get serverId => $composableBuilder(
+      column: $table.serverId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get songId => $composableBuilder(
+      column: $table.songId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get title => $composableBuilder(
+      column: $table.title, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get artist => $composableBuilder(
+      column: $table.artist, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get album => $composableBuilder(
+      column: $table.album, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get albumId => $composableBuilder(
+      column: $table.albumId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get artistId => $composableBuilder(
+      column: $table.artistId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get coverArt => $composableBuilder(
+      column: $table.coverArt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get year => $composableBuilder(
+      column: $table.year, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get durationSec => $composableBuilder(
+      column: $table.durationSec, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get genre => $composableBuilder(
+      column: $table.genre, builder: (column) => ColumnFilters(column));
+}
+
+class $$CachedSubsonicSongsTableOrderingComposer
+    extends Composer<_$AppDb, $CachedSubsonicSongsTable> {
+  $$CachedSubsonicSongsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get serverId => $composableBuilder(
+      column: $table.serverId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get songId => $composableBuilder(
+      column: $table.songId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get title => $composableBuilder(
+      column: $table.title, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get artist => $composableBuilder(
+      column: $table.artist, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get album => $composableBuilder(
+      column: $table.album, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get albumId => $composableBuilder(
+      column: $table.albumId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get artistId => $composableBuilder(
+      column: $table.artistId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get coverArt => $composableBuilder(
+      column: $table.coverArt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get year => $composableBuilder(
+      column: $table.year, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get durationSec => $composableBuilder(
+      column: $table.durationSec, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get genre => $composableBuilder(
+      column: $table.genre, builder: (column) => ColumnOrderings(column));
+}
+
+class $$CachedSubsonicSongsTableAnnotationComposer
+    extends Composer<_$AppDb, $CachedSubsonicSongsTable> {
+  $$CachedSubsonicSongsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get serverId =>
+      $composableBuilder(column: $table.serverId, builder: (column) => column);
+
+  GeneratedColumn<String> get songId =>
+      $composableBuilder(column: $table.songId, builder: (column) => column);
+
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<String> get artist =>
+      $composableBuilder(column: $table.artist, builder: (column) => column);
+
+  GeneratedColumn<String> get album =>
+      $composableBuilder(column: $table.album, builder: (column) => column);
+
+  GeneratedColumn<String> get albumId =>
+      $composableBuilder(column: $table.albumId, builder: (column) => column);
+
+  GeneratedColumn<String> get artistId =>
+      $composableBuilder(column: $table.artistId, builder: (column) => column);
+
+  GeneratedColumn<String> get coverArt =>
+      $composableBuilder(column: $table.coverArt, builder: (column) => column);
+
+  GeneratedColumn<int> get year =>
+      $composableBuilder(column: $table.year, builder: (column) => column);
+
+  GeneratedColumn<int> get durationSec => $composableBuilder(
+      column: $table.durationSec, builder: (column) => column);
+
+  GeneratedColumn<String> get genre =>
+      $composableBuilder(column: $table.genre, builder: (column) => column);
+}
+
+class $$CachedSubsonicSongsTableTableManager extends RootTableManager<
+    _$AppDb,
+    $CachedSubsonicSongsTable,
+    CachedSubsonicSong,
+    $$CachedSubsonicSongsTableFilterComposer,
+    $$CachedSubsonicSongsTableOrderingComposer,
+    $$CachedSubsonicSongsTableAnnotationComposer,
+    $$CachedSubsonicSongsTableCreateCompanionBuilder,
+    $$CachedSubsonicSongsTableUpdateCompanionBuilder,
+    (
+      CachedSubsonicSong,
+      BaseReferences<_$AppDb, $CachedSubsonicSongsTable, CachedSubsonicSong>
+    ),
+    CachedSubsonicSong,
+    PrefetchHooks Function()> {
+  $$CachedSubsonicSongsTableTableManager(
+      _$AppDb db, $CachedSubsonicSongsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CachedSubsonicSongsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CachedSubsonicSongsTableOrderingComposer(
+                  $db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CachedSubsonicSongsTableAnnotationComposer(
+                  $db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> serverId = const Value.absent(),
+            Value<String> songId = const Value.absent(),
+            Value<String> title = const Value.absent(),
+            Value<String?> artist = const Value.absent(),
+            Value<String?> album = const Value.absent(),
+            Value<String?> albumId = const Value.absent(),
+            Value<String?> artistId = const Value.absent(),
+            Value<String?> coverArt = const Value.absent(),
+            Value<int?> year = const Value.absent(),
+            Value<int?> durationSec = const Value.absent(),
+            Value<String?> genre = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              CachedSubsonicSongsCompanion(
+            serverId: serverId,
+            songId: songId,
+            title: title,
+            artist: artist,
+            album: album,
+            albumId: albumId,
+            artistId: artistId,
+            coverArt: coverArt,
+            year: year,
+            durationSec: durationSec,
+            genre: genre,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String serverId,
+            required String songId,
+            required String title,
+            Value<String?> artist = const Value.absent(),
+            Value<String?> album = const Value.absent(),
+            Value<String?> albumId = const Value.absent(),
+            Value<String?> artistId = const Value.absent(),
+            Value<String?> coverArt = const Value.absent(),
+            Value<int?> year = const Value.absent(),
+            Value<int?> durationSec = const Value.absent(),
+            Value<String?> genre = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              CachedSubsonicSongsCompanion.insert(
+            serverId: serverId,
+            songId: songId,
+            title: title,
+            artist: artist,
+            album: album,
+            albumId: albumId,
+            artistId: artistId,
+            coverArt: coverArt,
+            year: year,
+            durationSec: durationSec,
+            genre: genre,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$CachedSubsonicSongsTableProcessedTableManager = ProcessedTableManager<
+    _$AppDb,
+    $CachedSubsonicSongsTable,
+    CachedSubsonicSong,
+    $$CachedSubsonicSongsTableFilterComposer,
+    $$CachedSubsonicSongsTableOrderingComposer,
+    $$CachedSubsonicSongsTableAnnotationComposer,
+    $$CachedSubsonicSongsTableCreateCompanionBuilder,
+    $$CachedSubsonicSongsTableUpdateCompanionBuilder,
+    (
+      CachedSubsonicSong,
+      BaseReferences<_$AppDb, $CachedSubsonicSongsTable, CachedSubsonicSong>
+    ),
+    CachedSubsonicSong,
+    PrefetchHooks Function()>;
 
 class $AppDbManager {
   final _$AppDb _db;
@@ -2970,4 +3785,6 @@ class $AppDbManager {
       $$MissingTracksTableTableManager(_db, _db.missingTracks);
   $$WishlistTableTableManager get wishlist =>
       $$WishlistTableTableManager(_db, _db.wishlist);
+  $$CachedSubsonicSongsTableTableManager get cachedSubsonicSongs =>
+      $$CachedSubsonicSongsTableTableManager(_db, _db.cachedSubsonicSongs);
 }
