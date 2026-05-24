@@ -7,6 +7,21 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.5.1] — 2026-05-24
+
+Custom launcher icon — visual pun on "DIG" audio.
+
+### Added
+- **Brand icon**: tilted green music-note head with **DIG** overlaid in
+  bold white, an eighth-note flag for clarity, and a metal handle ending
+  in a spade-shaped blade. One centered vertical figure so the silhouette
+  reads even at 48 px.
+- **`tool/make_icon.py`** — PIL-based generator (no rsvg / ImageMagick
+  required) that emits both the full icon and a transparent-background
+  foreground for Android adaptive icons. Re-run on any design change.
+- **`flutter_launcher_icons`** dev dep + pubspec config block; generates
+  all `mipmap-*` and iOS `AppIcon` assets from a single 1024 px source.
+
 ## [0.5.0] — 2026-05-24
 
 Playlist import (from external apps) + wishlist for tracks you don't have yet.
