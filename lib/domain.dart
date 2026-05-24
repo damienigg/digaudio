@@ -120,3 +120,34 @@ class SearchResults {
 
   bool get isEmpty => tracks.isEmpty && albums.isEmpty && artists.isEmpty;
 }
+
+/// An item in a (local) playlist — either a resolved [Track] or a [Missing]
+/// entry whose source couldn't be matched on import.
+sealed class PlaylistEntry {
+  const PlaylistEntry();
+  String get displayTitle;
+  String get displayArtist;
+}
+
+class TrackEntry extends PlaylistEntry {
+  final Track track;
+  const TrackEntry(this.track);
+  @override
+  String get displayTitle => track.title;
+  @override
+  String get displayArtist => track.displayArtist;
+}
+
+class MissingEntry extends PlaylistEntry {
+  /// Sentinel key stored in `LocalPlaylistTracks.trackKey`, format
+  /// `missing:<uuid>`. Used to look the entry back up in `MissingTracks`.
+  final String key;
+  final String title;
+  final String? artist;
+  final String? album;
+  const MissingEntry({required this.key, required this.title, this.artist, this.album});
+  @override
+  String get displayTitle => title;
+  @override
+  String get displayArtist => artist ?? 'Unknown';
+}

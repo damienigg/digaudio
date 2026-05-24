@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -150,6 +153,15 @@ class _PlaylistsTab extends ConsumerWidget {
           onTap: () => context.push('/favorites'),
         ),
         const Divider(height: 1, color: Colors.white12),
+        ListTile(
+          leading: const Icon(Icons.bookmark_outline),
+          title: const Text('Wishlist'),
+          subtitle: const Text('Tracks you\'d like to add to your library'),
+          onTap: () => context.push('/wishlist'),
+        ),
+        const Divider(height: 1, color: Colors.white12),
+        _ImportTile(),
+        const Divider(height: 1, color: Colors.white12),
         const _SectionHeader('Local playlists'),
         localState.when(
           loading: () => const Padding(
@@ -214,6 +226,39 @@ class _SectionHeader extends StatelessWidget {
         child: Text(text,
             style: const TextStyle(color: Colors.white60, fontSize: 11, letterSpacing: 1.5)),
       );
+}
+
+class _ImportTile extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => ListTile(
+        leading: const Icon(Icons.file_open_outlined),
+        title: const Text('Import playlist…'),
+        subtitle: const Text('From M3U / M3U8 or digaudio JSON'),
+        onTap: () => _runImport(context, ref),
+      );
+
+  Future<void> _runImport(BuildContext context, WidgetRef ref) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final picked = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['m3u', 'm3u8', 'json'],
+    );
+    if (picked == null || picked.files.isEmpty) return;
+    final path = picked.files.single.path;
+    if (path == null) return;
+
+    messenger.showSnackBar(const SnackBar(content: Text('Importing…')));
+    try {
+      final report = await ref.read(playlistImporterProvider).importFile(File(path));
+      messenger.showSnackBar(SnackBar(
+        content: Text('Imported "${report.playlistName}" — '
+            '${report.matched} matched, ${report.missing} missing'),
+        duration: const Duration(seconds: 5),
+      ));
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('Import failed: $e')));
+    }
+  }
 }
 
 class _Empty extends StatelessWidget {

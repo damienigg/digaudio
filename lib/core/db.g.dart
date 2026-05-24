@@ -1121,6 +1121,608 @@ class RecentPlaysCompanion extends UpdateCompanion<RecentPlay> {
   }
 }
 
+class $MissingTracksTable extends MissingTracks
+    with TableInfo<$MissingTracksTable, MissingTrack> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $MissingTracksTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _trackKeyMeta =
+      const VerificationMeta('trackKey');
+  @override
+  late final GeneratedColumn<String> trackKey = GeneratedColumn<String>(
+      'track_key', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  @override
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+      'title', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _artistMeta = const VerificationMeta('artist');
+  @override
+  late final GeneratedColumn<String> artist = GeneratedColumn<String>(
+      'artist', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _albumMeta = const VerificationMeta('album');
+  @override
+  late final GeneratedColumn<String> album = GeneratedColumn<String>(
+      'album', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  @override
+  List<GeneratedColumn> get $columns => [trackKey, title, artist, album];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'missing_tracks';
+  @override
+  VerificationContext validateIntegrity(Insertable<MissingTrack> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('track_key')) {
+      context.handle(_trackKeyMeta,
+          trackKey.isAcceptableOrUnknown(data['track_key']!, _trackKeyMeta));
+    } else if (isInserting) {
+      context.missing(_trackKeyMeta);
+    }
+    if (data.containsKey('title')) {
+      context.handle(
+          _titleMeta, title.isAcceptableOrUnknown(data['title']!, _titleMeta));
+    } else if (isInserting) {
+      context.missing(_titleMeta);
+    }
+    if (data.containsKey('artist')) {
+      context.handle(_artistMeta,
+          artist.isAcceptableOrUnknown(data['artist']!, _artistMeta));
+    }
+    if (data.containsKey('album')) {
+      context.handle(
+          _albumMeta, album.isAcceptableOrUnknown(data['album']!, _albumMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {trackKey};
+  @override
+  MissingTrack map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return MissingTrack(
+      trackKey: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}track_key'])!,
+      title: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}title'])!,
+      artist: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}artist']),
+      album: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}album']),
+    );
+  }
+
+  @override
+  $MissingTracksTable createAlias(String alias) {
+    return $MissingTracksTable(attachedDatabase, alias);
+  }
+}
+
+class MissingTrack extends DataClass implements Insertable<MissingTrack> {
+  final String trackKey;
+  final String title;
+  final String? artist;
+  final String? album;
+  const MissingTrack(
+      {required this.trackKey, required this.title, this.artist, this.album});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['track_key'] = Variable<String>(trackKey);
+    map['title'] = Variable<String>(title);
+    if (!nullToAbsent || artist != null) {
+      map['artist'] = Variable<String>(artist);
+    }
+    if (!nullToAbsent || album != null) {
+      map['album'] = Variable<String>(album);
+    }
+    return map;
+  }
+
+  MissingTracksCompanion toCompanion(bool nullToAbsent) {
+    return MissingTracksCompanion(
+      trackKey: Value(trackKey),
+      title: Value(title),
+      artist:
+          artist == null && nullToAbsent ? const Value.absent() : Value(artist),
+      album:
+          album == null && nullToAbsent ? const Value.absent() : Value(album),
+    );
+  }
+
+  factory MissingTrack.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return MissingTrack(
+      trackKey: serializer.fromJson<String>(json['trackKey']),
+      title: serializer.fromJson<String>(json['title']),
+      artist: serializer.fromJson<String?>(json['artist']),
+      album: serializer.fromJson<String?>(json['album']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'trackKey': serializer.toJson<String>(trackKey),
+      'title': serializer.toJson<String>(title),
+      'artist': serializer.toJson<String?>(artist),
+      'album': serializer.toJson<String?>(album),
+    };
+  }
+
+  MissingTrack copyWith(
+          {String? trackKey,
+          String? title,
+          Value<String?> artist = const Value.absent(),
+          Value<String?> album = const Value.absent()}) =>
+      MissingTrack(
+        trackKey: trackKey ?? this.trackKey,
+        title: title ?? this.title,
+        artist: artist.present ? artist.value : this.artist,
+        album: album.present ? album.value : this.album,
+      );
+  MissingTrack copyWithCompanion(MissingTracksCompanion data) {
+    return MissingTrack(
+      trackKey: data.trackKey.present ? data.trackKey.value : this.trackKey,
+      title: data.title.present ? data.title.value : this.title,
+      artist: data.artist.present ? data.artist.value : this.artist,
+      album: data.album.present ? data.album.value : this.album,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MissingTrack(')
+          ..write('trackKey: $trackKey, ')
+          ..write('title: $title, ')
+          ..write('artist: $artist, ')
+          ..write('album: $album')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(trackKey, title, artist, album);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is MissingTrack &&
+          other.trackKey == this.trackKey &&
+          other.title == this.title &&
+          other.artist == this.artist &&
+          other.album == this.album);
+}
+
+class MissingTracksCompanion extends UpdateCompanion<MissingTrack> {
+  final Value<String> trackKey;
+  final Value<String> title;
+  final Value<String?> artist;
+  final Value<String?> album;
+  final Value<int> rowid;
+  const MissingTracksCompanion({
+    this.trackKey = const Value.absent(),
+    this.title = const Value.absent(),
+    this.artist = const Value.absent(),
+    this.album = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  MissingTracksCompanion.insert({
+    required String trackKey,
+    required String title,
+    this.artist = const Value.absent(),
+    this.album = const Value.absent(),
+    this.rowid = const Value.absent(),
+  })  : trackKey = Value(trackKey),
+        title = Value(title);
+  static Insertable<MissingTrack> custom({
+    Expression<String>? trackKey,
+    Expression<String>? title,
+    Expression<String>? artist,
+    Expression<String>? album,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (trackKey != null) 'track_key': trackKey,
+      if (title != null) 'title': title,
+      if (artist != null) 'artist': artist,
+      if (album != null) 'album': album,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  MissingTracksCompanion copyWith(
+      {Value<String>? trackKey,
+      Value<String>? title,
+      Value<String?>? artist,
+      Value<String?>? album,
+      Value<int>? rowid}) {
+    return MissingTracksCompanion(
+      trackKey: trackKey ?? this.trackKey,
+      title: title ?? this.title,
+      artist: artist ?? this.artist,
+      album: album ?? this.album,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (trackKey.present) {
+      map['track_key'] = Variable<String>(trackKey.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (artist.present) {
+      map['artist'] = Variable<String>(artist.value);
+    }
+    if (album.present) {
+      map['album'] = Variable<String>(album.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MissingTracksCompanion(')
+          ..write('trackKey: $trackKey, ')
+          ..write('title: $title, ')
+          ..write('artist: $artist, ')
+          ..write('album: $album, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $WishlistTable extends Wishlist
+    with TableInfo<$WishlistTable, WishlistData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $WishlistTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+      'id', aliasedName, false,
+      hasAutoIncrement: true,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  @override
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+      'title', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _artistMeta = const VerificationMeta('artist');
+  @override
+  late final GeneratedColumn<String> artist = GeneratedColumn<String>(
+      'artist', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _albumMeta = const VerificationMeta('album');
+  @override
+  late final GeneratedColumn<String> album = GeneratedColumn<String>(
+      'album', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _requestedAtMeta =
+      const VerificationMeta('requestedAt');
+  @override
+  late final GeneratedColumn<DateTime> requestedAt = GeneratedColumn<DateTime>(
+      'requested_at', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
+  @override
+  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
+      'notes', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  @override
+  List<GeneratedColumn> get $columns =>
+      [id, title, artist, album, requestedAt, notes];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'wishlist';
+  @override
+  VerificationContext validateIntegrity(Insertable<WishlistData> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('title')) {
+      context.handle(
+          _titleMeta, title.isAcceptableOrUnknown(data['title']!, _titleMeta));
+    } else if (isInserting) {
+      context.missing(_titleMeta);
+    }
+    if (data.containsKey('artist')) {
+      context.handle(_artistMeta,
+          artist.isAcceptableOrUnknown(data['artist']!, _artistMeta));
+    }
+    if (data.containsKey('album')) {
+      context.handle(
+          _albumMeta, album.isAcceptableOrUnknown(data['album']!, _albumMeta));
+    }
+    if (data.containsKey('requested_at')) {
+      context.handle(
+          _requestedAtMeta,
+          requestedAt.isAcceptableOrUnknown(
+              data['requested_at']!, _requestedAtMeta));
+    } else if (isInserting) {
+      context.missing(_requestedAtMeta);
+    }
+    if (data.containsKey('notes')) {
+      context.handle(
+          _notesMeta, notes.isAcceptableOrUnknown(data['notes']!, _notesMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  WishlistData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return WishlistData(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
+      title: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}title'])!,
+      artist: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}artist']),
+      album: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}album']),
+      requestedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}requested_at'])!,
+      notes: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}notes']),
+    );
+  }
+
+  @override
+  $WishlistTable createAlias(String alias) {
+    return $WishlistTable(attachedDatabase, alias);
+  }
+}
+
+class WishlistData extends DataClass implements Insertable<WishlistData> {
+  final int id;
+  final String title;
+  final String? artist;
+  final String? album;
+  final DateTime requestedAt;
+  final String? notes;
+  const WishlistData(
+      {required this.id,
+      required this.title,
+      this.artist,
+      this.album,
+      required this.requestedAt,
+      this.notes});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['title'] = Variable<String>(title);
+    if (!nullToAbsent || artist != null) {
+      map['artist'] = Variable<String>(artist);
+    }
+    if (!nullToAbsent || album != null) {
+      map['album'] = Variable<String>(album);
+    }
+    map['requested_at'] = Variable<DateTime>(requestedAt);
+    if (!nullToAbsent || notes != null) {
+      map['notes'] = Variable<String>(notes);
+    }
+    return map;
+  }
+
+  WishlistCompanion toCompanion(bool nullToAbsent) {
+    return WishlistCompanion(
+      id: Value(id),
+      title: Value(title),
+      artist:
+          artist == null && nullToAbsent ? const Value.absent() : Value(artist),
+      album:
+          album == null && nullToAbsent ? const Value.absent() : Value(album),
+      requestedAt: Value(requestedAt),
+      notes:
+          notes == null && nullToAbsent ? const Value.absent() : Value(notes),
+    );
+  }
+
+  factory WishlistData.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return WishlistData(
+      id: serializer.fromJson<int>(json['id']),
+      title: serializer.fromJson<String>(json['title']),
+      artist: serializer.fromJson<String?>(json['artist']),
+      album: serializer.fromJson<String?>(json['album']),
+      requestedAt: serializer.fromJson<DateTime>(json['requestedAt']),
+      notes: serializer.fromJson<String?>(json['notes']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'title': serializer.toJson<String>(title),
+      'artist': serializer.toJson<String?>(artist),
+      'album': serializer.toJson<String?>(album),
+      'requestedAt': serializer.toJson<DateTime>(requestedAt),
+      'notes': serializer.toJson<String?>(notes),
+    };
+  }
+
+  WishlistData copyWith(
+          {int? id,
+          String? title,
+          Value<String?> artist = const Value.absent(),
+          Value<String?> album = const Value.absent(),
+          DateTime? requestedAt,
+          Value<String?> notes = const Value.absent()}) =>
+      WishlistData(
+        id: id ?? this.id,
+        title: title ?? this.title,
+        artist: artist.present ? artist.value : this.artist,
+        album: album.present ? album.value : this.album,
+        requestedAt: requestedAt ?? this.requestedAt,
+        notes: notes.present ? notes.value : this.notes,
+      );
+  WishlistData copyWithCompanion(WishlistCompanion data) {
+    return WishlistData(
+      id: data.id.present ? data.id.value : this.id,
+      title: data.title.present ? data.title.value : this.title,
+      artist: data.artist.present ? data.artist.value : this.artist,
+      album: data.album.present ? data.album.value : this.album,
+      requestedAt:
+          data.requestedAt.present ? data.requestedAt.value : this.requestedAt,
+      notes: data.notes.present ? data.notes.value : this.notes,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('WishlistData(')
+          ..write('id: $id, ')
+          ..write('title: $title, ')
+          ..write('artist: $artist, ')
+          ..write('album: $album, ')
+          ..write('requestedAt: $requestedAt, ')
+          ..write('notes: $notes')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, title, artist, album, requestedAt, notes);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is WishlistData &&
+          other.id == this.id &&
+          other.title == this.title &&
+          other.artist == this.artist &&
+          other.album == this.album &&
+          other.requestedAt == this.requestedAt &&
+          other.notes == this.notes);
+}
+
+class WishlistCompanion extends UpdateCompanion<WishlistData> {
+  final Value<int> id;
+  final Value<String> title;
+  final Value<String?> artist;
+  final Value<String?> album;
+  final Value<DateTime> requestedAt;
+  final Value<String?> notes;
+  const WishlistCompanion({
+    this.id = const Value.absent(),
+    this.title = const Value.absent(),
+    this.artist = const Value.absent(),
+    this.album = const Value.absent(),
+    this.requestedAt = const Value.absent(),
+    this.notes = const Value.absent(),
+  });
+  WishlistCompanion.insert({
+    this.id = const Value.absent(),
+    required String title,
+    this.artist = const Value.absent(),
+    this.album = const Value.absent(),
+    required DateTime requestedAt,
+    this.notes = const Value.absent(),
+  })  : title = Value(title),
+        requestedAt = Value(requestedAt);
+  static Insertable<WishlistData> custom({
+    Expression<int>? id,
+    Expression<String>? title,
+    Expression<String>? artist,
+    Expression<String>? album,
+    Expression<DateTime>? requestedAt,
+    Expression<String>? notes,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (title != null) 'title': title,
+      if (artist != null) 'artist': artist,
+      if (album != null) 'album': album,
+      if (requestedAt != null) 'requested_at': requestedAt,
+      if (notes != null) 'notes': notes,
+    });
+  }
+
+  WishlistCompanion copyWith(
+      {Value<int>? id,
+      Value<String>? title,
+      Value<String?>? artist,
+      Value<String?>? album,
+      Value<DateTime>? requestedAt,
+      Value<String?>? notes}) {
+    return WishlistCompanion(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      artist: artist ?? this.artist,
+      album: album ?? this.album,
+      requestedAt: requestedAt ?? this.requestedAt,
+      notes: notes ?? this.notes,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (artist.present) {
+      map['artist'] = Variable<String>(artist.value);
+    }
+    if (album.present) {
+      map['album'] = Variable<String>(album.value);
+    }
+    if (requestedAt.present) {
+      map['requested_at'] = Variable<DateTime>(requestedAt.value);
+    }
+    if (notes.present) {
+      map['notes'] = Variable<String>(notes.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('WishlistCompanion(')
+          ..write('id: $id, ')
+          ..write('title: $title, ')
+          ..write('artist: $artist, ')
+          ..write('album: $album, ')
+          ..write('requestedAt: $requestedAt, ')
+          ..write('notes: $notes')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDb extends GeneratedDatabase {
   _$AppDb(QueryExecutor e) : super(e);
   $AppDbManager get managers => $AppDbManager(this);
@@ -1130,12 +1732,21 @@ abstract class _$AppDb extends GeneratedDatabase {
   late final $LocalPlaylistTracksTable localPlaylistTracks =
       $LocalPlaylistTracksTable(this);
   late final $RecentPlaysTable recentPlays = $RecentPlaysTable(this);
+  late final $MissingTracksTable missingTracks = $MissingTracksTable(this);
+  late final $WishlistTable wishlist = $WishlistTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
-  List<DatabaseSchemaEntity> get allSchemaEntities =>
-      [downloads, favorites, localPlaylists, localPlaylistTracks, recentPlays];
+  List<DatabaseSchemaEntity> get allSchemaEntities => [
+        downloads,
+        favorites,
+        localPlaylists,
+        localPlaylistTracks,
+        recentPlays,
+        missingTracks,
+        wishlist
+      ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules(
         [
@@ -2016,6 +2627,331 @@ typedef $$RecentPlaysTableProcessedTableManager = ProcessedTableManager<
     (RecentPlay, BaseReferences<_$AppDb, $RecentPlaysTable, RecentPlay>),
     RecentPlay,
     PrefetchHooks Function()>;
+typedef $$MissingTracksTableCreateCompanionBuilder = MissingTracksCompanion
+    Function({
+  required String trackKey,
+  required String title,
+  Value<String?> artist,
+  Value<String?> album,
+  Value<int> rowid,
+});
+typedef $$MissingTracksTableUpdateCompanionBuilder = MissingTracksCompanion
+    Function({
+  Value<String> trackKey,
+  Value<String> title,
+  Value<String?> artist,
+  Value<String?> album,
+  Value<int> rowid,
+});
+
+class $$MissingTracksTableFilterComposer
+    extends Composer<_$AppDb, $MissingTracksTable> {
+  $$MissingTracksTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get trackKey => $composableBuilder(
+      column: $table.trackKey, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get title => $composableBuilder(
+      column: $table.title, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get artist => $composableBuilder(
+      column: $table.artist, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get album => $composableBuilder(
+      column: $table.album, builder: (column) => ColumnFilters(column));
+}
+
+class $$MissingTracksTableOrderingComposer
+    extends Composer<_$AppDb, $MissingTracksTable> {
+  $$MissingTracksTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get trackKey => $composableBuilder(
+      column: $table.trackKey, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get title => $composableBuilder(
+      column: $table.title, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get artist => $composableBuilder(
+      column: $table.artist, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get album => $composableBuilder(
+      column: $table.album, builder: (column) => ColumnOrderings(column));
+}
+
+class $$MissingTracksTableAnnotationComposer
+    extends Composer<_$AppDb, $MissingTracksTable> {
+  $$MissingTracksTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get trackKey =>
+      $composableBuilder(column: $table.trackKey, builder: (column) => column);
+
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<String> get artist =>
+      $composableBuilder(column: $table.artist, builder: (column) => column);
+
+  GeneratedColumn<String> get album =>
+      $composableBuilder(column: $table.album, builder: (column) => column);
+}
+
+class $$MissingTracksTableTableManager extends RootTableManager<
+    _$AppDb,
+    $MissingTracksTable,
+    MissingTrack,
+    $$MissingTracksTableFilterComposer,
+    $$MissingTracksTableOrderingComposer,
+    $$MissingTracksTableAnnotationComposer,
+    $$MissingTracksTableCreateCompanionBuilder,
+    $$MissingTracksTableUpdateCompanionBuilder,
+    (MissingTrack, BaseReferences<_$AppDb, $MissingTracksTable, MissingTrack>),
+    MissingTrack,
+    PrefetchHooks Function()> {
+  $$MissingTracksTableTableManager(_$AppDb db, $MissingTracksTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$MissingTracksTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$MissingTracksTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$MissingTracksTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> trackKey = const Value.absent(),
+            Value<String> title = const Value.absent(),
+            Value<String?> artist = const Value.absent(),
+            Value<String?> album = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              MissingTracksCompanion(
+            trackKey: trackKey,
+            title: title,
+            artist: artist,
+            album: album,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String trackKey,
+            required String title,
+            Value<String?> artist = const Value.absent(),
+            Value<String?> album = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              MissingTracksCompanion.insert(
+            trackKey: trackKey,
+            title: title,
+            artist: artist,
+            album: album,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$MissingTracksTableProcessedTableManager = ProcessedTableManager<
+    _$AppDb,
+    $MissingTracksTable,
+    MissingTrack,
+    $$MissingTracksTableFilterComposer,
+    $$MissingTracksTableOrderingComposer,
+    $$MissingTracksTableAnnotationComposer,
+    $$MissingTracksTableCreateCompanionBuilder,
+    $$MissingTracksTableUpdateCompanionBuilder,
+    (MissingTrack, BaseReferences<_$AppDb, $MissingTracksTable, MissingTrack>),
+    MissingTrack,
+    PrefetchHooks Function()>;
+typedef $$WishlistTableCreateCompanionBuilder = WishlistCompanion Function({
+  Value<int> id,
+  required String title,
+  Value<String?> artist,
+  Value<String?> album,
+  required DateTime requestedAt,
+  Value<String?> notes,
+});
+typedef $$WishlistTableUpdateCompanionBuilder = WishlistCompanion Function({
+  Value<int> id,
+  Value<String> title,
+  Value<String?> artist,
+  Value<String?> album,
+  Value<DateTime> requestedAt,
+  Value<String?> notes,
+});
+
+class $$WishlistTableFilterComposer extends Composer<_$AppDb, $WishlistTable> {
+  $$WishlistTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get title => $composableBuilder(
+      column: $table.title, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get artist => $composableBuilder(
+      column: $table.artist, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get album => $composableBuilder(
+      column: $table.album, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get requestedAt => $composableBuilder(
+      column: $table.requestedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get notes => $composableBuilder(
+      column: $table.notes, builder: (column) => ColumnFilters(column));
+}
+
+class $$WishlistTableOrderingComposer
+    extends Composer<_$AppDb, $WishlistTable> {
+  $$WishlistTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get title => $composableBuilder(
+      column: $table.title, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get artist => $composableBuilder(
+      column: $table.artist, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get album => $composableBuilder(
+      column: $table.album, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get requestedAt => $composableBuilder(
+      column: $table.requestedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get notes => $composableBuilder(
+      column: $table.notes, builder: (column) => ColumnOrderings(column));
+}
+
+class $$WishlistTableAnnotationComposer
+    extends Composer<_$AppDb, $WishlistTable> {
+  $$WishlistTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<String> get artist =>
+      $composableBuilder(column: $table.artist, builder: (column) => column);
+
+  GeneratedColumn<String> get album =>
+      $composableBuilder(column: $table.album, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get requestedAt => $composableBuilder(
+      column: $table.requestedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => column);
+}
+
+class $$WishlistTableTableManager extends RootTableManager<
+    _$AppDb,
+    $WishlistTable,
+    WishlistData,
+    $$WishlistTableFilterComposer,
+    $$WishlistTableOrderingComposer,
+    $$WishlistTableAnnotationComposer,
+    $$WishlistTableCreateCompanionBuilder,
+    $$WishlistTableUpdateCompanionBuilder,
+    (WishlistData, BaseReferences<_$AppDb, $WishlistTable, WishlistData>),
+    WishlistData,
+    PrefetchHooks Function()> {
+  $$WishlistTableTableManager(_$AppDb db, $WishlistTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$WishlistTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$WishlistTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$WishlistTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<String> title = const Value.absent(),
+            Value<String?> artist = const Value.absent(),
+            Value<String?> album = const Value.absent(),
+            Value<DateTime> requestedAt = const Value.absent(),
+            Value<String?> notes = const Value.absent(),
+          }) =>
+              WishlistCompanion(
+            id: id,
+            title: title,
+            artist: artist,
+            album: album,
+            requestedAt: requestedAt,
+            notes: notes,
+          ),
+          createCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            required String title,
+            Value<String?> artist = const Value.absent(),
+            Value<String?> album = const Value.absent(),
+            required DateTime requestedAt,
+            Value<String?> notes = const Value.absent(),
+          }) =>
+              WishlistCompanion.insert(
+            id: id,
+            title: title,
+            artist: artist,
+            album: album,
+            requestedAt: requestedAt,
+            notes: notes,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$WishlistTableProcessedTableManager = ProcessedTableManager<
+    _$AppDb,
+    $WishlistTable,
+    WishlistData,
+    $$WishlistTableFilterComposer,
+    $$WishlistTableOrderingComposer,
+    $$WishlistTableAnnotationComposer,
+    $$WishlistTableCreateCompanionBuilder,
+    $$WishlistTableUpdateCompanionBuilder,
+    (WishlistData, BaseReferences<_$AppDb, $WishlistTable, WishlistData>),
+    WishlistData,
+    PrefetchHooks Function()>;
 
 class $AppDbManager {
   final _$AppDb _db;
@@ -2030,4 +2966,8 @@ class $AppDbManager {
       $$LocalPlaylistTracksTableTableManager(_db, _db.localPlaylistTracks);
   $$RecentPlaysTableTableManager get recentPlays =>
       $$RecentPlaysTableTableManager(_db, _db.recentPlays);
+  $$MissingTracksTableTableManager get missingTracks =>
+      $$MissingTracksTableTableManager(_db, _db.missingTracks);
+  $$WishlistTableTableManager get wishlist =>
+      $$WishlistTableTableManager(_db, _db.wishlist);
 }

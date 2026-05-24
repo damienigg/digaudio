@@ -1,9 +1,14 @@
+import 'dart:math';
+
 import 'package:drift/drift.dart';
 
 import '../core/db.dart';
 import '../domain.dart';
 import '../library/local.dart';
 import '../subsonic/client.dart';
+
+const String _missingPrefix = 'missing:';
+bool isMissingKey(String key) => key.startsWith(_missingPrefix);
 
 /// CRUD for favorites and local playlists, backed by drift.
 ///
@@ -146,17 +151,52 @@ class LocalPlaylistsManager {
       }
     });
   }
+
+  // --- Missing-entry helpers ----------------------------------------------
+
+  /// Persists a missing-track placeholder and returns its sentinel key
+  /// (`missing:<uuid>`). The key is appended to a playlist like any other.
+  Future<String> recordMissing({
+    required String title,
+    String? artist,
+    String? album,
+  }) async {
+    final key = '$_missingPrefix${_uuid()}';
+    await _db.into(_db.missingTracks).insertOnConflictUpdate(MissingTracksCompanion(
+          trackKey: Value(key),
+          title: Value(title),
+          artist: Value(artist),
+          album: Value(album),
+        ));
+    return key;
+  }
+
+  Future<MissingEntry?> readMissing(String key) async {
+    final row = await (_db.select(_db.missingTracks)..where((m) => m.trackKey.equals(key)))
+        .getSingleOrNull();
+    if (row == null) return null;
+    return MissingEntry(key: key, title: row.title, artist: row.artist, album: row.album);
+  }
+
+  static String _uuid() {
+    final r = Random.secure();
+    final now = DateTime.now().microsecondsSinceEpoch.toRadixString(36);
+    final suffix = List.generate(6, (_) => r.nextInt(36).toRadixString(36)).join();
+    return '$now$suffix';
+  }
 }
 
-/// Resolves stored track keys back to full [Track] objects, choosing the
-/// right backend per origin. Subsonic resolution is best-effort and may
-/// return null if the server is unreachable or the song was removed.
+/// Resolves stored track keys back to full [Track] / [PlaylistEntry]
+/// objects, choosing the right backend per origin. Subsonic resolution is
+/// best-effort and may return null if the server is unreachable.
 class TrackResolver {
   final LocalLibrary local;
   final SubsonicClient? Function() subsonic;
-  TrackResolver({required this.local, required this.subsonic});
+  final LocalPlaylistsManager playlists;
+  TrackResolver({required this.local, required this.subsonic, required this.playlists});
 
   Future<Track?> resolve(String key) async {
+    if (isMissingKey(key)) return null; // missing entries aren't playable
     final i = key.indexOf(':');
     if (i < 0) return null;
     final origin = key.substring(0, i);
@@ -166,13 +206,31 @@ class TrackResolver {
     return null;
   }
 
-  /// Resolves a list of keys, dropping any that can't be resolved (server
-  /// unreachable, song deleted). Preserves the input order for the rest.
+  /// Resolves a list of keys to plain [Track]s, dropping anything that
+  /// can't be played (missing entries, unreachable Subsonic). Use for
+  /// "Play all" flows where missing rows would only confuse the engine.
   Future<List<Track>> resolveAll(List<String> keys) async {
     final out = <Track>[];
     for (final k in keys) {
       final t = await resolve(k);
       if (t != null) out.add(t);
+    }
+    return out;
+  }
+
+  /// Resolves keys to mixed [PlaylistEntry] (track OR missing) preserving
+  /// input order. Used by the playlist detail view so missing imports
+  /// render as greyed-out placeholders.
+  Future<List<PlaylistEntry>> resolveEntries(List<String> keys) async {
+    final out = <PlaylistEntry>[];
+    for (final k in keys) {
+      if (isMissingKey(k)) {
+        final m = await playlists.readMissing(k);
+        if (m != null) out.add(m);
+      } else {
+        final t = await resolve(k);
+        if (t != null) out.add(TrackEntry(t));
+      }
     }
     return out;
   }

@@ -44,12 +44,55 @@ class RecentPlays extends Table {
   Set<Column> get primaryKey => {trackKey};
 }
 
-@DriftDatabase(tables: [Downloads, Favorites, LocalPlaylists, LocalPlaylistTracks, RecentPlays])
+/// Imported playlist entries whose source track couldn't be matched against
+/// any local file or configured Subsonic server. Stored under sentinel keys
+/// (`missing:<uuid>`) referenced from [LocalPlaylistTracks.trackKey] — keeps
+/// the schema for resolved tracks untouched.
+class MissingTracks extends Table {
+  TextColumn get trackKey => text()(); // 'missing:<uuid>'
+  TextColumn get title => text()();
+  TextColumn get artist => text().nullable()();
+  TextColumn get album => text().nullable()();
+  @override
+  Set<Column> get primaryKey => {trackKey};
+}
+
+/// User's wish list — tracks/albums they want to land on a Subsonic server
+/// (eventually via Lidarr; see lib/library/wishlist.dart).
+class Wishlist extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get title => text()();
+  TextColumn get artist => text().nullable()();
+  TextColumn get album => text().nullable()();
+  DateTimeColumn get requestedAt => dateTime()();
+  TextColumn get notes => text().nullable()();
+}
+
+@DriftDatabase(tables: [
+  Downloads,
+  Favorites,
+  LocalPlaylists,
+  LocalPlaylistTracks,
+  RecentPlays,
+  MissingTracks,
+  Wishlist,
+])
 class AppDb extends _$AppDb {
   AppDb() : super(_open());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+        onCreate: (m) => m.createAll(),
+        onUpgrade: (m, from, to) async {
+          if (from < 2) {
+            await m.createTable(missingTracks);
+            await m.createTable(wishlist);
+          }
+        },
+      );
 }
 
 LazyDatabase _open() => LazyDatabase(() async {

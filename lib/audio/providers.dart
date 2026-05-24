@@ -8,7 +8,9 @@ import '../domain.dart';
 import '../library/auto_queue.dart';
 import '../library/collections.dart';
 import '../library/downloads.dart';
+import '../library/importer.dart';
 import '../library/local.dart';
+import '../library/wishlist.dart';
 import '../subsonic/client.dart';
 import 'player.dart';
 
@@ -70,6 +72,7 @@ final playlistsProvider = Provider<LocalPlaylistsManager>((ref) =>
 final trackResolverProvider = Provider<TrackResolver>((ref) => TrackResolver(
       local: ref.watch(localLibraryProvider),
       subsonic: () => ref.read(subsonicProvider),
+      playlists: ref.watch(playlistsProvider),
     ));
 
 final autoQueueProvider = Provider<AutoQueueService>((ref) {
@@ -98,6 +101,18 @@ final playlistByIdProvider = FutureProvider.family<LocalPlaylist?, int>((ref, id
 /// Live track keys for a given playlist (drift-watched).
 final playlistKeysProvider = StreamProvider.family<List<String>, int>((ref, id) =>
     ref.watch(playlistsProvider).watchTrackKeys(id));
+
+final wishlistManagerProvider = Provider<WishlistManager>((ref) =>
+    WishlistManager(ref.watch(dbProvider)));
+
+final wishlistProvider = StreamProvider<List<WishlistData>>((ref) =>
+    ref.watch(wishlistManagerProvider).watchAll());
+
+final playlistImporterProvider = Provider<PlaylistImporter>((ref) => PlaylistImporter(
+      local: ref.watch(localLibraryProvider),
+      subsonic: () => ref.read(subsonicProvider),
+      playlists: ref.watch(playlistsProvider),
+    ));
 
 // ---- Player streams (cheap projections for UI) -----------------------------
 

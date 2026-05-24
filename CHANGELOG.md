@@ -7,6 +7,46 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-05-24
+
+Playlist import (from external apps) + wishlist for tracks you don't have yet.
+
+### Added
+- **Playlist import** (`Library → Import playlist…`) reads M3U / M3U8 and
+  digaudio JSON, matches each entry against the local library first and
+  then the active Subsonic server's `search3`. Each match is normalized
+  (lowercase, diacritic fold, punctuation stripped) so "Café del Mar" and
+  "cafe del mar" collide. Unmatched rows are recorded as **missing
+  entries** with a sentinel key (`missing:<uuid>`) — they appear in the
+  playlist as **greyed-out tiles** with a `cloud_off` icon and a
+  bookmark-add action to push them straight onto the wishlist.
+- **Wishlist** (`/wishlist`): drift-backed list of tracks/albums you want
+  on a server. Add manually via FAB, add from any missing playlist entry
+  in one tap, swipe to remove. Lidarr integration is **deferred** with a
+  documented hook point in `lib/library/wishlist.dart` (POST
+  `/api/v1/album/lookup` then `/api/v1/album` on `add(...)`).
+- **`PlaylistEntry` sealed type** (`TrackEntry` | `MissingEntry`) so
+  playlist UI handles mixed contents without branching everywhere.
+- **`MissingTracks` table** (sentinel-key approach — no costly recreation
+  of `LocalPlaylistTracks` to add nullable columns).
+- **`Wishlist` table** with `requestedAt` for ordering and an optional
+  `notes` field reserved for the Lidarr album id once that ships.
+- **drift schema v2** with a clean `onUpgrade` migration (creates the two
+  new tables; existing data untouched).
+- **`file_picker` dep** to open M3U / JSON files from device storage.
+
+### Changed
+- `TrackResolver` gains `resolveEntries(keys)` returning mixed
+  `PlaylistEntry` (used by the playlist detail view); the existing
+  `resolveAll(keys)` still returns `Track` only for play-all flows.
+- Library page Playlists tab gains: `Wishlist` tile, `Import playlist…`
+  entry, the existing Favorites / Local / Subsonic sections unchanged.
+
+### Notes
+- Spotify CSV and Apple Music exports aren't auto-detected yet — the M3U
+  path covers most exports out of common third-party tools; native
+  formats can be added with a single parser each.
+
 ## [0.4.0] — 2026-05-24
 
 Favorites, editable local playlists, metadata-based similarity engine, and

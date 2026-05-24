@@ -62,8 +62,8 @@ class _Body extends ConsumerWidget {
             onPressed: keys.isEmpty
                 ? null
                 : () async {
-                    final tracks = await resolver.resolveAll(keys);
-                    if (context.mounted) await _export(context, playlist, tracks);
+                    final entries = await resolver.resolveEntries(keys);
+                    if (context.mounted) await _export(context, playlist, entries);
                   },
           ),
           IconButton(
@@ -80,24 +80,30 @@ class _Body extends ConsumerWidget {
       ),
       body: keys.isEmpty
           ? const _Empty()
-          : FutureBuilder<List<Track>>(
-              future: resolver.resolveAll(keys),
+          : FutureBuilder<List<PlaylistEntry>>(
+              future: resolver.resolveEntries(keys),
               builder: (_, snap) {
                 if (!snap.hasData) return const Center(child: CircularProgressIndicator());
-                final tracks = snap.data!;
+                final entries = snap.data!;
+                final playable = entries.whereType<TrackEntry>().map((e) => e.track).toList();
+                final missingCount = entries.length - playable.length;
                 return Column(
                   children: [
                     Padding(
                       padding: const EdgeInsets.all(12),
                       child: Row(
                         children: [
-                          Text('${tracks.length} tracks',
-                              style: const TextStyle(color: Colors.white60, fontSize: 12)),
+                          Text(
+                            missingCount == 0
+                                ? '${entries.length} tracks'
+                                : '${playable.length} of ${entries.length} available',
+                            style: const TextStyle(color: Colors.white60, fontSize: 12),
+                          ),
                           const Spacer(),
                           FilledButton.icon(
                             icon: const Icon(Icons.play_arrow),
                             label: const Text('Play'),
-                            onPressed: tracks.isEmpty ? null : () => engine.setQueue(tracks),
+                            onPressed: playable.isEmpty ? null : () => engine.setQueue(playable),
                           ),
                         ],
                       ),
@@ -113,29 +119,13 @@ class _Body extends ConsumerWidget {
                           await mgr.reorder(playlist.id, reordered);
                         },
                         children: [
-                          for (var i = 0; i < tracks.length; i++)
-                            Dismissible(
-                              key: ValueKey('plr-${playlist.id}-${tracks[i].uniqueKey}-$i'),
-                              direction: DismissDirection.endToStart,
-                              background: Container(
-                                color: Colors.redAccent.withOpacity(0.5),
-                                alignment: Alignment.centerRight,
-                                padding: const EdgeInsets.only(right: 16),
-                                child: const Icon(Icons.delete),
-                              ),
-                              onDismissed: (_) => mgr.removeAt(playlist.id, i),
-                              child: Row(
-                                children: [
-                                  Expanded(child: TrackTile(queue: tracks, index: i)),
-                                  ReorderableDragStartListener(
-                                    index: i,
-                                    child: const Padding(
-                                      padding: EdgeInsets.symmetric(horizontal: 8),
-                                      child: Icon(Icons.drag_indicator, color: Colors.white38),
-                                    ),
-                                  ),
-                                ],
-                              ),
+                          for (var i = 0; i < entries.length; i++)
+                            _EntryRow(
+                              key: ValueKey('plr-${playlist.id}-$i-${keys[i]}'),
+                              entry: entries[i],
+                              playableQueue: playable,
+                              index: i,
+                              onRemove: () => mgr.removeAt(playlist.id, i),
                             ),
                         ],
                       ),
@@ -146,6 +136,97 @@ class _Body extends ConsumerWidget {
             ),
     );
   }
+}
+
+class _EntryRow extends ConsumerWidget {
+  final PlaylistEntry entry;
+  final List<Track> playableQueue;
+  final int index;
+  final VoidCallback onRemove;
+  const _EntryRow({
+    super.key,
+    required this.entry,
+    required this.playableQueue,
+    required this.index,
+    required this.onRemove,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Dismissible(
+      key: ValueKey('dis-$index-${entry.displayTitle}'),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        color: Colors.redAccent.withOpacity(0.5),
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 16),
+        child: const Icon(Icons.delete),
+      ),
+      onDismissed: (_) => onRemove(),
+      child: Row(
+        children: [
+          Expanded(
+            child: switch (entry) {
+              TrackEntry(:final track) => TrackTile(
+                  queue: playableQueue,
+                  index: playableQueue.indexOf(track).clamp(0, playableQueue.length - 1),
+                ),
+              MissingEntry m => _MissingTile(entry: m),
+            },
+          ),
+          ReorderableDragStartListener(
+            index: index,
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 8),
+              child: Icon(Icons.drag_indicator, color: Colors.white38),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MissingTile extends ConsumerWidget {
+  final MissingEntry entry;
+  const _MissingTile({required this.entry});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => Opacity(
+        opacity: 0.5,
+        child: ListTile(
+          leading: Container(
+            width: 48, height: 48,
+            decoration: BoxDecoration(
+              color: const Color(0xFF1E1E22),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: Colors.white24, width: 1),
+            ),
+            child: const Icon(Icons.cloud_off, color: Colors.white38),
+          ),
+          title: Text(entry.title, style: const TextStyle(decoration: TextDecoration.lineThrough)),
+          subtitle: Text(
+            [entry.artist, entry.album].whereType<String>().join(' • '),
+            style: const TextStyle(fontSize: 11),
+          ),
+          trailing: IconButton(
+            tooltip: 'Add to wishlist',
+            icon: const Icon(Icons.bookmark_add_outlined),
+            onPressed: () async {
+              await ref.read(wishlistManagerProvider).add(
+                    title: entry.title,
+                    artist: entry.artist,
+                    album: entry.album,
+                  );
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Added to wishlist')),
+                );
+              }
+            },
+          ),
+        ),
+      );
 }
 
 class _Empty extends StatelessWidget {
@@ -188,22 +269,30 @@ Future<bool?> _confirmDelete(BuildContext context, String name) => showDialog<bo
       ),
     );
 
-Future<void> _export(BuildContext context, LocalPlaylist pl, List<Track> tracks) async {
-  // Portable JSON: keeps origin so it can be re-imported in another digaudio
-  // install. Subsonic stream URLs and credentials are NOT included.
+Future<void> _export(BuildContext context, LocalPlaylist pl, List<PlaylistEntry> entries) async {
+  // Portable JSON: preserves origin AND missing entries so a roundtrip keeps
+  // the user's intent. No credentials, no stream URLs.
   final payload = {
     'format': 'digaudio.playlist.v1',
     'name': pl.name,
     'exportedAt': DateTime.now().toIso8601String(),
-    'tracks': tracks
-        .map((t) => {
-              'key': t.uniqueKey,
-              'title': t.title,
-              'artist': t.artist,
-              'album': t.album,
-              'year': t.year,
-              'duration_ms': t.duration?.inMilliseconds,
-              'genre': t.genre,
+    'tracks': entries
+        .map((e) => switch (e) {
+              TrackEntry(:final track) => {
+                  'key': track.uniqueKey,
+                  'title': track.title,
+                  'artist': track.artist,
+                  'album': track.album,
+                  'year': track.year,
+                  'duration_ms': track.duration?.inMilliseconds,
+                  'genre': track.genre,
+                },
+              MissingEntry m => {
+                  'missing': true,
+                  'title': m.title,
+                  'artist': m.artist,
+                  'album': m.album,
+                },
             })
         .toList(),
   };
@@ -213,4 +302,3 @@ Future<void> _export(BuildContext context, LocalPlaylist pl, List<Track> tracks)
   await file.writeAsString(const JsonEncoder.withIndent('  ').convert(payload));
   await Share.shareXFiles([XFile(file.path, mimeType: 'application/json')], subject: pl.name);
 }
-
