@@ -80,6 +80,15 @@ class LocalLibrary {
   Future<List<Track>> getSongsByArtist(String artistId) async =>
       (await getAllSongs()).where((t) => t.artistId == artistId).toList();
 
+  /// Resolves a track id (the MediaStore _ID, as a String) back to a [Track].
+  Future<Track?> getSongById(String id) async {
+    final all = await getAllSongs();
+    for (final t in all) {
+      if (t.id == id) return t;
+    }
+    return null;
+  }
+
   Future<Uint8List?> getArtwork(String songId, {int size = 400}) async {
     final id = int.tryParse(songId);
     if (id == null) return null;

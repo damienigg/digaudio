@@ -7,6 +7,51 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-05-24
+
+Favorites, editable local playlists, metadata-based similarity engine, and
+auto-queue continuation.
+
+### Added
+- **Favorites** — heart icon in the track actions sheet; reactive across
+  the UI (drift `watchKeys`). Dedicated `/favorites` view, accessible from
+  the Library tab.
+- **Local playlists** — create / rename / delete; add tracks via the track
+  actions sheet (long-press or "…" → "Add to playlist"). Detail view at
+  `/playlist/local/:id` with drag-to-reorder, swipe-to-remove, and
+  play-all.
+- **Playlist export** — JSON (`digaudio.playlist.v1`) shared via the OS
+  share sheet (`share_plus`). Track origin is preserved; no credentials or
+  Subsonic stream URLs are written.
+- **`Similarity` service** — single metadata-based scoring algorithm
+  (artist +10, album +5, genre +6, year ±5 +3, duration ±60 s +1) used for:
+  - the "Suggested next" hint shown after adding a track to favorites or a
+    playlist,
+  - the auto-queue (see below).
+- **`AutoQueueService`** — when the playback queue is about to run out,
+  appends a similar track from the library (local songs + a cached
+  Subsonic random sample of 200). Same scoring as the suggestion hint, so
+  both surfaces behave consistently.
+- **`genre` field** on `Track` (parsed from Subsonic responses) — feeds
+  into the similarity score.
+- **Subsonic `getSong(id)`** and **`LocalLibrary.getSongById(id)`** —
+  resolve stored track keys (`origin:id`) back to full `Track` objects on
+  playlist / favorites load.
+
+### Changed
+- Track tile shows a small heart marker next to favorites; the trailing
+  "…" button and long-press both open the actions sheet.
+- Library / Playlists tab gains sections: **Favorites** (with live count),
+  **Local playlists**, **Subsonic playlists**.
+
+### Notes
+- Subsonic candidate pool for the similarity algorithm is capped at 200
+  random songs to keep the per-launch fetch cheap. The server's
+  `getSimilarSongs2` endpoint is a planned enhancement to deepen the pool
+  for Subsonic-origin seeds.
+- Local tracks have no `genre` for now (Android MediaStore exposes it via
+  a separate `audio_genres` join that's costly per-song; deferred).
+
 ## [0.3.0] — 2026-05-24
 
 Equalizer (Android) + Settings restructured as a hub.

@@ -20,6 +20,7 @@ class Track {
   final int? trackNumber;
   final int? bitRate;
   final String? contentType;
+  final String? genre;
   final MediaOrigin origin;
 
   const Track({
@@ -36,6 +37,7 @@ class Track {
     this.trackNumber,
     this.bitRate,
     this.contentType,
+    this.genre,
   });
 
   /// Unique key across all origins (collision-free).

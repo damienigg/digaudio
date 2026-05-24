@@ -1,7 +1,7 @@
 name: digaudio
 description: "digaudio — a lightweight, modern, high-quality audio player (local + Subsonic)."
 publish_to: 'none'
-version: 0.3.0+3
+version: 0.4.0+4
 
 environment:
   sdk: ^3.5.4
@@ -39,6 +39,9 @@ dependencies:
   # UI
   cached_network_image: ^3.4.1
   palette_generator: ^0.3.3+5
+
+  # Sharing (playlist export)
+  share_plus: ^10.1.2
 
 dev_dependencies:
   flutter_test:

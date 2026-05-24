@@ -3,8 +3,10 @@ import 'package:go_router/go_router.dart';
 
 import 'ui/album_page.dart';
 import 'ui/artist_page.dart';
+import 'ui/favorites_page.dart';
 import 'ui/home.dart';
 import 'ui/library_page.dart';
+import 'ui/local_playlist_page.dart';
 import 'ui/now_playing.dart';
 import 'ui/playlist_page.dart';
 import 'ui/search.dart';
@@ -42,8 +44,13 @@ GoRouter buildRouter() => GoRouter(
           builder: (_, s) => ArtistPage(origin: s.pathParameters['origin']!, id: s.pathParameters['id']!),
         ),
         GoRoute(
+          path: '/playlist/local/:id',
+          builder: (_, s) => LocalPlaylistPage(playlistId: int.parse(s.pathParameters['id']!)),
+        ),
+        GoRoute(
           path: '/playlist/:origin/:id',
           builder: (_, s) => PlaylistPage(origin: s.pathParameters['origin']!, id: s.pathParameters['id']!),
         ),
+        GoRoute(path: '/favorites', builder: (_, __) => const FavoritesPage()),
       ],
     );

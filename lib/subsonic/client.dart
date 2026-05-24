@@ -153,6 +153,15 @@ class SubsonicClient {
     );
   }
 
+  Future<Track?> getSong(String id) async {
+    try {
+      final r = await _get('getSong', {'id': id});
+      return _parseSong(r['song'] as Map<String, dynamic>);
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<String?> getLyrics({String? artist, String? title}) async {
     try {
       final r = await _get('getLyrics', {
@@ -193,6 +202,7 @@ class SubsonicClient {
         trackNumber: j['track'] as int?,
         bitRate: j['bitRate'] as int?,
         contentType: j['contentType'] as String?,
+        genre: j['genre'] as String?,
         origin: MediaOrigin.subsonic,
       );
 

@@ -4,10 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../audio/providers.dart';
 import '../../domain.dart';
 import 'artwork.dart';
+import 'track_actions.dart';
 
 /// One row in any list of tracks. Tapping plays from this index in the given
-/// queue (so playback context — album/playlist — is preserved). Long-press
-/// reveals a sheet with track actions.
+/// queue (so playback context — album/playlist — is preserved). Long-press or
+/// the trailing button opens the per-track actions sheet (favorites,
+/// playlists, queue ops).
 class TrackTile extends ConsumerWidget {
   final List<Track> queue;
   final int index;
@@ -19,9 +21,12 @@ class TrackTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final t = queue[index];
     final engine = ref.watch(audioEngineProvider);
+    final favKeys = ref.watch(favoriteKeysProvider).valueOrNull ?? const [];
+    final isFav = favKeys.contains(t.uniqueKey);
+    final openActions = onMore ?? () => showTrackActions(context, ref, t);
     return InkWell(
       onTap: () => engine.setQueue(queue, initialIndex: index),
-      onLongPress: onMore,
+      onLongPress: openActions,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         child: Row(
@@ -32,8 +37,18 @@ class TrackTile extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(t.title, maxLines: 1, overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                  Row(
+                    children: [
+                      if (isFav) ...[
+                        const Icon(Icons.favorite, size: 12, color: Color(0xFF1ED760)),
+                        const SizedBox(width: 4),
+                      ],
+                      Expanded(
+                        child: Text(t.title, maxLines: 1, overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 2),
                   Text(t.displayArtist, maxLines: 1, overflow: TextOverflow.ellipsis,
                       style: const TextStyle(color: Colors.white60, fontSize: 12)),
@@ -48,7 +63,7 @@ class TrackTile extends ConsumerWidget {
               ),
             IconButton(
               icon: const Icon(Icons.more_vert, color: Colors.white54),
-              onPressed: onMore,
+              onPressed: openActions,
             ),
           ],
         ),

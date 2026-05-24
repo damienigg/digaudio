@@ -31,6 +31,8 @@ class _DigaudioAppState extends ConsumerState<DigaudioApp> {
       if (prefs.eqGainsDb.isNotEmpty) {
         await engine.applyEqGains(prefs.eqGainsDb);
       }
+      // Auto-queue similar songs as the playback queue runs out.
+      ref.read(autoQueueProvider).start();
     });
   }
 

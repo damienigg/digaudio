@@ -135,27 +135,85 @@ class _PlaylistsTab extends ConsumerWidget {
   const _PlaylistsTab();
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(subsonicPlaylistsProvider);
-    return state.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('$e', style: const TextStyle(color: Colors.redAccent))),
-      data: (lists) => lists.isEmpty
-          ? const _Empty('No playlists.\nCreate playlists on your Subsonic server, or add local ones.')
-          : ListView.separated(
-              itemCount: lists.length,
-              separatorBuilder: (_, __) => const Divider(height: 1, color: Colors.white12),
-              itemBuilder: (_, i) {
-                final pl = lists[i];
-                return ListTile(
-                  leading: Artwork(coverArt: pl.coverArt, origin: pl.origin, size: 48),
-                  title: Text(pl.name),
-                  subtitle: Text('${pl.songCount ?? 0} tracks'),
-                  onTap: () => context.push('/playlist/${pl.origin.name}/${pl.id}'),
-                );
-              },
-            ),
+    final subsonicState = ref.watch(subsonicPlaylistsProvider);
+    final favKeys = ref.watch(favoriteKeysProvider).valueOrNull ?? const [];
+    final localState = ref.watch(localPlaylistsProvider);
+    return ListView(
+      children: [
+        ListTile(
+          leading: const CircleAvatar(
+            backgroundColor: Color(0xFF1ED760),
+            child: Icon(Icons.favorite, color: Colors.black),
+          ),
+          title: const Text('Favorites'),
+          subtitle: Text('${favKeys.length} tracks'),
+          onTap: () => context.push('/favorites'),
+        ),
+        const Divider(height: 1, color: Colors.white12),
+        const _SectionHeader('Local playlists'),
+        localState.when(
+          loading: () => const Padding(
+            padding: EdgeInsets.all(16),
+            child: Center(child: CircularProgressIndicator()),
+          ),
+          error: (e, _) => Padding(padding: const EdgeInsets.all(16), child: Text('$e')),
+          data: (lists) => lists.isEmpty
+              ? const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Text('No local playlists yet — long-press a track and "Add to playlist" to create one.',
+                      style: TextStyle(color: Colors.white54, fontSize: 12)),
+                )
+              : Column(
+                  children: [
+                    for (final pl in lists)
+                      ListTile(
+                        leading: const Icon(Icons.queue_music),
+                        title: Text(pl.name),
+                        onTap: () => context.push('/playlist/local/${pl.id}'),
+                      ),
+                  ],
+                ),
+        ),
+        const Divider(height: 1, color: Colors.white12),
+        const _SectionHeader('Subsonic playlists'),
+        subsonicState.when(
+          loading: () => const Padding(
+            padding: EdgeInsets.all(16),
+            child: Center(child: CircularProgressIndicator()),
+          ),
+          error: (e, _) => Padding(padding: const EdgeInsets.all(16), child: Text('$e')),
+          data: (lists) => lists.isEmpty
+              ? const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Text('No Subsonic playlists.',
+                      style: TextStyle(color: Colors.white54, fontSize: 12)),
+                )
+              : Column(
+                  children: [
+                    for (final pl in lists)
+                      ListTile(
+                        leading: Artwork(coverArt: pl.coverArt, origin: pl.origin, size: 48),
+                        title: Text(pl.name),
+                        subtitle: Text('${pl.songCount ?? 0} tracks'),
+                        onTap: () => context.push('/playlist/${pl.origin.name}/${pl.id}'),
+                      ),
+                  ],
+                ),
+        ),
+      ],
     );
   }
+}
+
+class _SectionHeader extends StatelessWidget {
+  final String text;
+  const _SectionHeader(this.text);
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
+        child: Text(text,
+            style: const TextStyle(color: Colors.white60, fontSize: 11, letterSpacing: 1.5)),
+      );
 }
 
 class _Empty extends StatelessWidget {

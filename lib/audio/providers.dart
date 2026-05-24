@@ -5,6 +5,8 @@ import '../core/db.dart';
 import '../core/playback_prefs.dart';
 import '../core/settings.dart';
 import '../domain.dart';
+import '../library/auto_queue.dart';
+import '../library/collections.dart';
 import '../library/downloads.dart';
 import '../library/local.dart';
 import '../subsonic/client.dart';
@@ -58,6 +60,44 @@ final audioEngineProvider = Provider<AudioEngine>((ref) {
 });
 
 final playbackPrefsProvider = Provider<PlaybackPrefs>((_) => PlaybackPrefs());
+
+final favoritesProvider = Provider<FavoritesManager>((ref) =>
+    FavoritesManager(ref.watch(dbProvider)));
+
+final playlistsProvider = Provider<LocalPlaylistsManager>((ref) =>
+    LocalPlaylistsManager(ref.watch(dbProvider)));
+
+final trackResolverProvider = Provider<TrackResolver>((ref) => TrackResolver(
+      local: ref.watch(localLibraryProvider),
+      subsonic: () => ref.read(subsonicProvider),
+    ));
+
+final autoQueueProvider = Provider<AutoQueueService>((ref) {
+  final svc = AutoQueueService(
+    engine: ref.watch(audioEngineProvider),
+    local: ref.watch(localLibraryProvider),
+    subsonic: () => ref.read(subsonicProvider),
+  );
+  ref.onDispose(svc.dispose);
+  return svc;
+});
+
+/// Stream of favorite track keys (drift-watched). UI uses this to render
+/// the heart toggle reactively.
+final favoriteKeysProvider = StreamProvider<List<String>>((ref) =>
+    ref.watch(favoritesProvider).watchKeys());
+
+/// Stream of all local playlists.
+final localPlaylistsProvider = StreamProvider<List<LocalPlaylist>>((ref) =>
+    ref.watch(playlistsProvider).watchAll());
+
+/// Single playlist by id (one-shot read; rebuilds when invalidated).
+final playlistByIdProvider = FutureProvider.family<LocalPlaylist?, int>((ref, id) =>
+    ref.watch(playlistsProvider).get(id));
+
+/// Live track keys for a given playlist (drift-watched).
+final playlistKeysProvider = StreamProvider.family<List<String>, int>((ref, id) =>
+    ref.watch(playlistsProvider).watchTrackKeys(id));
 
 // ---- Player streams (cheap projections for UI) -----------------------------
 
