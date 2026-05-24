@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../audio/providers.dart';
 import '../../domain.dart';
+import '../../library/downloads.dart';
+import '../../subsonic/client.dart';
 import 'artwork.dart';
 
 /// Bottom sheet with the per-track actions: favorites, playlists, queue ops.
@@ -74,6 +76,12 @@ class _TrackActionsSheet extends ConsumerWidget {
                 engine.appendToQueue(track);
               },
             ),
+            if (track.origin == MediaOrigin.subsonic)
+              _DownloadTile(
+                track: track,
+                downloads: ref.read(downloadsProvider),
+                subsonic: ref.read(subsonicProvider),
+              ),
           ],
         ),
       ),
@@ -193,6 +201,48 @@ Future<String?> _askName(BuildContext context) async {
     ),
   );
   return (ok == true) ? c.text.trim() : null;
+}
+
+class _DownloadTile extends StatelessWidget {
+  final Track track;
+  final DownloadsManager downloads;
+  final SubsonicClient? subsonic;
+  const _DownloadTile({required this.track, required this.downloads, required this.subsonic});
+
+  @override
+  Widget build(BuildContext context) {
+    final cached = downloads.cachedPathFor(track) != null;
+    return ListTile(
+      leading: Icon(cached ? Icons.download_done : Icons.download_for_offline),
+      title: Text(cached ? 'Remove download' : 'Download for offline'),
+      subtitle: subsonic == null && !cached
+          ? const Text('No active server', style: TextStyle(fontSize: 11, color: Colors.white38))
+          : null,
+      enabled: cached || subsonic != null,
+      onTap: () async {
+        final messenger = ScaffoldMessenger.of(context);
+        Navigator.pop(context);
+        if (cached) {
+          await downloads.remove(track);
+          messenger.showSnackBar(const SnackBar(content: Text('Download removed')));
+          return;
+        }
+        if (subsonic == null) return;
+        messenger.showSnackBar(SnackBar(
+          content: Text('Downloading "${track.title}"…'),
+          duration: const Duration(minutes: 5),
+        ));
+        try {
+          await downloads.download(track, subsonic!);
+          messenger.hideCurrentSnackBar();
+          messenger.showSnackBar(SnackBar(content: Text('Downloaded "${track.title}"')));
+        } catch (e) {
+          messenger.hideCurrentSnackBar();
+          messenger.showSnackBar(SnackBar(content: Text('Download failed: $e')));
+        }
+      },
+    );
+  }
 }
 
 Future<void> _suggestAfterPlaylistAdd(

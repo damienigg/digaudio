@@ -417,6 +417,25 @@ class _PlaybackPageState extends ConsumerState<PlaybackPage> {
         children: [
           SwitchListTile.adaptive(
             contentPadding: EdgeInsets.zero,
+            title: const Text('Auto-queue similar tracks',
+                style: TextStyle(fontWeight: FontWeight.w700)),
+            subtitle: const Text(
+              'When the queue is about to end, append a similar track from '
+              'your library (same algorithm as the "Suggested next" hint).',
+              style: TextStyle(color: Colors.white54, fontSize: 12),
+            ),
+            value: ref.watch(playbackPrefsProvider).autoQueueEnabled,
+            onChanged: (v) async {
+              final prefs = ref.read(playbackPrefsProvider);
+              prefs.autoQueueEnabled = v;
+              await prefs.save();
+              ref.read(autoQueueProvider).enabled = v;
+              setState(() {});
+            },
+          ),
+          const Divider(height: 32, color: Colors.white12),
+          SwitchListTile.adaptive(
+            contentPadding: EdgeInsets.zero,
             title: const Text('Equalizer', style: TextStyle(fontWeight: FontWeight.w700)),
             subtitle: Text(
               params.bands.isEmpty

@@ -7,6 +7,29 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.7.0] — 2026-05-24
+
+User-facing controls for the two features that previously had no UI:
+auto-queue continuation and per-track offline downloads.
+
+### Added
+- **Auto-queue toggle** (`Settings → Playback`) — switch to disable the
+  similarity-based auto-append at the end of the playback queue.
+  `PlaybackPrefs.autoQueueEnabled` persists across launches (default ON).
+  Restored at app startup and pushed straight into `AutoQueueService`.
+- **Download for offline / Remove download** action in the track actions
+  sheet (only shown for Subsonic-origin tracks). Streams the track to the
+  app docs dir, records it in the `Downloads` drift table, and the audio
+  engine transparently prefers the cached file over re-streaming.
+
+### Notes
+- Download progress is surfaced as a sticky snackbar that switches to a
+  completion / failure snackbar at the end. Per-track progress percentage
+  isn't shown live; that can wire to `DownloadsManager.progressStream` in
+  a future commit when it's worth the noise.
+- A "downloaded" badge on the track tile isn't shown yet — the sheet
+  reflects the current cache state when opened, which is enough for now.
+
 ## [0.6.0] — 2026-05-24
 
 CI: GitHub Actions builds and releases the Android APK automatically.
