@@ -7,6 +7,24 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.12.1] — 2026-05-25
+
+### Added (Stats polish)
+- **Year-grid heatmap** (GitHub-contributions style) replaces the
+  30-day strip. 7 rows × ~53 cols, oldest left / today right. Cell
+  intensity normalises against the year's max so a quiet listener
+  still sees relative shape.
+- **Monthly tops** — one block per month for the last 12 months,
+  newest first; each block shows the 3 most-played tracks of the
+  month with play counts. Tap a track → engine plays it.
+
+### Internal
+- `PlayHistoryManager.topPerMonth(months)` — single SQL pass via
+  `strftime('%Y-%m', played_at, 'unixepoch')` for grouping; UI
+  resolves only the top 3 per month (≤ 36 lookups for a year).
+- `_load()` now fetches the year-long heatmap + monthly tops alongside
+  the existing payload — still one async pass, no extra rebuilds.
+
 ## [0.12.0] — 2026-05-25
 
 ### Changed (theme-awareness sweep)

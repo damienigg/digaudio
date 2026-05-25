@@ -38,15 +38,15 @@ class _StatsState extends ConsumerState<StatsPage> {
   /// Single round-trip: pull top 50 trackKeys, resolve them once, then
   /// derive top-tracks (first 10) AND top-artists (group all 50). This
   /// is the same payload powering the "Most played" smart-mix button.
-  /// Streaks + heatmap are window-independent (always full history /
-  /// last 30 days respectively).
+  /// Streaks / year heatmap / monthly tops are window-independent
+  /// (always full history / last 365 days / last 12 months).
   static Future<_StatsData> _load(
       PlayHistoryManager h, TrackResolver r, int? sinceDays) async {
     final total = await h.totalPlays(sinceDays: sinceDays);
     final unique = await h.uniqueTracks(sinceDays: sinceDays);
     final days = await h.listeningDays(sinceDays: sinceDays);
     final streaks = await h.streaks();
-    final heatmap = await h.dailyCounts(days: 30);
+    final heatmap = await h.dailyCounts(days: 365);
     final tops = await h.topTracks(sinceDays: sinceDays, limit: 50);
     final tracks = <(Track, int)>[];
     for (final e in tops) {
@@ -60,6 +60,22 @@ class _StatsState extends ConsumerState<StatsPage> {
     }
     final topArtists = artistCounts.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
+
+    // Resolve monthly tops once. For each month, take the top 3 trackKeys
+    // and resolve to Tracks — only 36 lookups for a year of history.
+    final rawMonthly = await h.topPerMonth(12);
+    final monthly = <(String month, List<(Track track, int count)>)>[];
+    final monthKeys = rawMonthly.keys.toList()..sort((a, b) => b.compareTo(a));
+    for (final m in monthKeys) {
+      final entries = rawMonthly[m]!.take(3).toList();
+      final resolved = <(Track, int)>[];
+      for (final e in entries) {
+        final t = await r.resolve(e.trackKey);
+        if (t != null) resolved.add((t, e.count));
+      }
+      if (resolved.isNotEmpty) monthly.add((m, resolved));
+    }
+
     return _StatsData(
       totalPlays: total,
       uniqueTracks: unique,
@@ -70,6 +86,7 @@ class _StatsState extends ConsumerState<StatsPage> {
       topTracks: tracks.take(10).toList(),
       topArtists: topArtists.take(10).map((e) => (e.key, e.value)).toList(),
       mixSeed: tracks.map((e) => e.$1).toList(),
+      monthlyTops: monthly,
     );
   }
 
@@ -109,8 +126,8 @@ class _StatsState extends ConsumerState<StatsPage> {
               const SizedBox(height: 12),
               _Streaks(current: data.currentStreak, longest: data.longestStreak),
               const SizedBox(height: 16),
-              const _SectionHeader('Last 30 days'),
-              _Heatmap(counts: data.heatmap),
+              const _SectionHeader('Last 365 days'),
+              _YearHeatmap(counts: data.heatmap),
               const SizedBox(height: 16),
               if (data.mixSeed.isNotEmpty) ...[
                 _PlayMixButton(seed: data.mixSeed),
@@ -127,6 +144,13 @@ class _StatsState extends ConsumerState<StatsPage> {
                 const _EmptyHint('No plays in this window yet.')
               else
                 ...data.topArtists.map((e) => _TopArtistRow(name: e.$1, count: e.$2)),
+              const SizedBox(height: 16),
+              const _SectionHeader('Monthly tops'),
+              if (data.monthlyTops.isEmpty)
+                const _EmptyHint('No monthly history yet.')
+              else
+                ...data.monthlyTops
+                    .map((m) => _MonthBlock(yyyymm: m.$1, tracks: m.$2)),
             ],
           );
         },
@@ -141,13 +165,16 @@ class _StatsData {
   final int listeningDays;
   final int currentStreak;
   final int longestStreak;
-  /// `date → play count` for the last 30 days; missing keys = 0.
+  /// `date → play count` for the last 365 days; missing keys = 0.
   final Map<DateTime, int> heatmap;
   final List<(Track, int)> topTracks;
   final List<(String, int)> topArtists;
   // Full 50-track seed for the "Most played" smart mix. Order = play-count
   // descending, so the queue is itself a rank-sorted mix.
   final List<Track> mixSeed;
+  /// `YYYY-MM → top 3 tracks` for the last 12 months, newest first.
+  /// Already-resolved Tracks so the renderer is sync.
+  final List<(String month, List<(Track, int)>)> monthlyTops;
   _StatsData({
     required this.totalPlays,
     required this.uniqueTracks,
@@ -158,6 +185,7 @@ class _StatsData {
     required this.topTracks,
     required this.topArtists,
     required this.mixSeed,
+    required this.monthlyTops,
   });
 }
 
@@ -267,43 +295,146 @@ class _StreakChip extends StatelessWidget {
       );
 }
 
-/// 30-day heatmap row. Each square = one day, intensity = play count
-/// normalised against the window's max. Days with zero plays render as
-/// white12 (visible but inert). Oldest left, today right.
-class _Heatmap extends StatelessWidget {
+/// GitHub-contributions-style year heatmap. 7 rows × ~53 cols; rows
+/// = days of week (Mon top, Sun bottom); cols = ISO weeks; oldest left,
+/// today right. Cell intensity normalises against the window's max so
+/// a quiet listener still sees relative shape. Cells before the start
+/// of the window OR after today render blank (no slot).
+///
+/// Width is 53 × ~7dp ≈ 370dp — fits a phone in portrait without
+/// horizontal scroll, just barely. If a future device is narrower
+/// we'd swap to a SingleChildScrollView wrapper.
+class _YearHeatmap extends StatelessWidget {
   final Map<DateTime, int> counts;
-  const _Heatmap({required this.counts});
+  const _YearHeatmap({required this.counts});
+
+  static const _cellSize = 5.5;
+  static const _gap = 1.5;
 
   @override
   Widget build(BuildContext context) {
     final maxCount = counts.values.fold<int>(0, (a, b) => b > a ? b : a);
     final now = DateTime.now();
     final today = DateTime.utc(now.year, now.month, now.day);
+    final oldest = today.subtract(const Duration(days: 364));
+    // Align the grid to Monday on the left so columns are clean weeks.
+    final daysBackToMonday = (oldest.weekday - DateTime.monday) % 7;
+    final firstColDate = oldest.subtract(Duration(days: daysBackToMonday));
+    final totalDays = today.difference(firstColDate).inDays + 1;
+    final cols = (totalDays / 7).ceil();
+
     return SizedBox(
-      height: 16,
+      height: 7 * (_cellSize + _gap) - _gap,
       child: Row(
         children: [
-          for (var i = 29; i >= 0; i--)
+          for (var w = 0; w < cols; w++) ...[
+            if (w > 0) const SizedBox(width: _gap),
             Expanded(
-              child: () {
-                final d = today.subtract(Duration(days: i));
-                final c = counts[d] ?? 0;
-                final t = maxCount == 0 ? 0.0 : (c / maxCount).clamp(0.0, 1.0);
-                return Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 1),
-                  decoration: BoxDecoration(
-                    color: c == 0
-                        ? context.dividerSoft
-                        : Color.lerp(context.outlineStrong, _accent, t),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                );
-              }(),
+              child: Column(
+                children: [
+                  for (var d = 0; d < 7; d++) ...[
+                    if (d > 0) const SizedBox(height: _gap),
+                    Expanded(
+                      child: () {
+                        final cellDate =
+                            firstColDate.add(Duration(days: w * 7 + d));
+                        if (cellDate.isBefore(oldest) ||
+                            cellDate.isAfter(today)) {
+                          return const SizedBox();
+                        }
+                        final c = counts[cellDate] ?? 0;
+                        final t = maxCount == 0
+                            ? 0.0
+                            : (c / maxCount).clamp(0.0, 1.0);
+                        return Container(
+                          decoration: BoxDecoration(
+                            color: c == 0
+                                ? context.dividerSoft
+                                : Color.lerp(
+                                    context.outlineStrong, _accent, t),
+                            borderRadius: BorderRadius.circular(1.5),
+                          ),
+                        );
+                      }(),
+                    ),
+                  ],
+                ],
+              ),
             ),
+          ],
         ],
       ),
     );
   }
+}
+
+/// One month's leaderboard: title row (Mar 2026) + the 3 most-played
+/// tracks of the month with play counts. Tap row → engine.playSingle.
+class _MonthBlock extends ConsumerWidget {
+  final String yyyymm; // "2026-03"
+  final List<(Track, int)> tracks;
+  const _MonthBlock({required this.yyyymm, required this.tracks});
+
+  static const _months = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  ];
+
+  String _label() {
+    final parts = yyyymm.split('-');
+    final y = int.tryParse(parts.first) ?? 0;
+    final m = int.tryParse(parts.last) ?? 1;
+    return '${_months[(m - 1).clamp(0, 11)]} $y';
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(_label(),
+                style: TextStyle(
+                    color: context.textSecondary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700)),
+            const SizedBox(height: 4),
+            for (final (t, c) in tracks)
+              InkWell(
+                onTap: () => ref.read(audioEngineProvider).playSingle(t),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(t.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 13)),
+                            Text(t.displayArtist,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                    color: context.textTertiary,
+                                    fontSize: 11)),
+                          ],
+                        ),
+                      ),
+                      Text('$c×',
+                          style: const TextStyle(
+                              color: _accent,
+                              fontWeight: FontWeight.w700,
+                              fontFeatures: [FontFeature.tabularFigures()])),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
+      );
 }
 
 class _PlayMixButton extends ConsumerWidget {

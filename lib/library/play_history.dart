@@ -126,6 +126,30 @@ class PlayHistoryManager {
     return {for (final r in rows) DateTime.parse(r.read<String>('d')): r.read<int>('c')};
   }
 
+  /// `YYYY-MM` → top trackKeys (count desc) for the last [months]
+  /// calendar months. UI resolves the keys to Tracks once and renders
+  /// monthly leaderboards in the Stats page.
+  Future<Map<String, List<({String trackKey, int count})>>> topPerMonth(int months) async {
+    final cutoff = DateTime.now().subtract(Duration(days: months * 31));
+    final rows = await _db.customSelect(
+      "SELECT track_key, strftime('%Y-%m', played_at, 'unixepoch') AS m, COUNT(*) AS c "
+      "FROM recent_plays WHERE played_at >= ? "
+      "GROUP BY track_key, m "
+      "ORDER BY m DESC, c DESC",
+      variables: [Variable<int>(cutoff.millisecondsSinceEpoch ~/ 1000)],
+      readsFrom: {_db.recentPlays},
+    ).get();
+    final out = <String, List<({String trackKey, int count})>>{};
+    for (final r in rows) {
+      final m = r.read<String>('m');
+      out.putIfAbsent(m, () => []).add((
+        trackKey: r.read<String>('track_key'),
+        count: r.read<int>('c'),
+      ));
+    }
+    return out;
+  }
+
   /// Most-recent N distinct trackKeys, most-recent first. Powers the
   /// Android Auto "Recently played" browsable node.
   Future<List<String>> recentUnique(int n) async {
