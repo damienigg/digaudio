@@ -1,4 +1,4 @@
-# Features — digaudio (v0.24.1)
+# Features — digaudio (v0.25.0)
 
 What's shipped, where to find it. Each row gives the entry point + a one-line description. **TEST_PLAN.md** covers acceptance tests, **TODO.md** covers what's left.
 
@@ -134,6 +134,7 @@ What's shipped, where to find it. Each row gives the entry point + a one-line de
 | **Notification rich actions** (skip 10 s back / forward) | ✓ v0.23.1 |
 | Bluetooth controls | ✓ |
 | **Quick Settings tile** (Android system shade) | ✓ v0.20.0 — user drags it in once |
+| **Homescreen widget** (mini-player, 4×1 cell) | ✓ v0.25.0 — long-press homescreen → Widgets → drag "digaudio" |
 | Android Auto browsable tree (Favourites / Recently played / Most played) | ✓ (untested on real head unit) |
 | Headphone-removal auto-pause | ✓ free via `audio_session.music` |
 | Auto-play on BT connect | ✓ v0.20.1 (opt-in toggle) |

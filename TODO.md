@@ -1,4 +1,4 @@
-# TODO — digaudio (post-v0.24.1)
+# TODO — digaudio (post-v0.25.0)
 
 What's left, organised by category + combo. Effort tags: **S** ≈ 30 min, **M** ≈ 1 h, **L** ≈ several hours (own session).
 
@@ -17,14 +17,15 @@ What's left, organised by category + combo. Effort tags: **S** ≈ 30 min, **M**
 
 ## Categories with items remaining
 
-### D · Platform integration — 3/7 remaining
+### D · Platform integration — 2/7 remaining
 
-- **Homescreen widget (mini-player)** — *(L)*  
-  Same controls + artwork on the user's homescreen. Glance value. Significant Android `AppWidget` work — Kotlin + remote views + update broadcasts. Own session.
+- ~~**Homescreen widget (mini-player)**~~ — **DONE v0.25.0** (4×1 RemoteViews + WidgetChannel push from Dart; v1 has no artwork — RemoteViews need a Bitmap, deferred to v2)
 - **Voice search inside the app** — *(M)*  
   Today Android Auto does it via the system; in-app would use Android's `SpeechRecognizer`. Adds a mic icon to the Search AppBar → speech-to-text → debounced query injection.
 - **Wear OS companion** — *(L)*  
   Independent watch app, syncs playback state with the phone via the standard Wear Data Layer. Own session.
+- **Widget artwork (v2)** — *(M, follow-up to v0.25.0)*  
+  Pre-fetch the current track's artwork on the Dart side, write to a tmp file, pass the path through the MethodChannel; Kotlin reads + `setImageViewBitmap` on the widget. Battery + storage cost minor (one Bitmap per track switch, evicted on next change).
 
 ### E · Social & external — 2/4 remaining
 
@@ -77,7 +78,7 @@ What's left, organised by category + combo. Effort tags: **S** ≈ 30 min, **M**
 | 1 · Recommendation engine (Last.fm × FTS × smart playlists × Subsonic radio) | **4/4 ✓** |
 | 2 · Pro-listener (RG × crossfade × EQ presets × per-BT EQ × FLAC × wired-DAC) | 4/6 (verify-only remaining) |
 | 3 · Friend-share (ListenBrainz × Now-Playing share × listening parties × webhook) | 0/4 |
-| 4 · Daily driver (Quick Settings tile × widget × Wear OS × Auto-play BT × Per-track resume) | 3/5 |
+| 4 · Daily driver (Quick Settings tile × widget × Wear OS × Auto-play BT × Per-track resume) | 4/5 (only Wear OS remains) |
 
 ---
 
@@ -86,11 +87,11 @@ What's left, organised by category + combo. Effort tags: **S** ≈ 30 min, **M**
 - ~~**v0.22.x** — F batch~~ DONE (cache auto-refresh / Recently played / DL queue)
 - ~~**v0.23.x** — G batch (partial)~~ DONE (sleep fade / notif rich actions / accessibility); i18n + waveform + BPM-match + admin remain
 - ~~**v0.24.x** — E batch (partial)~~ DONE (Now-Playing share / ListenBrainz); Last.fm direct (M) + listening parties (L) remain
-- **v0.25.x** — Homescreen widget (L, own session)
+- ~~**v0.25.x** — Homescreen widget~~ DONE (v1 without artwork)
 - **v0.26.x** — Voice search in-app (M)
 - **v0.27.x** — Wear OS companion (L, own session)
 - **v0.28.x** — Multi-server unified search (L, cross-cutting Track.serverId refactor)
-- **v0.29.x** — i18n / Last.fm direct / Subsonic admin (mid-effort polish)
+- **v0.29.x** — i18n / Last.fm direct / Subsonic admin / widget-artwork-v2 (mid-effort polish)
 - **v1.0.0** — first "release" milestone after a real-device validation pass on every section of `TEST_PLAN.md`
 
 ## Items deliberately not on the roadmap
