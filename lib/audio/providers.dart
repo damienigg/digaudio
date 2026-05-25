@@ -14,6 +14,7 @@ import '../library/subsonic_cache.dart';
 import '../library/wishlist.dart';
 import '../subsonic/client.dart';
 import 'player.dart';
+import 'sleep_timer.dart';
 
 /// Central Riverpod wiring.
 ///
@@ -55,6 +56,12 @@ final localLibraryProvider = Provider<LocalLibrary>((_) => LocalLibrary());
 
 final playbackPrefsProvider = Provider<PlaybackPrefs>((_) => PlaybackPrefs());
 
+/// Reactive mirror of [PlaybackPrefs.playbackSpeed]. The prefs object itself
+/// is mutable and not Riverpod-watched; this StateProvider feeds the AppBar
+/// speed button so the label updates instantly when the user picks a new
+/// rate. Kept in sync at the one writer (Speed sheet) and at startup.
+final playbackSpeedProvider = StateProvider<double>((_) => 1.0);
+
 final audioEngineProvider = Provider<AudioEngine>((ref) {
   final engine = AudioEngine(
     subsonic: () => ref.read(subsonicProvider),
@@ -64,6 +71,20 @@ final audioEngineProvider = Provider<AudioEngine>((ref) {
   ref.onDispose(engine.dispose);
   return engine;
 });
+
+final sleepTimerProvider = Provider<SleepTimerService>((ref) {
+  final svc = SleepTimerService(ref.watch(audioEngineProvider));
+  ref.onDispose(svc.dispose);
+  return svc;
+});
+
+/// Countdown stream — `null` whenever no duration timer is running.
+final sleepRemainingProvider = StreamProvider<Duration?>((ref) =>
+    ref.watch(sleepTimerProvider).remainingStream);
+
+/// True iff the "stop at end of current track" mode is armed.
+final sleepEndOfTrackProvider = StreamProvider<bool>((ref) =>
+    ref.watch(sleepTimerProvider).endOfTrackActiveStream);
 
 final favoritesProvider = Provider<FavoritesManager>((ref) =>
     FavoritesManager(ref.watch(dbProvider)));

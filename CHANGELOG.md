@@ -7,6 +7,30 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.9.1] — 2026-05-25
+
+### Added (Substreamer parity — batch 1)
+- **Subsonic scrobble.** Every track playback fires a "now playing" hint
+  at start (`submission=false`) and a definitive scrobble once the played
+  duration crosses the Last.fm threshold (≥4 min OR ≥50 % of length,
+  whichever is shorter). Origin-gated to Subsonic tracks; failures are
+  swallowed so a flaky network never interrupts playback. Subsonic
+  forwards to Last.fm / ListenBrainz server-side when configured.
+- **Sleep timer.** Now Playing AppBar gains a bedtime button. Pick a
+  fixed duration (5 / 15 / 30 / 45 / 60 min) — the icon shows a live
+  countdown — or "Stop at end of current track" which arms on the
+  player's own `completed` state. Cancellable from the same sheet.
+- **Playback speed control.** AppBar action shows the current rate
+  (`1.0x` ⇒ idle, anything else ⇒ green). Picker offers 0.5× → 2.0× in
+  6 stops. Persisted in `PlaybackPrefs`, restored at startup.
+
+### Internal
+- `lib/audio/sleep_timer.dart` — `SleepTimerService` with two modes
+  (duration / end-of-track) and two reactive streams
+  (`remainingStream`, `endOfTrackActiveStream`).
+- `playbackSpeedProvider` — `StateProvider<double>` mirror of the
+  persisted speed, so the AppBar label rebuilds instantly on change.
+
 ## [0.9.0] — 2026-05-25
 
 ### Added

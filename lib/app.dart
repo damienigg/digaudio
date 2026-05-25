@@ -34,6 +34,10 @@ class _DigaudioAppState extends ConsumerState<DigaudioApp> {
       if (prefs.eqGainsDb.isNotEmpty) {
         await engine.applyEqGains(prefs.eqGainsDb);
       }
+      if (prefs.playbackSpeed != 1.0) {
+        await engine.setSpeed(prefs.playbackSpeed);
+      }
+      ref.read(playbackSpeedProvider.notifier).state = prefs.playbackSpeed;
       // Auto-queue similar songs as the playback queue runs out. The
       // listener is always attached; `enabled` gates the behaviour and is
       // restored from PlaybackPrefs.

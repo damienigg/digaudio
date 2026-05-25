@@ -7,6 +7,8 @@ import '../domain.dart';
 import 'widgets/artwork.dart';
 import 'widgets/track_tile.dart';
 
+const _accent = Color(0xFF1ED760);
+
 class NowPlayingPage extends ConsumerWidget {
   const NowPlayingPage({super.key});
 
@@ -22,8 +24,9 @@ class NowPlayingPage extends ConsumerWidget {
         appBar: AppBar(
           leading: IconButton(icon: const Icon(Icons.keyboard_arrow_down), onPressed: () => Navigator.maybePop(context)),
           title: Text(track.album ?? track.title, style: const TextStyle(fontSize: 14)),
+          actions: const [_SpeedAction(), _SleepAction()],
           bottom: const TabBar(
-            indicatorColor: Color(0xFF1ED760),
+            indicatorColor: _accent,
             tabs: [Tab(text: 'Player'), Tab(text: 'Queue'), Tab(text: 'Lyrics')],
           ),
         ),
@@ -96,13 +99,13 @@ class _PlayerTab extends ConsumerWidget {
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 IconButton(
-                  icon: Icon(Icons.shuffle, color: shuffle ? const Color(0xFF1ED760) : Colors.white70),
+                  icon: Icon(Icons.shuffle, color: shuffle ? _accent : Colors.white70),
                   onPressed: () => engine.setShuffle(!shuffle),
                 ),
                 IconButton(iconSize: 40, icon: const Icon(Icons.skip_previous), onPressed: engine.previous),
                 FloatingActionButton(
                   onPressed: () => playing ? engine.pause() : engine.play(),
-                  backgroundColor: const Color(0xFF1ED760),
+                  backgroundColor: _accent,
                   foregroundColor: Colors.black,
                   child: Icon(playing ? Icons.pause : Icons.play_arrow, size: 32),
                 ),
@@ -110,7 +113,7 @@ class _PlayerTab extends ConsumerWidget {
                 IconButton(
                   icon: Icon(
                     loop == LoopMode.one ? Icons.repeat_one : Icons.repeat,
-                    color: loop == LoopMode.off ? Colors.white70 : const Color(0xFF1ED760),
+                    color: loop == LoopMode.off ? Colors.white70 : _accent,
                   ),
                   onPressed: () => engine.setRepeat(_cycleLoop(loop)),
                 ),
@@ -191,4 +194,148 @@ String _fmt(Duration d) {
   final m = d.inMinutes;
   final s = d.inSeconds % 60;
   return '$m:${s.toString().padLeft(2, '0')}';
+}
+
+String _fmtSpeed(double s) =>
+    s == s.truncateToDouble() ? s.toStringAsFixed(1) : s.toStringAsFixed(2);
+
+const _speedOptions = <double>[0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
+
+/// AppBar action: live playback-speed label, opens a picker on tap.
+/// Persistence happens in [PlaybackPrefs]; the [playbackSpeedProvider]
+/// StateProvider is the reactive mirror so the label updates the moment
+/// the user picks a new rate.
+class _SpeedAction extends ConsumerWidget {
+  const _SpeedAction();
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final speed = ref.watch(playbackSpeedProvider);
+    final active = speed != 1.0;
+    return TextButton(
+      onPressed: () => _show(context, ref, speed),
+      style: TextButton.styleFrom(
+        foregroundColor: active ? _accent : Colors.white70,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+      ),
+      child: Text('${_fmtSpeed(speed)}x',
+          style: const TextStyle(fontFeatures: [FontFeature.tabularFigures()])),
+    );
+  }
+
+  Future<void> _show(BuildContext context, WidgetRef ref, double current) =>
+      showModalBottomSheet(
+        context: context,
+        backgroundColor: const Color(0xFF18181B),
+        showDragHandle: true,
+        builder: (_) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Padding(
+                padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
+                child: Text('Playback speed',
+                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+              ),
+              for (final o in _speedOptions)
+                ListTile(
+                  leading: Icon(o == current ? Icons.check : Icons.speed,
+                      color: o == current ? _accent : null),
+                  title: Text('${_fmtSpeed(o)}x'),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    final prefs = ref.read(playbackPrefsProvider);
+                    prefs.playbackSpeed = o;
+                    await prefs.save();
+                    await ref.read(audioEngineProvider).setSpeed(o);
+                    ref.read(playbackSpeedProvider.notifier).state = o;
+                  },
+                ),
+            ],
+          ),
+        ),
+      );
+}
+
+/// AppBar action: bedtime icon + live countdown when a sleep timer is
+/// active. Idle = outlined icon, no label. Active = filled icon, "m:ss"
+/// or "EOT" (end-of-track mode has no countdown).
+class _SleepAction extends ConsumerWidget {
+  const _SleepAction();
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final remaining = ref.watch(sleepRemainingProvider).valueOrNull;
+    final endOfTrack = ref.watch(sleepEndOfTrackProvider).valueOrNull ?? false;
+    final active = remaining != null || endOfTrack;
+    return TextButton(
+      onPressed: () => _show(context, ref),
+      style: TextButton.styleFrom(
+        foregroundColor: active ? _accent : Colors.white70,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(active ? Icons.bedtime : Icons.bedtime_outlined, size: 20),
+          if (active) ...[
+            const SizedBox(width: 4),
+            Text(
+              remaining != null ? _fmt(remaining) : 'EOT',
+              style: const TextStyle(
+                  fontSize: 12, fontFeatures: [FontFeature.tabularFigures()]),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Future<void> _show(BuildContext context, WidgetRef ref) {
+    final timer = ref.read(sleepTimerProvider);
+    return showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF18181B),
+      showDragHandle: true,
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
+              child: Text('Sleep timer',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+            ),
+            ListTile(
+              leading: const Icon(Icons.skip_next),
+              title: const Text('Stop at end of current track'),
+              onTap: () {
+                Navigator.pop(context);
+                timer.startAtEndOfTrack();
+              },
+            ),
+            const Divider(height: 1, color: Colors.white12),
+            for (final mins in const [5, 15, 30, 45, 60])
+              ListTile(
+                leading: const Icon(Icons.bedtime_outlined),
+                title: Text('$mins minutes'),
+                onTap: () {
+                  Navigator.pop(context);
+                  timer.start(Duration(minutes: mins));
+                },
+              ),
+            if (timer.active) ...[
+              const Divider(height: 1, color: Colors.white12),
+              ListTile(
+                leading: const Icon(Icons.cancel_outlined, color: Colors.redAccent),
+                title: const Text('Cancel timer', style: TextStyle(color: Colors.redAccent)),
+                onTap: () {
+                  Navigator.pop(context);
+                  timer.cancel();
+                },
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
 }

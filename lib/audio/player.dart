@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:audio_session/audio_session.dart';
 import 'package:just_audio/just_audio.dart';
@@ -30,6 +31,12 @@ class AudioEngine {
   ConcatenatingAudioSource? _queue;
   List<Track> _tracks = const [];
   StreamSubscription<int?>? _indexSub;
+  StreamSubscription<Duration>? _posSub;
+  // Scrobble bookkeeping: which trackKey we last reported "now playing" for,
+  // and whether we've already fired the definitive (submission=true) scrobble
+  // for the currently-playing track.
+  String? _nowPlayingKey;
+  bool _scrobbledCurrent = false;
 
   AudioEngine({
     required SubsonicClient? Function() subsonic,
@@ -46,11 +53,33 @@ class AudioEngine {
   Future<void> init() async {
     final session = await AudioSession.instance;
     await session.configure(const AudioSessionConfiguration.music());
-    // LRU bookkeeping: every track switch refreshes lastAccessedAt so
-    // freshly-played items survive the next eviction sweep.
+    // On every track switch: refresh LRU access time, fire a Subsonic "now
+    // playing" hint, and reset the played-threshold tracker so the next
+    // scrobble(true) only fires for the new track.
     _indexSub = _player.currentIndexStream.listen((i) {
       if (i == null || i < 0 || i >= _tracks.length) return;
-      _cache.touch(_tracks[i].uniqueKey);
+      final t = _tracks[i];
+      _cache.touch(t.uniqueKey);
+      _nowPlayingKey = t.uniqueKey;
+      _scrobbledCurrent = false;
+      if (t.origin == MediaOrigin.subsonic) {
+        _subsonic()?.scrobble(t.id, submission: false);
+      }
+    });
+    // Definitive scrobble at ≥4 min played OR ≥50% of duration — Last.fm's
+    // classic threshold (Subsonic forwards to Last.fm server-side when
+    // configured). Position-stream throttling keeps overhead trivial.
+    _posSub = _player.positionStream.listen((pos) {
+      if (_scrobbledCurrent) return;
+      final t = currentTrack;
+      if (t == null || t.origin != MediaOrigin.subsonic) return;
+      if (t.uniqueKey != _nowPlayingKey) return;
+      final durSec = _player.duration?.inSeconds ?? 0;
+      final thresholdSec = durSec == 0 ? 240 : min(240, durSec ~/ 2);
+      if (pos.inSeconds >= thresholdSec) {
+        _scrobbledCurrent = true;
+        _subsonic()?.scrobble(t.id, submission: true);
+      }
     });
   }
 
@@ -173,6 +202,7 @@ class AudioEngine {
 
   Future<void> dispose() async {
     await _indexSub?.cancel();
+    await _posSub?.cancel();
     await _player.dispose();
   }
 

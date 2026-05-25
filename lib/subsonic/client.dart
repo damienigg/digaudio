@@ -162,6 +162,23 @@ class SubsonicClient {
     }
   }
 
+  /// Subsonic scrobble. `submission=false` ⇒ "now playing" hint sent at
+  /// track start; `submission=true` ⇒ definitive scrobble fired once the
+  /// played-duration threshold (Last.fm convention: ≥4 min OR ≥50% of
+  /// length) is crossed. Errors are swallowed — scrobble never blocks
+  /// playback.
+  Future<void> scrobble(String songId, {required bool submission, DateTime? time}) async {
+    try {
+      await _get('scrobble', {
+        'id': songId,
+        'submission': submission.toString(),
+        if (time != null) 'time': '${time.millisecondsSinceEpoch}',
+      });
+    } catch (_) {
+      // Network / server hiccup — losing a scrobble is not worth interrupting.
+    }
+  }
+
   Future<String?> getLyrics({String? artist, String? title}) async {
     try {
       final r = await _get('getLyrics', {

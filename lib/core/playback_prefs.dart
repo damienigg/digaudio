@@ -12,6 +12,7 @@ class PlaybackPrefs {
   static const _kAutoQueue = 'pb.autoqueue.enabled';
   static const _kAutoCache = 'pb.autocache.enabled';
   static const _kCacheMaxBytes = 'pb.cache.max_bytes';
+  static const _kSpeed = 'pb.speed';
 
   /// Default cap for the auto-cache pool. Pinned downloads don't count against
   /// it. 2 GB matches what Spotify ships and survives a long road trip without
@@ -37,12 +38,17 @@ class PlaybackPrefs {
   /// Hard cap on the auto-cache pool (bytes). Pinned downloads excluded.
   int cacheMaxBytes = defaultCacheMaxBytes;
 
+  /// Playback speed multiplier (1.0 = real-time). Restored at startup so a
+  /// podcast listener doesn't have to re-set 1.5x every launch.
+  double playbackSpeed = 1.0;
+
   Future<void> load() async {
     final p = await SharedPreferences.getInstance();
     eqEnabled = p.getBool(_kEqEnabled) ?? false;
     autoQueueEnabled = p.getBool(_kAutoQueue) ?? true;
     autoCacheEnabled = p.getBool(_kAutoCache) ?? true;
     cacheMaxBytes = p.getInt(_kCacheMaxBytes) ?? defaultCacheMaxBytes;
+    playbackSpeed = p.getDouble(_kSpeed) ?? 1.0;
     final raw = p.getString(_kEqGains);
     if (raw != null && raw.isNotEmpty) {
       eqGainsDb = (jsonDecode(raw) as List).map((e) => (e as num).toDouble()).toList();
@@ -55,6 +61,7 @@ class PlaybackPrefs {
     await p.setBool(_kAutoQueue, autoQueueEnabled);
     await p.setBool(_kAutoCache, autoCacheEnabled);
     await p.setInt(_kCacheMaxBytes, cacheMaxBytes);
+    await p.setDouble(_kSpeed, playbackSpeed);
     await p.setString(_kEqGains, jsonEncode(eqGainsDb));
   }
 }
