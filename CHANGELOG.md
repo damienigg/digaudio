@@ -7,6 +7,22 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.10.1] — 2026-05-25
+
+### Added (Phase 2.1 — streaks + heatmap)
+- **Listening streaks** — current and longest consecutive-day runs.
+  "Current" tolerates a missed *today* (walks back from yesterday) so
+  the streak doesn't visually reset at midnight before the morning's
+  listen. Rendered as two flame-chip metrics on the Stats page.
+- **30-day heatmap** — one square per day, intensity normalised
+  against the window's max. Days with zero plays render in white12
+  (visible but inert). Oldest left, today right.
+
+### Internal
+- `PlayHistoryManager.streaks()` + `dailyCounts(days:)` — both go
+  through SQLite's `date(played_at, 'unixepoch')` since drift's typed
+  expressions don't expose day truncation.
+
 ## [0.10.0] — 2026-05-25
 
 ### Added (Phase 2 — listening stats + smart mixes)

@@ -76,6 +76,56 @@ class PlayHistoryManager {
         .toList();
   }
 
+  /// (current, longest) consecutive-day streaks. Day boundaries follow the
+  /// device's local-equivalent UTC date returned by SQLite's `date()`
+  /// (Subsonic / device clocks differ; we accept that for simplicity).
+  /// "current" tolerates a missed *today* — it walks back from yesterday
+  /// if no play was logged today yet — so the streak doesn't visually
+  /// reset at midnight before the morning's listen.
+  Future<({int current, int longest})> streaks() async {
+    final rows = await _db.customSelect(
+      "SELECT DISTINCT date(played_at, 'unixepoch') AS d FROM recent_plays ORDER BY d ASC",
+      readsFrom: {_db.recentPlays},
+    ).get();
+    if (rows.isEmpty) return (current: 0, longest: 0);
+
+    final days = rows.map((r) => DateTime.parse(r.read<String>('d'))).toList();
+    var longest = 1;
+    var run = 1;
+    for (var i = 1; i < days.length; i++) {
+      if (days[i].difference(days[i - 1]).inDays == 1) {
+        run++;
+        if (run > longest) longest = run;
+      } else {
+        run = 1;
+      }
+    }
+
+    final now = DateTime.now();
+    final today = DateTime.utc(now.year, now.month, now.day);
+    final daySet = days.toSet();
+    var current = 0;
+    var cursor = daySet.contains(today) ? today : today.subtract(const Duration(days: 1));
+    while (daySet.contains(cursor)) {
+      current++;
+      cursor = cursor.subtract(const Duration(days: 1));
+    }
+    return (current: current, longest: longest);
+  }
+
+  /// `date → play count` for the last [days] days. UI renders this as a
+  /// heatmap row. Days with zero plays are absent from the map (the
+  /// renderer defaults to 0 / white12).
+  Future<Map<DateTime, int>> dailyCounts({int days = 30}) async {
+    final cutoff = DateTime.now().subtract(Duration(days: days));
+    final rows = await _db.customSelect(
+      "SELECT date(played_at, 'unixepoch') AS d, COUNT(*) AS c FROM recent_plays WHERE played_at >= ? GROUP BY d",
+      variables: [Variable<int>(cutoff.millisecondsSinceEpoch ~/ 1000)],
+      readsFrom: {_db.recentPlays},
+    ).get();
+    return {for (final r in rows) DateTime.parse(r.read<String>('d')): r.read<int>('c')};
+  }
+
   /// Wipes the history (Settings → "Reset stats").
   Future<void> clear() => _db.delete(_db.recentPlays).go();
 
