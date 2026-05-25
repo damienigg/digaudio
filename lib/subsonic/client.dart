@@ -123,12 +123,22 @@ class SubsonicClient {
     return (album: album, tracks: tracks);
   }
 
-  Future<SearchResults> search(String query, {int songCount = 20, int albumCount = 20, int artistCount = 20}) async {
+  Future<SearchResults> search(String query, {
+    int songCount = 20,
+    int songOffset = 0,
+    int albumCount = 20,
+    int albumOffset = 0,
+    int artistCount = 20,
+    int artistOffset = 0,
+  }) async {
     final r = await _get('search3', {
       'query': query,
       'songCount': '$songCount',
+      if (songOffset > 0) 'songOffset': '$songOffset',
       'albumCount': '$albumCount',
+      if (albumOffset > 0) 'albumOffset': '$albumOffset',
       'artistCount': '$artistCount',
+      if (artistOffset > 0) 'artistOffset': '$artistOffset',
     });
     final s = r['searchResult3'] as Map<String, dynamic>? ?? const {};
     return SearchResults(

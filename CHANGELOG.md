@@ -7,6 +7,25 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.14.2] — 2026-05-25
+
+### Added
+- **Search pagination ("Show more" per category).** The first batch
+  still comes from the existing `searchResultsProvider` (20 each).
+  After that, each section gets a "Show more" button that fetches
+  the next 20 of that type via the Subsonic offset params and
+  appends to the displayed list. Button hides itself when a fetch
+  returns fewer than the requested page size (server has no more).
+  Local-track matches stay up front; remote tracks paginate.
+- `SubsonicClient.search` gained `songOffset` / `albumOffset` /
+  `artistOffset` parameters (omitted when 0 to keep the first-call
+  request small).
+
+### Internal
+- Per-category extras + exhausted flags + loading flags live in
+  `_SearchPageState`; reset whenever the debounced query changes
+  so we never mix results across searches.
+
 ## [0.14.1] — 2026-05-25
 
 ### Changed
