@@ -10,6 +10,7 @@ import 'package:share_plus/share_plus.dart';
 import '../audio/providers.dart';
 import '../core/db.dart';
 import '../domain.dart';
+import 'widgets/theme_ext.dart';
 import 'widgets/track_tile.dart';
 
 class LocalPlaylistPage extends ConsumerStatefulWidget {
@@ -97,7 +98,7 @@ class _Body extends ConsumerWidget {
                             missingCount == 0
                                 ? '${entries.length} tracks'
                                 : '${playable.length} of ${entries.length} available',
-                            style: const TextStyle(color: Colors.white60, fontSize: 12),
+                            style: TextStyle(color: context.textTertiary, fontSize: 12),
                           ),
                           const Spacer(),
                           FilledButton.icon(
@@ -176,9 +177,9 @@ class _EntryRow extends ConsumerWidget {
           ),
           ReorderableDragStartListener(
             index: index,
-            child: const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 8),
-              child: Icon(Icons.drag_indicator, color: Colors.white38),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Icon(Icons.drag_indicator, color: context.textDisabled),
             ),
           ),
         ],
@@ -200,9 +201,9 @@ class _MissingTile extends ConsumerWidget {
             decoration: BoxDecoration(
               color: const Color(0xFF1E1E22),
               borderRadius: BorderRadius.circular(6),
-              border: Border.all(color: Colors.white24, width: 1),
+              border: Border.all(color: context.outlineStrong, width: 1),
             ),
-            child: const Icon(Icons.cloud_off, color: Colors.white38),
+            child: Icon(Icons.cloud_off, color: context.textDisabled),
           ),
           title: Text(entry.title, style: const TextStyle(decoration: TextDecoration.lineThrough)),
           subtitle: Text(
@@ -232,11 +233,11 @@ class _MissingTile extends ConsumerWidget {
 class _Empty extends StatelessWidget {
   const _Empty();
   @override
-  Widget build(BuildContext context) => const Center(
+  Widget build(BuildContext context) => Center(
         child: Padding(
-          padding: EdgeInsets.all(32),
+          padding: const EdgeInsets.all(32),
           child: Text('Empty playlist — open a track and tap "Add to playlist".',
-              textAlign: TextAlign.center, style: TextStyle(color: Colors.white54)),
+              textAlign: TextAlign.center, style: TextStyle(color: context.textMuted)),
         ),
       );
 }

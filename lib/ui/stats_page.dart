@@ -6,6 +6,7 @@ import '../domain.dart';
 import '../library/collections.dart';
 import '../library/play_history.dart';
 import 'widgets/artwork.dart';
+import 'widgets/theme_ext.dart';
 
 const _accent = Color(0xFF1ED760);
 
@@ -174,7 +175,7 @@ class _RangePicker extends StatelessWidget {
             selected: value == days,
             onSelected: (_) => onChanged(days),
             selectedColor: _accent,
-            labelStyle: TextStyle(color: value == days ? Colors.black : Colors.white70),
+            labelStyle: TextStyle(color: value == days ? Colors.black : context.textSecondary),
           ),
         );
     return Row(children: [chip('30 d', 30), chip('90 d', 90), chip('All time', null)]);
@@ -209,7 +210,7 @@ class _Metric extends StatelessWidget {
                     color: _accent,
                     fontFeatures: [FontFeature.tabularFigures()])),
             Text(label,
-                style: const TextStyle(color: Colors.white60, fontSize: 11)),
+                style: TextStyle(color: context.textTertiary, fontSize: 11)),
           ],
         ),
       );
@@ -241,7 +242,7 @@ class _StreakChip extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
           decoration: BoxDecoration(
-            color: Colors.white10,
+            color: context.dividerSoft,
             borderRadius: BorderRadius.circular(8),
           ),
           child: Row(
@@ -257,7 +258,7 @@ class _StreakChip extends StatelessWidget {
                           fontSize: 16,
                           fontFeatures: [FontFeature.tabularFigures()])),
                   Text(label,
-                      style: const TextStyle(color: Colors.white60, fontSize: 10)),
+                      style: TextStyle(color: context.textTertiary, fontSize: 10)),
                 ],
               ),
             ],
@@ -292,8 +293,8 @@ class _Heatmap extends StatelessWidget {
                   margin: const EdgeInsets.symmetric(horizontal: 1),
                   decoration: BoxDecoration(
                     color: c == 0
-                        ? Colors.white10
-                        : Color.lerp(Colors.white24, _accent, t),
+                        ? context.dividerSoft
+                        : Color.lerp(context.outlineStrong, _accent, t),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 );
@@ -353,7 +354,7 @@ class _TopArtistRow extends StatelessWidget {
         ),
         title: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis),
         trailing: Text('$count plays',
-            style: const TextStyle(color: Colors.white60, fontSize: 12)),
+            style: TextStyle(color: context.textTertiary, fontSize: 12)),
       );
 }
 
@@ -364,8 +365,8 @@ class _SectionHeader extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: Text(text,
-            style: const TextStyle(
-                color: Colors.white60,
+            style: TextStyle(
+                color: context.textTertiary,
                 fontSize: 11,
                 letterSpacing: 1.5,
                 fontWeight: FontWeight.w700)),
@@ -378,6 +379,6 @@ class _EmptyHint extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 16),
-        child: Text(text, style: const TextStyle(color: Colors.white54)),
+        child: Text(text, style: TextStyle(color: context.textMuted)),
       );
 }

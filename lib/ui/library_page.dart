@@ -9,6 +9,7 @@ import '../audio/providers.dart';
 import 'widgets/album_card.dart';
 import 'widgets/alpha_scroll.dart';
 import 'widgets/artwork.dart';
+import 'widgets/theme_ext.dart';
 import 'widgets/track_tile.dart';
 
 class LibraryPage extends ConsumerStatefulWidget {
@@ -154,23 +155,23 @@ class _PlaylistsTab extends ConsumerWidget {
           subtitle: Text('${favKeys.length} tracks'),
           onTap: () => context.push('/favorites'),
         ),
-        const Divider(height: 1, color: Colors.white12),
+        Divider(height: 1, color: context.dividerSoft),
         ListTile(
           leading: const Icon(Icons.bookmark_outline),
           title: const Text('Wishlist'),
           subtitle: const Text('Tracks you\'d like to add to your library'),
           onTap: () => context.push('/wishlist'),
         ),
-        const Divider(height: 1, color: Colors.white12),
+        Divider(height: 1, color: context.dividerSoft),
         ListTile(
           leading: const Icon(Icons.bar_chart),
           title: const Text('Stats'),
           subtitle: const Text('Top tracks, top artists, and the "Most played" smart mix'),
           onTap: () => context.push('/stats'),
         ),
-        const Divider(height: 1, color: Colors.white12),
+        Divider(height: 1, color: context.dividerSoft),
         _ImportTile(),
-        const Divider(height: 1, color: Colors.white12),
+        Divider(height: 1, color: context.dividerSoft),
         const _SectionHeader('Local playlists'),
         localState.when(
           loading: () => const Padding(
@@ -179,10 +180,10 @@ class _PlaylistsTab extends ConsumerWidget {
           ),
           error: (e, _) => Padding(padding: const EdgeInsets.all(16), child: Text('$e')),
           data: (lists) => lists.isEmpty
-              ? const Padding(
-                  padding: EdgeInsets.all(16),
+              ? Padding(
+                  padding: const EdgeInsets.all(16),
                   child: Text('No local playlists yet — long-press a track and "Add to playlist" to create one.',
-                      style: TextStyle(color: Colors.white54, fontSize: 12)),
+                      style: TextStyle(color: context.textMuted, fontSize: 12)),
                 )
               : Column(
                   children: [
@@ -195,7 +196,7 @@ class _PlaylistsTab extends ConsumerWidget {
                   ],
                 ),
         ),
-        const Divider(height: 1, color: Colors.white12),
+        Divider(height: 1, color: context.dividerSoft),
         const _SectionHeader('Subsonic playlists'),
         subsonicState.when(
           loading: () => const Padding(
@@ -204,10 +205,10 @@ class _PlaylistsTab extends ConsumerWidget {
           ),
           error: (e, _) => Padding(padding: const EdgeInsets.all(16), child: Text('$e')),
           data: (lists) => lists.isEmpty
-              ? const Padding(
-                  padding: EdgeInsets.all(16),
+              ? Padding(
+                  padding: const EdgeInsets.all(16),
                   child: Text('No Subsonic playlists.',
-                      style: TextStyle(color: Colors.white54, fontSize: 12)),
+                      style: TextStyle(color: context.textMuted, fontSize: 12)),
                 )
               : Column(
                   children: [
@@ -233,7 +234,7 @@ class _SectionHeader extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
         child: Text(text,
-            style: const TextStyle(color: Colors.white60, fontSize: 11, letterSpacing: 1.5)),
+            style: TextStyle(color: context.textTertiary, fontSize: 11, letterSpacing: 1.5)),
       );
 }
 
@@ -277,7 +278,7 @@ class _Empty extends StatelessWidget {
   Widget build(BuildContext context) => Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
-          child: Text(text, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white54)),
+          child: Text(text, textAlign: TextAlign.center, style: TextStyle(color: context.textMuted)),
         ),
       );
 }

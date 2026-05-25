@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../audio/providers.dart';
 import '../domain.dart';
 import 'widgets/album_card.dart';
+import 'widgets/theme_ext.dart';
 import 'widgets/track_tile.dart';
 
 class HomePage extends ConsumerWidget {
@@ -55,13 +56,13 @@ class _SetupHint extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.cloud_off, size: 48, color: Colors.white38),
+              Icon(Icons.cloud_off, size: 48, color: context.textDisabled),
               const SizedBox(height: 12),
-              const Text('No Subsonic server configured.',
-                  style: TextStyle(color: Colors.white70)),
+              Text('No Subsonic server configured.',
+                  style: TextStyle(color: context.textSecondary)),
               const SizedBox(height: 4),
-              const Text('Your local library still works — set up a server to stream.',
-                  textAlign: TextAlign.center, style: TextStyle(color: Colors.white38, fontSize: 12)),
+              Text('Your local library still works — set up a server to stream.',
+                  textAlign: TextAlign.center, style: TextStyle(color: context.textDisabled, fontSize: 12)),
               const SizedBox(height: 16),
               FilledButton(onPressed: onConfigure, child: const Text('Configure server')),
             ],
@@ -98,7 +99,7 @@ class _AlbumRow extends StatelessWidget {
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (e, _) => Text('$e', style: const TextStyle(color: Colors.redAccent)),
           data: (albums) => albums.isEmpty
-              ? const Text('Nothing here yet.', style: TextStyle(color: Colors.white54))
+              ? Text('Nothing here yet.', style: TextStyle(color: context.textMuted))
               : ListView.separated(
                   scrollDirection: Axis.horizontal,
                   itemCount: albums.length,

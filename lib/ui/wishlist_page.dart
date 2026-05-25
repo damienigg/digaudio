@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../audio/providers.dart';
+import 'widgets/theme_ext.dart';
 
 class WishlistPage extends ConsumerWidget {
   const WishlistPage({super.key});
@@ -17,22 +18,22 @@ class WishlistPage extends ConsumerWidget {
         onPressed: () => _add(context, ref),
       ),
       body: items.isEmpty
-          ? const Center(
+          ? Center(
               child: Padding(
-                padding: EdgeInsets.all(32),
+                padding: const EdgeInsets.all(32),
                 child: Text(
                   'Nothing here yet.\n\nAdd tracks the active server is missing — '
                   'they\'ll show up here so you can grow your library.\n\n'
                   'Lidarr integration is planned (auto-push of artist/album to '
                   'a Lidarr instance via API key).',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white60),
+                  style: TextStyle(color: context.textTertiary),
                 ),
               ),
             )
           : ListView.separated(
               itemCount: items.length,
-              separatorBuilder: (_, __) => const Divider(height: 1, color: Colors.white12),
+              separatorBuilder: (_, __) => Divider(height: 1, color: context.dividerSoft),
               itemBuilder: (_, i) {
                 final w = items[i];
                 return Dismissible(

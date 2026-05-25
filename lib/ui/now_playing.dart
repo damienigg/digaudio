@@ -8,6 +8,7 @@ import '../audio/providers.dart';
 import '../domain.dart';
 import '../subsonic/client.dart';
 import 'widgets/artwork.dart';
+import 'widgets/theme_ext.dart';
 import 'widgets/track_tile.dart';
 
 const _accent = Color(0xFF1ED760);
@@ -80,7 +81,7 @@ class _PlayerTab extends ConsumerWidget {
             Text(track.title, maxLines: 1, overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
             const SizedBox(height: 4),
-            Text(track.displayArtist, style: const TextStyle(color: Colors.white60, fontSize: 14)),
+            Text(track.displayArtist, style: TextStyle(color: context.textTertiary, fontSize: 14)),
             const SizedBox(height: 12),
             Slider(
               value: position.inMilliseconds.toDouble().clamp(0, duration.inMilliseconds.toDouble()),
@@ -92,8 +93,8 @@ class _PlayerTab extends ConsumerWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(_fmt(position), style: const TextStyle(color: Colors.white60, fontSize: 11)),
-                  Text(_fmt(duration), style: const TextStyle(color: Colors.white60, fontSize: 11)),
+                  Text(_fmt(position), style: TextStyle(color: context.textTertiary, fontSize: 11)),
+                  Text(_fmt(duration), style: TextStyle(color: context.textTertiary, fontSize: 11)),
                 ],
               ),
             ),
@@ -102,7 +103,7 @@ class _PlayerTab extends ConsumerWidget {
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 IconButton(
-                  icon: Icon(Icons.shuffle, color: shuffle ? _accent : Colors.white70),
+                  icon: Icon(Icons.shuffle, color: shuffle ? _accent : context.textSecondary),
                   onPressed: () => engine.setShuffle(!shuffle),
                 ),
                 IconButton(iconSize: 40, icon: const Icon(Icons.skip_previous), onPressed: engine.previous),
@@ -116,7 +117,7 @@ class _PlayerTab extends ConsumerWidget {
                 IconButton(
                   icon: Icon(
                     loop == LoopMode.one ? Icons.repeat_one : Icons.repeat,
-                    color: loop == LoopMode.off ? Colors.white70 : _accent,
+                    color: loop == LoopMode.off ? context.textSecondary : _accent,
                   ),
                   onPressed: () => engine.setRepeat(_cycleLoop(loop)),
                 ),
@@ -203,9 +204,9 @@ class _LyricsTabState extends ConsumerState<_LyricsTab> {
           }
           final r = snap.data;
           if (r == null || r.lines.isEmpty) {
-            return const Center(
+            return Center(
                 child: Text('No lyrics available.',
-                    style: TextStyle(color: Colors.white54)));
+                    style: TextStyle(color: context.textMuted)));
           }
           if (r.synced) return _SyncedLyricsView(lyrics: r);
           // Plain — single block of text, nothing to sync against.
@@ -280,7 +281,7 @@ class _SyncedLyricsViewState extends ConsumerState<_SyncedLyricsView> {
       padding: const EdgeInsets.symmetric(vertical: 80, horizontal: 24),
       itemCount: lines.length,
       itemExtent: _lineHeight,
-      itemBuilder: (_, i) {
+      itemBuilder: (ctx, i) {
         final active = i == _active;
         final text = lines[i].text.trim();
         return Center(
@@ -292,7 +293,7 @@ class _SyncedLyricsViewState extends ConsumerState<_SyncedLyricsView> {
             style: TextStyle(
               fontSize: active ? 19 : 15,
               fontWeight: active ? FontWeight.w800 : FontWeight.w500,
-              color: active ? _accent : Colors.white54,
+              color: active ? _accent : ctx.textMuted,
             ),
           ),
         );
@@ -325,7 +326,7 @@ class _SpeedAction extends ConsumerWidget {
     return TextButton(
       onPressed: () => _show(context, ref, speed),
       style: TextButton.styleFrom(
-        foregroundColor: active ? _accent : Colors.white70,
+        foregroundColor: active ? _accent : context.textSecondary,
         padding: const EdgeInsets.symmetric(horizontal: 8),
       ),
       child: Text('${_fmtSpeed(speed)}x',
@@ -380,7 +381,7 @@ class _SleepAction extends ConsumerWidget {
     return TextButton(
       onPressed: () => _show(context, ref),
       style: TextButton.styleFrom(
-        foregroundColor: active ? _accent : Colors.white70,
+        foregroundColor: active ? _accent : context.textSecondary,
         padding: const EdgeInsets.symmetric(horizontal: 8),
       ),
       child: Row(
@@ -423,7 +424,7 @@ class _SleepAction extends ConsumerWidget {
                 timer.startAtEndOfTrack();
               },
             ),
-            const Divider(height: 1, color: Colors.white12),
+            Divider(height: 1, color: context.dividerSoft),
             for (final mins in const [5, 15, 30, 45, 60])
               ListTile(
                 leading: const Icon(Icons.bedtime_outlined),
@@ -434,7 +435,7 @@ class _SleepAction extends ConsumerWidget {
                 },
               ),
             if (timer.active) ...[
-              const Divider(height: 1, color: Colors.white12),
+              Divider(height: 1, color: context.dividerSoft),
               ListTile(
                 leading: const Icon(Icons.cancel_outlined, color: Colors.redAccent),
                 title: const Text('Cancel timer', style: TextStyle(color: Colors.redAccent)),

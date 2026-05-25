@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../domain.dart';
 import 'artwork.dart';
+import 'theme_ext.dart';
 
 class AlbumCard extends ConsumerWidget {
   final Album album;
@@ -26,7 +27,7 @@ class AlbumCard extends ConsumerWidget {
                 style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
             if (album.artist != null)
               Text(album.artist!, maxLines: 1, overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Colors.white60, fontSize: 11)),
+                  style: TextStyle(color: context.textTertiary, fontSize: 11)),
           ],
         ),
       ),

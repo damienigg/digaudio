@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../audio/providers.dart';
 import '../../domain.dart';
 import 'artwork.dart';
+import 'theme_ext.dart';
 
 /// Bottom sheet with the per-track actions: favorites, playlists, queue ops.
 /// After adding to a playlist or favorites, surfaces a "Suggested next track"
@@ -37,7 +38,7 @@ class _TrackActionsSheet extends ConsumerWidget {
               title: Text(track.title, maxLines: 1, overflow: TextOverflow.ellipsis),
               subtitle: Text(track.displayArtist, maxLines: 1, overflow: TextOverflow.ellipsis),
             ),
-            const Divider(height: 1, color: Colors.white12),
+            Divider(height: 1, color: context.dividerSoft),
             ListTile(
               leading: Icon(isFav ? Icons.favorite : Icons.favorite_border,
                   color: isFav ? const Color(0xFF1ED760) : null),
@@ -141,16 +142,16 @@ class _PlaylistPicker extends ConsumerWidget {
               }
             },
           ),
-          const Divider(height: 1, color: Colors.white12),
+          Divider(height: 1, color: context.dividerSoft),
           Flexible(
             child: playlists.when(
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => Text('$e'),
               data: (list) => list.isEmpty
-                  ? const Padding(
-                      padding: EdgeInsets.all(24),
+                  ? Padding(
+                      padding: const EdgeInsets.all(24),
                       child: Text('No playlists yet — create one above.',
-                          style: TextStyle(color: Colors.white54)))
+                          style: TextStyle(color: context.textMuted)))
                   : ListView(
                       shrinkWrap: true,
                       children: [
@@ -266,7 +267,7 @@ class _DownloadTile extends ConsumerWidget {
       title: Text(label),
       subtitle: subtitle == null
           ? null
-          : Text(subtitle, style: const TextStyle(fontSize: 11, color: Colors.white38)),
+          : Text(subtitle, style: TextStyle(fontSize: 11, color: context.textDisabled)),
       enabled: onTap != null,
       onTap: onTap,
     );
@@ -297,7 +298,7 @@ class _RatingRow extends ConsumerWidget {
               constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
               icon: Icon(
                 i <= current ? Icons.star : Icons.star_border,
-                color: i <= current ? const Color(0xFF1ED760) : Colors.white60,
+                color: i <= current ? const Color(0xFF1ED760) : context.textTertiary,
               ),
               // Tap on the current rating clears it; otherwise sets to i.
               onPressed: () async {

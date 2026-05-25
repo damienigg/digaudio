@@ -7,6 +7,37 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.12.0] — 2026-05-25
+
+### Changed (theme-awareness sweep)
+- **All 18 UI files** migrated from hardcoded `Colors.white*` literals to
+  a `BuildContext` extension (`textPrimary` / `textSecondary` /
+  `textTertiary` / `textMuted` / `textDisabled` / `outlineStrong` /
+  `dividerSoft`). The same UI now re-skins automatically when the user
+  picks light mode — no widget-by-widget overrides needed. The light
+  theme upgraded from "experimental" to actually usable.
+- **`lib/ui/widgets/theme_ext.dart`** — single source of truth for the
+  opacity-step rubric. Each alias is defined relative to
+  `colorScheme.onSurface` so dark + light both honour it.
+- **`AppTheme.light()` definitions** (in `lib/theme.dart`) keep their
+  hardcoded `Colors.black*` paint values — those define the theme,
+  not consume it.
+
+### Notable carve-outs
+- The amber **offline banner** in `shell.dart` keeps explicit
+  `Colors.white` for text + icon (fixed amber background, white reads
+  in both light and dark UI).
+- The `_accent` constant (`Color(0xFF1ED760)`) is unchanged — that's
+  the brand colour, intentionally fixed.
+
+### Internal
+- 87 `Colors.white*` literals replaced across 18 files; `flutter analyze`
+  clean.
+- `lib/ui/widgets/artwork.dart` placeholder helper gained a
+  `BuildContext` parameter (was static-callable; needed context for
+  the theme-aware fill). Three call sites in itemBuilder lambdas
+  updated.
+
 ## [0.11.3] — 2026-05-25
 
 ### Added

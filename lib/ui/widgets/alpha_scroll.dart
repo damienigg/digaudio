@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'theme_ext.dart';
+
 /// Long-list scroller with an A→Z sidebar. Items are passed in their
 /// existing order (the caller is responsible for sorting); the sidebar
 /// computes the first index per letter on the fly. Tap or drag a letter
@@ -108,8 +110,8 @@ class _AlphaScrollListState<T> extends State<AlphaScrollList<T>> {
                             l,
                             style: TextStyle(
                               color: idx.containsKey(l)
-                                  ? Colors.white70
-                                  : Colors.white24,
+                                  ? context.textSecondary
+                                  : context.outlineStrong,
                               fontSize: 10,
                               fontWeight: idx.containsKey(l)
                                   ? FontWeight.w600

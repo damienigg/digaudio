@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../audio/providers.dart';
 import '../../domain.dart';
+import 'theme_ext.dart';
 
 /// Source-agnostic artwork renderer.
 ///
@@ -34,24 +35,24 @@ class Artwork extends ConsumerWidget {
     final br = borderRadius ?? BorderRadius.circular(6);
     Widget child;
     if (coverArt == null) {
-      child = _placeholder();
+      child = _placeholder(context);
     } else if (origin == MediaOrigin.subsonic) {
       final s = ref.watch(subsonicProvider);
       child = s == null
-          ? _placeholder()
+          ? _placeholder(context)
           : CachedNetworkImage(
               imageUrl: s.coverUri(coverArt!, size: size.toInt() * 2).toString(),
               width: size,
               height: size,
               fit: BoxFit.cover,
-              placeholder: (_, __) => _placeholder(),
-              errorWidget: (_, __, ___) => _placeholder(),
+              placeholder: (c, __) => _placeholder(c),
+              errorWidget: (c, __, ___) => _placeholder(c),
             );
     } else {
       child = FutureBuilder<Uint8List?>(
         future: ref.read(localLibraryProvider).getArtwork(coverArt!, size: size.toInt() * 2),
-        builder: (_, snap) {
-          if (!snap.hasData || snap.data == null) return _placeholder();
+        builder: (c, snap) {
+          if (!snap.hasData || snap.data == null) return _placeholder(c);
           return Image.memory(snap.data!, width: size, height: size, fit: BoxFit.cover, gaplessPlayback: true);
         },
       );
@@ -59,10 +60,10 @@ class Artwork extends ConsumerWidget {
     return ClipRRect(borderRadius: br, child: SizedBox(width: size, height: size, child: child));
   }
 
-  Widget _placeholder() => Container(
+  Widget _placeholder(BuildContext context) => Container(
         width: size,
         height: size,
         color: const Color(0xFF1E1E22),
-        child: Icon(Icons.music_note, color: Colors.white.withOpacity(0.35), size: size * 0.5),
+        child: Icon(Icons.music_note, color: context.textPrimary.withOpacity(0.35), size: size * 0.5),
       );
 }

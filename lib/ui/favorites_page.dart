@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../audio/providers.dart';
 import '../domain.dart';
+import 'widgets/theme_ext.dart';
 import 'widgets/track_tile.dart';
 
 class FavoritesPage extends ConsumerWidget {
@@ -32,13 +33,13 @@ class FavoritesPage extends ConsumerWidget {
           ? const _Empty()
           : FutureBuilder<List<Track>>(
               future: resolver.resolveAll(keys),
-              builder: (_, snap) {
+              builder: (ctx, snap) {
                 if (!snap.hasData) return const Center(child: CircularProgressIndicator());
                 final tracks = snap.data!;
                 if (tracks.isEmpty) {
-                  return const Center(
+                  return Center(
                       child: Text('Favorites unavailable — check server / library.',
-                          style: TextStyle(color: Colors.white54)));
+                          style: TextStyle(color: ctx.textMuted)));
                 }
                 return ListView.builder(
                   itemCount: tracks.length,
@@ -53,13 +54,13 @@ class FavoritesPage extends ConsumerWidget {
 class _Empty extends StatelessWidget {
   const _Empty();
   @override
-  Widget build(BuildContext context) => const Center(
+  Widget build(BuildContext context) => Center(
         child: Padding(
-          padding: EdgeInsets.all(32),
+          padding: const EdgeInsets.all(32),
           child: Text(
             'No favorites yet.\nTap the heart on any track to add it.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white60),
+            style: TextStyle(color: context.textTertiary),
           ),
         ),
       );

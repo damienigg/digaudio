@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../audio/providers.dart';
 import '../domain.dart';
 import 'widgets/artwork.dart';
+import 'widgets/theme_ext.dart';
 import 'widgets/track_tile.dart';
 
 class PlaylistPage extends ConsumerWidget {
@@ -42,7 +43,7 @@ class PlaylistPage extends ConsumerWidget {
                             Text(pl.name,
                                 style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
                             Text('${tracks.length} tracks',
-                                style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                                style: TextStyle(color: context.textMuted, fontSize: 12)),
                             const SizedBox(height: 8),
                             FilledButton.icon(
                               icon: const Icon(Icons.play_arrow),

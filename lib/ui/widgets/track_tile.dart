@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../audio/providers.dart';
 import '../../domain.dart';
 import 'artwork.dart';
+import 'theme_ext.dart';
 import 'track_actions.dart';
 
 /// One row in any list of tracks. Tapping plays from this index in the given
@@ -49,7 +50,7 @@ class TrackTile extends ConsumerWidget {
                       if (cachePinned != null) ...[
                         Icon(Icons.download_done_rounded,
                             size: 12,
-                            color: cachePinned ? const Color(0xFF1ED760) : Colors.white38),
+                            color: cachePinned ? const Color(0xFF1ED760) : context.textDisabled),
                         const SizedBox(width: 4),
                       ],
                       Expanded(
@@ -60,7 +61,7 @@ class TrackTile extends ConsumerWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(t.displayArtist, maxLines: 1, overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: Colors.white60, fontSize: 12)),
+                      style: TextStyle(color: context.textTertiary, fontSize: 12)),
                 ],
               ),
             ),
@@ -68,10 +69,10 @@ class TrackTile extends ConsumerWidget {
               Padding(
                 padding: const EdgeInsets.only(left: 8),
                 child: Text(_fmt(t.duration!),
-                    style: const TextStyle(color: Colors.white54, fontSize: 12, fontFeatures: [FontFeature.tabularFigures()])),
+                    style: TextStyle(color: context.textMuted, fontSize: 12, fontFeatures: const [FontFeature.tabularFigures()])),
               ),
             IconButton(
-              icon: const Icon(Icons.more_vert, color: Colors.white54),
+              icon: Icon(Icons.more_vert, color: context.textMuted),
               onPressed: openActions,
             ),
           ],

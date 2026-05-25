@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../audio/providers.dart';
 import 'widgets/artwork.dart';
+import 'widgets/theme_ext.dart';
 import 'widgets/track_tile.dart';
 
 
@@ -53,7 +54,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('$e', style: const TextStyle(color: Colors.redAccent))),
         data: (r) => r.isEmpty
-            ? const Center(child: Text('Type to search.', style: TextStyle(color: Colors.white38)))
+            ? Center(child: Text('Type to search.', style: TextStyle(color: context.textDisabled)))
             : ListView(
                 children: [
                   if (r.artists.isNotEmpty) ...[

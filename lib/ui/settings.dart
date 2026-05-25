@@ -6,6 +6,7 @@ import 'package:just_audio/just_audio.dart';
 import '../audio/providers.dart';
 import '../core/playback_prefs.dart';
 import '../core/settings.dart';
+import 'widgets/theme_ext.dart';
 
 const _accent = Color(0xFF1ED760);
 
@@ -22,23 +23,23 @@ class SettingsPage extends StatelessWidget {
               leading: const Icon(Icons.cloud_outlined),
               title: const Text('Servers'),
               subtitle: const Text('Subsonic servers and credentials'),
-              trailing: const Icon(Icons.chevron_right, color: Colors.white38),
+              trailing: Icon(Icons.chevron_right, color: context.textDisabled),
               onTap: () => context.push('/settings/servers'),
             ),
-            const Divider(height: 1, color: Colors.white12),
+            Divider(height: 1, color: context.dividerSoft),
             ListTile(
               leading: const Icon(Icons.equalizer),
               title: const Text('Playback'),
               subtitle: const Text('Storage · auto-queue · equalizer'),
-              trailing: const Icon(Icons.chevron_right, color: Colors.white38),
+              trailing: Icon(Icons.chevron_right, color: context.textDisabled),
               onTap: () => context.push('/settings/playback'),
             ),
-            const Divider(height: 1, color: Colors.white12),
+            Divider(height: 1, color: context.dividerSoft),
             ListTile(
               leading: const Icon(Icons.brightness_6_outlined),
               title: const Text('Display'),
               subtitle: const Text('Theme'),
-              trailing: const Icon(Icons.chevron_right, color: Colors.white38),
+              trailing: Icon(Icons.chevron_right, color: context.textDisabled),
               onTap: () => context.push('/settings/display'),
             ),
           ],
@@ -71,7 +72,7 @@ class ServersPage extends ConsumerWidget {
             : ListView.separated(
                 padding: const EdgeInsets.only(top: 8, bottom: 96),
                 itemCount: list.length,
-                separatorBuilder: (_, __) => const Divider(height: 1, color: Colors.white12),
+                separatorBuilder: (_, __) => Divider(height: 1, color: context.dividerSoft),
                 itemBuilder: (_, i) => _ServerTile(
                   server: list[i],
                   active: list[i].id == activeId,
@@ -98,13 +99,13 @@ void _invalidateAll(WidgetRef ref) {
 class _EmptyHint extends StatelessWidget {
   const _EmptyHint();
   @override
-  Widget build(BuildContext context) => const Center(
+  Widget build(BuildContext context) => Center(
         child: Padding(
-          padding: EdgeInsets.all(32),
+          padding: const EdgeInsets.all(32),
           child: Text(
             'No Subsonic server registered yet.\nTap "Add server" to start.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white60),
+            style: TextStyle(color: context.textTertiary),
           ),
         ),
       );
@@ -121,7 +122,7 @@ class _ServerTile extends StatelessWidget {
     final status = server.isConfigured
         ? (active ? 'Active' : 'Tap to activate')
         : 'Credentials missing — tap to set';
-    final color = active ? _accent : Colors.white54;
+    final color = active ? _accent : context.textMuted;
     return ListTile(
       leading: Icon(active ? Icons.cloud_done : Icons.cloud_outlined, color: color),
       title: Row(
@@ -137,7 +138,7 @@ class _ServerTile extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(server.url, overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Colors.white54, fontSize: 11)),
+              style: TextStyle(color: context.textMuted, fontSize: 11)),
           Text(status, style: TextStyle(color: color, fontSize: 11)),
         ],
       ),
@@ -159,10 +160,10 @@ class _Badge extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
         decoration: BoxDecoration(
-          color: Colors.white12,
+          color: context.dividerSoft,
           borderRadius: BorderRadius.circular(4),
         ),
-        child: Text(text, style: const TextStyle(fontSize: 10, color: Colors.white70)),
+        child: Text(text, style: TextStyle(fontSize: 10, color: context.textSecondary)),
       );
 }
 
@@ -331,7 +332,7 @@ class _ServerEditPageState extends ConsumerState<ServerEditPage> {
                 ),
                 if (_status != null) ...[
                   const SizedBox(height: 16),
-                  Text(_status!, style: const TextStyle(color: Colors.white70)),
+                  Text(_status!, style: TextStyle(color: context.textSecondary)),
                 ],
               ],
             ),
@@ -371,11 +372,11 @@ class DisplayPage extends ConsumerWidget {
       appBar: AppBar(title: const Text('Display')),
       body: ListView(
         children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 16, 16, 6),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
             child: Text('Theme',
                 style: TextStyle(
-                    color: Colors.white60,
+                    color: context.textTertiary,
                     fontSize: 11,
                     letterSpacing: 1.5)),
           ),
@@ -588,7 +589,7 @@ class _PlaybackPageState extends ConsumerState<PlaybackPage> {
             onSync: _syncLibrary,
             onCancel: () => setState(() => _cancelSync = true),
           ),
-          const Divider(height: 32, color: Colors.white12),
+          Divider(height: 32, color: context.dividerSoft),
           _StorageCard(
             enabled: _autoCacheEnabled,
             autoBytes: _autoBytes,
@@ -598,15 +599,15 @@ class _PlaybackPageState extends ConsumerState<PlaybackPage> {
             onSetMax: _setCacheMax,
             onClear: _clearAutoCache,
           ),
-          const Divider(height: 32, color: Colors.white12),
+          Divider(height: 32, color: context.dividerSoft),
           SwitchListTile.adaptive(
             contentPadding: EdgeInsets.zero,
             title: const Text('Auto-queue similar tracks',
                 style: TextStyle(fontWeight: FontWeight.w700)),
-            subtitle: const Text(
+            subtitle: Text(
               'When the queue is about to end, append a similar track from '
               'your library (same algorithm as the "Suggested next" hint).',
-              style: TextStyle(color: Colors.white54, fontSize: 12),
+              style: TextStyle(color: context.textMuted, fontSize: 12),
             ),
             value: ref.watch(playbackPrefsProvider).autoQueueEnabled,
             onChanged: (v) async {
@@ -617,7 +618,7 @@ class _PlaybackPageState extends ConsumerState<PlaybackPage> {
               setState(() {});
             },
           ),
-          const Divider(height: 32, color: Colors.white12),
+          Divider(height: 32, color: context.dividerSoft),
           SwitchListTile.adaptive(
             contentPadding: EdgeInsets.zero,
             title: const Text('Equalizer', style: TextStyle(fontWeight: FontWeight.w700)),
@@ -626,7 +627,7 @@ class _PlaybackPageState extends ConsumerState<PlaybackPage> {
                   ? 'No equalizer available on this device.'
                   : '${params.bands.length} bands · '
                       '${params.minDecibels.toStringAsFixed(0)} to ${params.maxDecibels.toStringAsFixed(0)} dB',
-              style: const TextStyle(color: Colors.white54, fontSize: 12),
+              style: TextStyle(color: context.textMuted, fontSize: 12),
             ),
             value: _enabled,
             onChanged: params.bands.isEmpty ? null : _toggleEnabled,
@@ -678,11 +679,11 @@ class _SubsonicCacheCard extends StatelessWidget {
         const Text('Subsonic library cache',
             style: TextStyle(fontWeight: FontWeight.w700)),
         const SizedBox(height: 4),
-        const Text(
+        Text(
           'AutoQueue and "Suggested next" score against this cache instead of '
           'a random sample. Sync once after configuring a server; refresh '
           'when you add music server-side.',
-          style: TextStyle(color: Colors.white54, fontSize: 12),
+          style: TextStyle(color: context.textMuted, fontSize: 12),
         ),
         const SizedBox(height: 12),
         Text(status, style: const TextStyle(fontSize: 12)),
@@ -767,11 +768,11 @@ class _StorageCard extends StatelessWidget {
       children: [
         const Text('Storage', style: TextStyle(fontWeight: FontWeight.w700)),
         const SizedBox(height: 4),
-        const Text(
+        Text(
           'Anything you play is written to the on-disk pool so the next '
           'listen is offline-instant. The pool is LRU-evicted — pinned '
           'downloads are never touched.',
-          style: TextStyle(color: Colors.white54, fontSize: 12),
+          style: TextStyle(color: context.textMuted, fontSize: 12),
         ),
         SwitchListTile.adaptive(
           contentPadding: EdgeInsets.zero,
@@ -781,8 +782,8 @@ class _StorageCard extends StatelessWidget {
         ),
         Row(
           children: [
-            const Text('Max cache size',
-                style: TextStyle(color: Colors.white70, fontSize: 12)),
+            Text('Max cache size',
+                style: TextStyle(color: context.textSecondary, fontSize: 12)),
             const Spacer(),
             DropdownButton<int>(
               value: dropdownValue,
@@ -799,7 +800,7 @@ class _StorageCard extends StatelessWidget {
         Text(
           '${_fmt(autoBytes)} cached / ${_fmt(maxBytes)} max'
           '${pinnedBytes > 0 ? '   ·   ${_fmt(pinnedBytes)} pinned' : ''}',
-          style: const TextStyle(color: Colors.white60, fontSize: 11),
+          style: TextStyle(color: context.textTertiary, fontSize: 11),
         ),
         const SizedBox(height: 12),
         OutlinedButton.icon(
@@ -839,7 +840,7 @@ class _BandRow extends StatelessWidget {
         children: [
           SizedBox(
             width: 64,
-            child: Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+            child: Text(label, style: TextStyle(color: context.textSecondary, fontSize: 12)),
           ),
           Expanded(
             child: Slider(
@@ -855,7 +856,7 @@ class _BandRow extends StatelessWidget {
               '${gainDb >= 0 ? '+' : ''}${gainDb.toStringAsFixed(1)} dB',
               textAlign: TextAlign.end,
               style: TextStyle(
-                color: enabled ? Colors.white70 : Colors.white30,
+                color: enabled ? context.textSecondary : context.textDisabled,
                 fontSize: 11,
                 fontFeatures: const [FontFeature.tabularFigures()],
               ),

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../audio/providers.dart';
 import 'artwork.dart';
+import 'theme_ext.dart';
 
 /// Persistent mini player above the bottom nav. Disappears when no queue.
 class MiniPlayer extends ConsumerWidget {
@@ -35,7 +36,7 @@ class MiniPlayer extends ConsumerWidget {
               child: LinearProgressIndicator(
                 value: progress,
                 minHeight: 2,
-                backgroundColor: Colors.white12,
+                backgroundColor: context.dividerSoft,
                 valueColor: const AlwaysStoppedAnimation(Color(0xFF1ED760)),
               ),
             ),
@@ -52,7 +53,7 @@ class MiniPlayer extends ConsumerWidget {
                         Text(track.title, maxLines: 1, overflow: TextOverflow.ellipsis,
                             style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
                         Text(track.displayArtist, maxLines: 1, overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(color: Colors.white60, fontSize: 11)),
+                            style: TextStyle(color: context.textTertiary, fontSize: 11)),
                       ],
                     ),
                   ),

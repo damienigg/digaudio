@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../audio/providers.dart';
 import '../domain.dart';
 import 'widgets/artwork.dart';
+import 'widgets/theme_ext.dart';
 import 'widgets/track_tile.dart';
 
 class AlbumPage extends ConsumerWidget {
@@ -53,8 +54,8 @@ class AlbumPage extends ConsumerWidget {
                             Text(album.title,
                                 style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
                             if (album.artist != null)
-                              Text(album.artist!, style: const TextStyle(color: Colors.white60)),
-                            Text('${tracks.length} tracks', style: const TextStyle(color: Colors.white38, fontSize: 12)),
+                              Text(album.artist!, style: TextStyle(color: context.textTertiary)),
+                            Text('${tracks.length} tracks', style: TextStyle(color: context.textDisabled, fontSize: 12)),
                           ],
                         ),
                       ),
