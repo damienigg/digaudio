@@ -7,6 +7,29 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.17.2] — 2026-05-25
+
+### Added (Replay Gain — volume normalisation)
+- **`PlaybackPrefs.rgMode`** = `off` / `track` / `album`. Engine
+  reads the matching gain from the current Track and applies a
+  per-track volume attenuation via setVolume. Crossfade ramps were
+  refactored to tween toward the RG-adjusted ceiling (`_targetVolume`)
+  instead of 1.0, so RG and crossfade compose cleanly.
+- **No boost** — RG positive gain would require pre-amp boost that
+  risks clipping. Loud tracks get pulled down; quiet tracks stay at 1.0.
+- **Track model** gains `replayGainTrackDb` + `replayGainAlbumDb`
+  (nullable doubles). Parsed from OpenSubsonic's `replayGain.{track,album}Gain`
+  on song JSON. Stock Subsonic ≤ 1.16 doesn't expose them → both
+  fields null → engine leaves volume at 1.0 (no-op).
+- **Settings → Playback → Volume normalisation** picker (Off / Track /
+  Album) with subtitle explaining the OpenSubsonic dependency.
+
+### Internal
+- `AudioEngine._rgVolumeFor(t)` — `10^(gainDb/20)`, clamped `[0, 1]`,
+  with track / album field preference based on mode.
+- `_startFadeIn` / `_applyFadeOut` updated: their ramps tween toward
+  `_targetVolume` so an RG-quiet track + crossfade still works.
+
 ## [0.17.1] — 2026-05-25
 
 ### Confirmed

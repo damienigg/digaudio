@@ -284,6 +284,13 @@ class SubsonicClient {
         contentType: j['contentType'] as String?,
         genre: j['genre'] as String?,
         userRating: (j['userRating'] as num?)?.toInt(),
+        // OpenSubsonic extension — newer servers expose Replay Gain.
+        // Falls through to null on stock Subsonic ≤ 1.16 → engine
+        // silently leaves volume at 1.0 for that track.
+        replayGainTrackDb:
+            ((j['replayGain'] as Map?)?['trackGain'] as num?)?.toDouble(),
+        replayGainAlbumDb:
+            ((j['replayGain'] as Map?)?['albumGain'] as num?)?.toDouble(),
         origin: MediaOrigin.subsonic,
       );
 

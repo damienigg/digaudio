@@ -24,6 +24,12 @@ class Track {
   /// Subsonic user rating (1–5). Null = unrated OR origin doesn't support
   /// per-track ratings (e.g. local files). UI clears via `setRating(0)`.
   final int? userRating;
+  /// Replay Gain values in dB (from OpenSubsonic's `replayGain` field).
+  /// Null when the server doesn't expose them OR the track lacks RG
+  /// metadata. The engine prefers `replayGainAlbumDb` in album mode and
+  /// falls back to `replayGainTrackDb` (and vice versa).
+  final double? replayGainTrackDb;
+  final double? replayGainAlbumDb;
   final MediaOrigin origin;
 
   const Track({
@@ -42,6 +48,8 @@ class Track {
     this.contentType,
     this.genre,
     this.userRating,
+    this.replayGainTrackDb,
+    this.replayGainAlbumDb,
   });
 
   /// Unique key across all origins (collision-free).

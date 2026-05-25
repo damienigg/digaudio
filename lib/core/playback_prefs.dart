@@ -14,6 +14,7 @@ class PlaybackPrefs {
   static const _kCacheMaxBytes = 'pb.cache.max_bytes';
   static const _kSpeed = 'pb.speed';
   static const _kCrossfadeMs = 'pb.crossfade.ms';
+  static const _kRgMode = 'pb.rg.mode';
 
   /// Default cap for the auto-cache pool. Pinned downloads don't count against
   /// it. 2 GB matches what Spotify ships and survives a long road trip without
@@ -49,6 +50,14 @@ class PlaybackPrefs {
   /// but the perceived effect is the same for typical music.
   int crossfadeMs = 0;
 
+  /// Replay Gain mode: `off` / `track` / `album`. Engine reads the
+  /// matching gain from the current Track and applies an attenuation
+  /// via setVolume (RG values are typically negative; we clamp at 1.0
+  /// to avoid boost-induced clipping). Requires OpenSubsonic — older
+  /// Subsonic servers don't expose Replay Gain so the field is null
+  /// and we leave volume at 1.0.
+  String rgMode = 'off';
+
   Future<void> load() async {
     final p = await SharedPreferences.getInstance();
     eqEnabled = p.getBool(_kEqEnabled) ?? false;
@@ -57,6 +66,7 @@ class PlaybackPrefs {
     cacheMaxBytes = p.getInt(_kCacheMaxBytes) ?? defaultCacheMaxBytes;
     playbackSpeed = p.getDouble(_kSpeed) ?? 1.0;
     crossfadeMs = p.getInt(_kCrossfadeMs) ?? 0;
+    rgMode = p.getString(_kRgMode) ?? 'off';
     final raw = p.getString(_kEqGains);
     if (raw != null && raw.isNotEmpty) {
       eqGainsDb = (jsonDecode(raw) as List).map((e) => (e as num).toDouble()).toList();
@@ -71,6 +81,7 @@ class PlaybackPrefs {
     await p.setInt(_kCacheMaxBytes, cacheMaxBytes);
     await p.setDouble(_kSpeed, playbackSpeed);
     await p.setInt(_kCrossfadeMs, crossfadeMs);
+    await p.setString(_kRgMode, rgMode);
     await p.setString(_kEqGains, jsonEncode(eqGainsDb));
   }
 }

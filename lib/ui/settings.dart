@@ -693,6 +693,16 @@ class _PlaybackPageState extends ConsumerState<PlaybackPage> {
             },
           ),
           Divider(height: 32, color: context.dividerSoft),
+          _RgPicker(
+            mode: ref.watch(playbackPrefsProvider).rgMode,
+            onChanged: (v) async {
+              final prefs = ref.read(playbackPrefsProvider);
+              prefs.rgMode = v;
+              await prefs.save();
+              setState(() {});
+            },
+          ),
+          Divider(height: 32, color: context.dividerSoft),
           SwitchListTile.adaptive(
             contentPadding: EdgeInsets.zero,
             title: const Text('Equalizer', style: TextStyle(fontWeight: FontWeight.w700)),
@@ -941,6 +951,45 @@ class _CrossfadePicker extends StatelessWidget {
                           : context.textSecondary),
                 ),
             ],
+          ),
+        ],
+      );
+}
+
+/// Replay Gain mode picker (off / track / album). Server must expose
+/// the OpenSubsonic `replayGain` field per song for this to do
+/// anything — stock Subsonic ≤ 1.16 ignores it silently. We don't
+/// boost (no pre-amp): RG values are typically negative, so the
+/// adjustment is always an attenuation. Loud tracks get pulled down
+/// to the loudness reference; quiet tracks are left at 1.0.
+class _RgPicker extends StatelessWidget {
+  final String mode;
+  final ValueChanged<String> onChanged;
+  const _RgPicker({required this.mode, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Volume normalisation',
+              style: TextStyle(fontWeight: FontWeight.w700)),
+          const SizedBox(height: 4),
+          Text(
+            'Replay Gain — equalises perceived loudness across tracks. '
+            'Requires an OpenSubsonic-compatible server (Navidrome, recent '
+            'Gonic). Track mode normalises every track; Album mode '
+            'preserves intra-album dynamics.',
+            style: TextStyle(color: context.textMuted, fontSize: 12),
+          ),
+          const SizedBox(height: 8),
+          SegmentedButton<String>(
+            segments: const [
+              ButtonSegment(value: 'off', label: Text('Off')),
+              ButtonSegment(value: 'track', label: Text('Track')),
+              ButtonSegment(value: 'album', label: Text('Album')),
+            ],
+            selected: {mode},
+            onSelectionChanged: (s) => onChanged(s.first),
           ),
         ],
       );

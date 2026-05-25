@@ -50,6 +50,10 @@ class AudioEngine extends BaseAudioHandler {
   bool _scrobbledCurrent = false;
   Timer? _fadeInTimer;
   DateTime _lastPositionSave = DateTime(0);
+  /// Replay-Gain-adjusted ceiling for the current track. Crossfade
+  /// fade-in/fade-out ramps tween toward this value instead of 1.0
+  /// so RG doesn't get clobbered by the fade orchestrator.
+  double _targetVolume = 1.0;
 
   AudioEngine({
     required SubsonicClient? Function() subsonic,
@@ -96,6 +100,10 @@ class AudioEngine extends BaseAudioHandler {
       if (t.origin == MediaOrigin.subsonic) {
         _subsonic()?.scrobble(t.id, submission: false);
       }
+      // Replay Gain: pick the per-track attenuation target before any
+      // fade ramp starts (the fade orchestrator tweens toward
+      // _targetVolume, not toward 1.0).
+      _targetVolume = _rgVolumeFor(t);
       // Crossfade-in: start at volume 0 and ramp to 1 over the fade window
       // so the user perceives a continuous mix with the previous track's
       // tail-out.
@@ -161,22 +169,25 @@ class AudioEngine extends BaseAudioHandler {
 
   /// Volume ramp over the trailing edge of the current track. Idempotent
   /// — gets called every position tick (10–30 Hz); writing the same
-  /// volume value to just_audio is a no-op so it's cheap.
+  /// volume value to just_audio is a no-op so it's cheap. The ramp
+  /// tweens from `_targetVolume` (RG-adjusted) to 0.
   void _applyFadeOut(Duration pos, Duration? duration) {
     final fadeMs = _prefs.crossfadeMs;
     if (fadeMs <= 0 || duration == null) return;
     final remaining = duration.inMilliseconds - pos.inMilliseconds;
     if (remaining <= 0 || remaining > fadeMs) return;
-    _player.setVolume((remaining / fadeMs).clamp(0.0, 1.0));
+    final t = (remaining / fadeMs).clamp(0.0, 1.0);
+    _player.setVolume(t * _targetVolume);
   }
 
-  /// Volume ramp at track start. Cancels any in-flight fade-in. Falls
-  /// through to setVolume(1.0) immediately when crossfade is off.
+  /// Volume ramp at track start. Cancels any in-flight fade-in. Tweens
+  /// from 0 to `_targetVolume` (RG-adjusted) — when crossfade is off,
+  /// just jumps straight to the target.
   void _startFadeIn() {
     _fadeInTimer?.cancel();
     final fadeMs = _prefs.crossfadeMs;
     if (fadeMs <= 0) {
-      _player.setVolume(1.0);
+      _player.setVolume(_targetVolume);
       return;
     }
     _player.setVolume(0.0);
@@ -184,13 +195,28 @@ class AudioEngine extends BaseAudioHandler {
     _fadeInTimer = Timer.periodic(const Duration(milliseconds: 40), (t) {
       final elapsed = DateTime.now().difference(start).inMilliseconds;
       if (elapsed >= fadeMs) {
-        _player.setVolume(1.0);
+        _player.setVolume(_targetVolume);
         t.cancel();
         _fadeInTimer = null;
       } else {
-        _player.setVolume(elapsed / fadeMs);
+        _player.setVolume((elapsed / fadeMs) * _targetVolume);
       }
     });
+  }
+
+  /// Linear gain (0..1) from the track's Replay Gain metadata + the
+  /// user's `rgMode` preference. Caps at 1.0 — RG positive gain would
+  /// require pre-amp boost which we can't do without risking clipping.
+  /// Subsonic ≤ 1.16 servers don't expose RG → both fields null →
+  /// returns 1.0 (no attenuation).
+  double _rgVolumeFor(Track t) {
+    if (_prefs.rgMode == 'off') return 1.0;
+    final preferAlbum = _prefs.rgMode == 'album';
+    final gainDb = (preferAlbum
+            ? t.replayGainAlbumDb ?? t.replayGainTrackDb
+            : t.replayGainTrackDb ?? t.replayGainAlbumDb) ??
+        0.0;
+    return pow(10, gainDb / 20).toDouble().clamp(0.0, 1.0);
   }
 
   // --- Equalizer ------------------------------------------------------------
