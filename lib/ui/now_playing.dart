@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:palette_generator/palette_generator.dart';
 
 import '../audio/providers.dart';
 import '../domain.dart';
@@ -34,12 +35,82 @@ class NowPlayingPage extends ConsumerWidget {
             tabs: [Tab(text: 'Player'), Tab(text: 'Queue'), Tab(text: 'Lyrics')],
           ),
         ),
-        body: TabBarView(children: [
-          _PlayerTab(track: track),
-          const _QueueTab(),
-          _LyricsTab(track: track),
-        ]),
+        body: _TintBackground(
+          child: TabBarView(children: [
+            _PlayerTab(track: track),
+            const _QueueTab(),
+            _LyricsTab(track: track),
+          ]),
+        ),
       ),
+    );
+  }
+}
+
+/// Soft top-down gradient using the dominant colour of the currently
+/// playing artwork — adds life to Now Playing instead of a flat dark
+/// scaffold. Computed once per track via palette_generator and cached
+/// in state. Disabled when the user turns off the toggle or the track
+/// has no fetchable artwork (local files without a URI).
+class _TintBackground extends ConsumerStatefulWidget {
+  final Widget child;
+  const _TintBackground({required this.child});
+  @override
+  ConsumerState<_TintBackground> createState() => _TintBackgroundState();
+}
+
+class _TintBackgroundState extends ConsumerState<_TintBackground> {
+  Color? _tint;
+  String? _forKey;
+
+  Future<void> _maybeComputeFor(Track t) async {
+    if (_forKey == t.uniqueKey) return;
+    _forKey = t.uniqueKey;
+    final s = ref.read(subsonicProvider);
+    final uri = (t.origin == MediaOrigin.subsonic &&
+            t.coverArt != null &&
+            s != null)
+        ? s.coverUri(t.coverArt!)
+        : null;
+    if (uri == null) {
+      if (mounted) setState(() => _tint = null);
+      return;
+    }
+    try {
+      final palette = await PaletteGenerator.fromImageProvider(
+        NetworkImage(uri.toString()),
+        size: const Size(80, 80),
+        maximumColorCount: 8,
+      );
+      if (!mounted || _forKey != t.uniqueKey) return;
+      setState(() =>
+          _tint = palette.dominantColor?.color ?? palette.vibrantColor?.color);
+    } catch (_) {
+      // Best-effort — bad image / no network → no tint, no error.
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = ref.watch(displayPrefsProvider).nowPlayingTint;
+    final t = ref.watch(currentTrackProvider).valueOrNull;
+    if (enabled && t != null) _maybeComputeFor(t);
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        if (enabled && _tint != null)
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 400),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [_tint!.withOpacity(0.30), Colors.transparent],
+              ),
+            ),
+          ),
+        widget.child,
+      ],
     );
   }
 }

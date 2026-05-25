@@ -385,10 +385,65 @@ class DisplayPage extends ConsumerWidget {
               'Experimental — some surfaces still use dark-only colors.'),
           tile(ThemeMode.system, Icons.settings_brightness, 'Follow system',
               'Switches with the OS dark-mode setting.'),
+          Divider(height: 32, color: context.dividerSoft),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 8, 16, 6),
+            child: Text('Behaviour',
+                style: TextStyle(
+                    color: Colors.white60,
+                    fontSize: 11,
+                    letterSpacing: 1.5)),
+          ),
+          _DisplayToggle(
+            title: 'Long-press plays the track',
+            subtitle:
+                'Tap = browse / hold = play. The track sheet moves to the ⋮ button on the right.',
+            value: ref.watch(displayPrefsProvider).longPressPlays,
+            onChanged: (v) async {
+              final p = ref.read(displayPrefsProvider);
+              p.longPressPlays = v;
+              await p.save();
+              // The toggle is read live by TrackTile via ref.read so no
+              // global invalidation is needed; just trigger a rebuild.
+              ref.invalidate(displayPrefsProvider);
+            },
+          ),
+          _DisplayToggle(
+            title: 'Now Playing colour tint',
+            subtitle:
+                'Background gradient uses the dominant colour of the current artwork.',
+            value: ref.watch(displayPrefsProvider).nowPlayingTint,
+            onChanged: (v) async {
+              final p = ref.read(displayPrefsProvider);
+              p.nowPlayingTint = v;
+              await p.save();
+              ref.invalidate(displayPrefsProvider);
+            },
+          ),
         ],
       ),
     );
   }
+}
+
+class _DisplayToggle extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+  const _DisplayToggle({
+    required this.title,
+    required this.subtitle,
+    required this.value,
+    required this.onChanged,
+  });
+  @override
+  Widget build(BuildContext context) => SwitchListTile.adaptive(
+        title: Text(title),
+        subtitle: Text(subtitle, style: const TextStyle(fontSize: 11)),
+        value: value,
+        onChanged: onChanged,
+      );
 }
 
 /// Playback settings. Today: equalizer only. Crossfade lives here once the

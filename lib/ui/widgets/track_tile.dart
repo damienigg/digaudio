@@ -27,10 +27,15 @@ class TrackTile extends ConsumerWidget {
     final cacheState = ref.watch(cacheStateProvider).valueOrNull ?? const {};
     // null = uncached, false = auto-cached (LRU-evictable), true = pinned
     final cachePinned = cacheState[t.uniqueKey];
+    // Power-user toggle: long-press = play instead of opening the actions
+    // sheet. The trailing ⋮ remains the entry point to the sheet.
+    final longPressPlays = ref.read(displayPrefsProvider).longPressPlays;
     final openActions = onMore ?? () => showTrackActions(context, ref, t);
     return InkWell(
       onTap: () => engine.setQueue(queue, initialIndex: index),
-      onLongPress: openActions,
+      onLongPress: longPressPlays
+          ? () => engine.setQueue(queue, initialIndex: index)
+          : openActions,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         child: Row(

@@ -7,6 +7,32 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.16.2] — 2026-05-25
+
+### Added (UX polish — last items of category A)
+- **Now Playing colour tint.** Soft top-down gradient using the
+  dominant colour of the current artwork (via palette_generator,
+  already in the dep tree). Computed once per track, cached in
+  widget state, animated 400 ms between tracks. Toggle in
+  Settings → Display.
+- **Long-press plays the track** toggle (Settings → Display →
+  Behaviour). Power-user mode: tap = browse, hold = play; the track
+  sheet then moves to the ⋮ button on the right. Off by default.
+
+### Deferred (originally bundled into v0.16.2)
+- **Bulk select in lists** — long-press toggles a multi-select mode
+  with batch actions (favourite / add-to-playlist / queue /
+  download). Touches many UI files (Library, Search, Album, Playlist
+  views) + needs its own per-list state + an alternative AppBar.
+  Lifted to its own future release so this one ships clean.
+
+### Internal
+- `DisplayPrefs` gains `longPressPlays` + `nowPlayingTint` (both
+  persisted alongside `themeMode`).
+- `_TintBackground` is the only consumer of palette_generator
+  today; it caches by trackKey so the same track's palette is
+  computed at most once per session.
+
 ## [0.16.1] — 2026-05-25
 
 ### Added (Per-track resume + Up Next strip)
