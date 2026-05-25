@@ -7,6 +7,28 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.21.1] — 2026-05-25
+
+### Added (Subsonic radio: auto-refill, truly endless)
+- `RadioModeService` replaces the v0.15.2 one-shot 30-track flow.
+  On every track-index change, if the buffer is under 3 tracks
+  ahead, fetches 30 more similar tracks from the Subsonic server
+  via `getSimilarSongs2(last_tail_track)` and appends up to 10
+  unseen ones. Repeats indefinitely.
+- **Self-disengaging**: the service tracks every key it added to
+  the queue. On a track change, if the now-playing track isn't in
+  that set, the user must have switched queues (album / playlist /
+  smart mix) — refilling stops silently. Re-engaging is one tap on
+  "Start radio".
+- Refill seed is the **tail** of the queue (most recently added),
+  not the original seed — so the radio's trajectory drifts the
+  way the user is moving, not where they started.
+
+### Changed
+- "Start radio" action in the track sheet now routes through
+  `radioModeProvider.startRadio(track)` instead of calling
+  `engine.setQueue` directly. Same UX, plus the auto-refill.
+
 ## [0.21.0] — 2026-05-25
 
 ### Added (Smart playlists v2 — joins for the rules engine)

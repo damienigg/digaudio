@@ -25,6 +25,7 @@ import '../subsonic/client.dart';
 import 'album_mode.dart';
 import 'bt_eq.dart';
 import 'player.dart';
+import 'radio_mode.dart';
 import 'sleep_timer.dart';
 
 /// Central Riverpod wiring.
@@ -107,6 +108,15 @@ final sleepTimerProvider = Provider<SleepTimerService>((ref) {
 
 final albumModeProvider = Provider<AlbumModeService>((ref) {
   final svc = AlbumModeService(ref.watch(audioEngineProvider));
+  ref.onDispose(svc.dispose);
+  return svc;
+});
+
+final radioModeProvider = Provider<RadioModeService>((ref) {
+  final svc = RadioModeService(
+    ref.watch(audioEngineProvider),
+    () => ref.read(subsonicProvider),
+  );
   ref.onDispose(svc.dispose);
   return svc;
 });
