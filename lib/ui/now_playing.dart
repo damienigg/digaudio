@@ -27,7 +27,7 @@ class NowPlayingPage extends ConsumerWidget {
       length: 3,
       child: Scaffold(
         appBar: AppBar(
-          leading: IconButton(icon: const Icon(Icons.keyboard_arrow_down), onPressed: () => Navigator.maybePop(context)),
+          leading: IconButton(tooltip: 'Close', icon: const Icon(Icons.keyboard_arrow_down), onPressed: () => Navigator.maybePop(context)),
           title: Text(track.album ?? track.title, style: const TextStyle(fontSize: 14)),
           actions: const [_AlbumModeAction(), _SpeedAction(), _SleepAction()],
           bottom: const TabBar(
@@ -191,18 +191,22 @@ class _PlayerTab extends ConsumerWidget {
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 IconButton(
+                  tooltip: shuffle ? 'Shuffle on' : 'Shuffle off',
                   icon: Icon(Icons.shuffle, color: shuffle ? _accent : context.textSecondary),
                   onPressed: () => engine.setShuffle(!shuffle),
                 ),
-                IconButton(iconSize: 40, icon: const Icon(Icons.skip_previous), onPressed: engine.previous),
+                IconButton(tooltip: 'Previous track', iconSize: 40, icon: const Icon(Icons.skip_previous), onPressed: engine.previous),
                 FloatingActionButton(
                   onPressed: () => playing ? engine.pause() : engine.play(),
                   backgroundColor: _accent,
                   foregroundColor: Colors.black,
                   child: Icon(playing ? Icons.pause : Icons.play_arrow, size: 32),
                 ),
-                IconButton(iconSize: 40, icon: const Icon(Icons.skip_next), onPressed: engine.next),
+                IconButton(tooltip: 'Next track', iconSize: 40, icon: const Icon(Icons.skip_next), onPressed: engine.next),
                 IconButton(
+                  tooltip: loop == LoopMode.one
+                      ? 'Repeat one'
+                      : (loop == LoopMode.all ? 'Repeat all' : 'Repeat off'),
                   icon: Icon(
                     loop == LoopMode.one ? Icons.repeat_one : Icons.repeat,
                     color: loop == LoopMode.off ? context.textSecondary : _accent,

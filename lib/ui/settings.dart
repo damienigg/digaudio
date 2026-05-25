@@ -144,6 +144,7 @@ class _ServerTile extends StatelessWidget {
       ),
       trailing: IconButton(
         icon: const Icon(Icons.edit_outlined),
+        tooltip: 'Edit server',
         onPressed: () => context.push('/settings/server/${server.id}'),
       ),
       onTap: server.isConfigured && !active
@@ -287,7 +288,7 @@ class _ServerEditPageState extends ConsumerState<ServerEditPage> {
         title: Text(_isNew ? 'Add Subsonic server' : 'Edit server'),
         actions: [
           if (!_isNew && !isBuiltin)
-            IconButton(icon: const Icon(Icons.delete_outline), onPressed: _busy ? null : _delete),
+            IconButton(tooltip: 'Delete server', icon: const Icon(Icons.delete_outline), onPressed: _busy ? null : _delete),
         ],
       ),
       body: !_loaded
@@ -1116,6 +1117,7 @@ class _BtEqCardState extends ConsumerState<_BtEqCard> {
                   style: const TextStyle(fontSize: 13)),
               trailing: IconButton(
                 icon: const Icon(Icons.delete_outline, size: 18),
+                tooltip: 'Forget device',
                 onPressed: () async {
                   await ref.read(btEqProvider).forget(e.key);
                   await _refresh();

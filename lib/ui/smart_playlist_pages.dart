@@ -79,6 +79,7 @@ class _SmartPlaylistBodyState extends ConsumerState<_SmartPlaylistBody> {
           ),
           IconButton(
             icon: const Icon(Icons.edit_outlined),
+            tooltip: 'Edit rules',
             onPressed: () async {
               await context.push('/playlist/smart/${widget.playlist.id}/edit');
               _reload(); // rules may have changed
@@ -86,6 +87,7 @@ class _SmartPlaylistBodyState extends ConsumerState<_SmartPlaylistBody> {
           ),
           IconButton(
             icon: const Icon(Icons.delete_outline),
+            tooltip: 'Delete',
             onPressed: () async {
               final ok = await showDialog<bool>(
                 context: context,

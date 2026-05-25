@@ -103,19 +103,23 @@ class _AlphaScrollListState<T> extends State<AlphaScrollList<T>> {
                 child: Column(
                   children: [
                     for (final l in _letters)
-                      SizedBox(
-                        height: letterHeight,
-                        child: Center(
-                          child: Text(
-                            l,
-                            style: TextStyle(
-                              color: idx.containsKey(l)
-                                  ? context.textSecondary
-                                  : context.outlineStrong,
-                              fontSize: 10,
-                              fontWeight: idx.containsKey(l)
-                                  ? FontWeight.w600
-                                  : FontWeight.w400,
+                      Semantics(
+                        label: 'Jump to letter $l',
+                        button: true,
+                        child: SizedBox(
+                          height: letterHeight,
+                          child: Center(
+                            child: Text(
+                              l,
+                              style: TextStyle(
+                                color: idx.containsKey(l)
+                                    ? context.textSecondary
+                                    : context.outlineStrong,
+                                fontSize: 10,
+                                fontWeight: idx.containsKey(l)
+                                    ? FontWeight.w600
+                                    : FontWeight.w400,
+                              ),
                             ),
                           ),
                         ),

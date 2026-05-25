@@ -7,6 +7,24 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.23.2] — 2026-05-25
+
+### Changed (Accessibility sweep)
+- **12 tooltips added** to previously-unlabelled `IconButton`s
+  across 7 UI files (Home Settings, Now Playing transport +
+  close, smart-playlist viewer, server edit / delete / forget,
+  mini-player play+next, track-tile ⋮, ratings stars). TalkBack
+  now announces a meaningful action for each.
+- **Alpha-scroll letter strip** (`AlphaScrollList`) wraps each
+  letter in `Semantics(label: 'Jump to letter X', button: true)`
+  — visual size unchanged, but TalkBack now reads each row as a
+  jump-target instead of just "B, button".
+- **Year heatmap** (`_YearHeatmap` in Stats) wrapped with one
+  summary `Semantics(label: 'Listening heatmap, last 365 days',
+  excludeSemantics: true)` — silences the 365 inner cells (would
+  otherwise read as "image, image, image..." noise) while keeping
+  the visualisation intact for sighted users.
+
 ## [0.23.1] — 2026-05-25
 
 ### Added (Notification rich actions — skip 10 s)

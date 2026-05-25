@@ -371,46 +371,51 @@ class _YearHeatmap extends StatelessWidget {
     final totalDays = today.difference(firstColDate).inDays + 1;
     final cols = (totalDays / 7).ceil();
 
-    return SizedBox(
-      height: 7 * (_cellSize + _gap) - _gap,
-      child: Row(
-        children: [
-          for (var w = 0; w < cols; w++) ...[
-            if (w > 0) const SizedBox(width: _gap),
-            Expanded(
-              child: Column(
-                children: [
-                  for (var d = 0; d < 7; d++) ...[
-                    if (d > 0) const SizedBox(height: _gap),
-                    Expanded(
-                      child: () {
-                        final cellDate =
-                            firstColDate.add(Duration(days: w * 7 + d));
-                        if (cellDate.isBefore(oldest) ||
-                            cellDate.isAfter(today)) {
-                          return const SizedBox();
-                        }
-                        final c = counts[cellDate] ?? 0;
-                        final t = maxCount == 0
-                            ? 0.0
-                            : (c / maxCount).clamp(0.0, 1.0);
-                        return Container(
-                          decoration: BoxDecoration(
-                            color: c == 0
-                                ? context.dividerSoft
-                                : Color.lerp(
-                                    context.outlineStrong, _accent, t),
-                            borderRadius: BorderRadius.circular(1.5),
-                          ),
-                        );
-                      }(),
-                    ),
+    return Semantics(
+      label: 'Listening heatmap, last 365 days',
+      container: true,
+      excludeSemantics: true,
+      child: SizedBox(
+        height: 7 * (_cellSize + _gap) - _gap,
+        child: Row(
+          children: [
+            for (var w = 0; w < cols; w++) ...[
+              if (w > 0) const SizedBox(width: _gap),
+              Expanded(
+                child: Column(
+                  children: [
+                    for (var d = 0; d < 7; d++) ...[
+                      if (d > 0) const SizedBox(height: _gap),
+                      Expanded(
+                        child: () {
+                          final cellDate =
+                              firstColDate.add(Duration(days: w * 7 + d));
+                          if (cellDate.isBefore(oldest) ||
+                              cellDate.isAfter(today)) {
+                            return const SizedBox();
+                          }
+                          final c = counts[cellDate] ?? 0;
+                          final t = maxCount == 0
+                              ? 0.0
+                              : (c / maxCount).clamp(0.0, 1.0);
+                          return Container(
+                            decoration: BoxDecoration(
+                              color: c == 0
+                                  ? context.dividerSoft
+                                  : Color.lerp(
+                                      context.outlineStrong, _accent, t),
+                              borderRadius: BorderRadius.circular(1.5),
+                            ),
+                          );
+                        }(),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
-            ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

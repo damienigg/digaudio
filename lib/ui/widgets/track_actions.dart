@@ -311,6 +311,7 @@ class _RatingRow extends ConsumerWidget {
             IconButton(
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+              tooltip: i == current ? 'Clear rating' : 'Rate $i star${i == 1 ? '' : 's'}',
               icon: Icon(
                 i <= current ? Icons.star : Icons.star_border,
                 color: i <= current ? const Color(0xFF1ED760) : context.textTertiary,

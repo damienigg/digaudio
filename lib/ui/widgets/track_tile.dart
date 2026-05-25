@@ -103,6 +103,7 @@ class TrackTile extends ConsumerWidget {
                     style: TextStyle(color: context.textMuted, fontSize: 12, fontFeatures: const [FontFeature.tabularFigures()])),
               ),
             IconButton(
+              tooltip: 'Track actions',
               icon: Icon(Icons.more_vert, color: context.textMuted),
               onPressed: openActions,
             ),
