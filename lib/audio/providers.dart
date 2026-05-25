@@ -20,6 +20,7 @@ import '../library/smart_playlists.dart';
 import '../library/subsonic_cache.dart';
 import '../library/wishlist.dart';
 import '../subsonic/client.dart';
+import 'album_mode.dart';
 import 'player.dart';
 import 'sleep_timer.dart';
 
@@ -100,6 +101,16 @@ final sleepTimerProvider = Provider<SleepTimerService>((ref) {
   ref.onDispose(svc.dispose);
   return svc;
 });
+
+final albumModeProvider = Provider<AlbumModeService>((ref) {
+  final svc = AlbumModeService(ref.watch(audioEngineProvider));
+  ref.onDispose(svc.dispose);
+  return svc;
+});
+
+/// True iff "stop after current album" is armed.
+final albumModeArmedProvider = StreamProvider<bool>((ref) =>
+    ref.watch(albumModeProvider).armedStream);
 
 /// Countdown stream — `null` whenever no duration timer is running.
 final sleepRemainingProvider = StreamProvider<Duration?>((ref) =>

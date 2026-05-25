@@ -201,6 +201,28 @@ class AudioEngine extends BaseAudioHandler {
     queue.add(_tracks.map(_toMediaItem).toList());
   }
 
+  /// Reorder a queue entry. just_audio's ConcatenatingAudioSource has
+  /// `move(from, to)` semantics where `to` is the FINAL index post-move
+  /// — we pass the UI's "new index" through directly.
+  Future<void> moveInQueue(int from, int to) async {
+    if (_queue == null || from == to) return;
+    if (from < 0 || from >= _tracks.length) return;
+    final clamped = to.clamp(0, _tracks.length - 1);
+    await _queue!.move(from, clamped);
+    final reordered = [..._tracks];
+    final t = reordered.removeAt(from);
+    reordered.insert(clamped, t);
+    _tracks = List.unmodifiable(reordered);
+    queue.add(_tracks.map(_toMediaItem).toList());
+  }
+
+  Future<void> removeFromQueue(int index) async {
+    if (_queue == null || index < 0 || index >= _tracks.length) return;
+    await _queue!.removeAt(index);
+    _tracks = List.unmodifiable([..._tracks]..removeAt(index));
+    queue.add(_tracks.map(_toMediaItem).toList());
+  }
+
   AudioSource _sourceFor(Track t) {
     final tag = _toMediaItem(t);
     // Offline file always wins — regardless of origin.

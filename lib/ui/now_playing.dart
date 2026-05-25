@@ -28,7 +28,7 @@ class NowPlayingPage extends ConsumerWidget {
         appBar: AppBar(
           leading: IconButton(icon: const Icon(Icons.keyboard_arrow_down), onPressed: () => Navigator.maybePop(context)),
           title: Text(track.album ?? track.title, style: const TextStyle(fontSize: 14)),
-          actions: const [_SpeedAction(), _SleepAction()],
+          actions: const [_AlbumModeAction(), _SpeedAction(), _SleepAction()],
           bottom: const TabBar(
             indicatorColor: _accent,
             tabs: [Tab(text: 'Player'), Tab(text: 'Queue'), Tab(text: 'Lyrics')],
@@ -150,16 +150,51 @@ class _PlayerTab extends ConsumerWidget {
       m == LoopMode.off ? LoopMode.all : (m == LoopMode.all ? LoopMode.one : LoopMode.off);
 }
 
+/// Editable queue: drag the handle to reorder, swipe a row to remove.
+/// Watches `currentIndexStream` so the list rebuilds when auto-queue
+/// appends a track at the tail without us having to invalidate
+/// anything manually.
 class _QueueTab extends ConsumerWidget {
   const _QueueTab();
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(currentTrackProvider); // rebuild on track change
     final engine = ref.watch(audioEngineProvider);
     final queue = engine.currentQueue;
     if (queue.isEmpty) return const Center(child: Text('Empty queue'));
-    return ListView.builder(
+    return ReorderableListView.builder(
       itemCount: queue.length,
-      itemBuilder: (_, i) => TrackTile(queue: queue, index: i),
+      buildDefaultDragHandles: false,
+      onReorder: (oldIndex, newIndex) {
+        // ReorderableListView uses the "before-removal" newIndex convention,
+        // hence the −1 when moving down. AudioEngine.moveInQueue expects the
+        // final position post-move; we adjust here.
+        final adjusted = newIndex > oldIndex ? newIndex - 1 : newIndex;
+        engine.moveInQueue(oldIndex, adjusted);
+      },
+      itemBuilder: (_, i) => Dismissible(
+        key: ValueKey('${queue[i].uniqueKey}-$i'),
+        direction: DismissDirection.endToStart,
+        background: Container(
+          color: Colors.redAccent.withOpacity(0.7),
+          alignment: Alignment.centerRight,
+          padding: const EdgeInsets.only(right: 20),
+          child: const Icon(Icons.delete, color: Colors.white),
+        ),
+        onDismissed: (_) => engine.removeFromQueue(i),
+        child: Row(
+          children: [
+            Expanded(child: TrackTile(queue: queue, index: i)),
+            ReorderableDragStartListener(
+              index: i,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Icon(Icons.drag_handle, color: context.textTertiary),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -315,6 +350,32 @@ class _SyncedLyricsViewState extends ConsumerState<_SyncedLyricsView> {
           ),
         );
       },
+    );
+  }
+}
+
+/// AppBar action: "Stop after this album". When armed, the engine
+/// pauses as soon as the next track switch leaves the current album.
+/// One-tap toggle; the chip turns accent when armed.
+class _AlbumModeAction extends ConsumerWidget {
+  const _AlbumModeAction();
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final armed = ref.watch(albumModeArmedProvider).valueOrNull ?? false;
+    return IconButton(
+      tooltip: armed ? 'Cancel album-end stop' : 'Stop after this album',
+      onPressed: () {
+        final svc = ref.read(albumModeProvider);
+        if (armed) {
+          svc.disarm();
+        } else {
+          svc.armForCurrent();
+        }
+      },
+      icon: Icon(
+        armed ? Icons.album : Icons.album_outlined,
+        color: armed ? _accent : context.textSecondary,
+      ),
     );
   }
 }

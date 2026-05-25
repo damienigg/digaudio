@@ -7,6 +7,31 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.16.0] — 2026-05-25
+
+### Added (Queue editor + Album mode — category A)
+- **Drag-to-reorder** in the Now Playing → Queue tab via
+  ReorderableListView. Each row carries an explicit drag handle on
+  the right (avoids tap-vs-drag ambiguity on TrackTile).
+- **Swipe-to-remove** queue entries (left swipe). Background reveals
+  red delete affordance, similar to the local-playlist editor.
+- **Album mode** ("Stop after this album") — new AppBar action on
+  Now Playing. When armed, the engine pauses as soon as the next
+  track switch leaves the current `albumId`. One-tap toggle; chip
+  turns accent green when armed; auto-disarms after firing.
+
+### Engine
+- `AudioEngine.moveInQueue(from, to)` — wraps just_audio's
+  `ConcatenatingAudioSource.move`. Adapts the "newIndex" convention
+  ReorderableListView uses (post-removal index) to the
+  ConcatenatingAudioSource expectation.
+- `AudioEngine.removeFromQueue(index)` — wraps `.removeAt`. Both
+  methods rebroadcast `queue` so the MediaSession surface stays
+  truthful.
+- `AlbumModeService` — lazy `currentIndexStream` subscription, only
+  attaches when the user first arms the toggle; reactive
+  `armedStream`.
+
 ## [0.15.4] — 2026-05-25
 
 ### Added (Smart mixes builtins seeded at first launch)
