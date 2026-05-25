@@ -410,6 +410,19 @@ class DisplayPage extends ConsumerWidget {
               ref.invalidate(displayPrefsProvider);
             },
           ),
+          _DisplayToggle(
+            title: 'Use system colours (Material You)',
+            subtitle:
+                'Android 12+: app accent follows the wallpaper palette. '
+                'Older devices ignore this toggle.',
+            value: ref.watch(displayPrefsProvider).materialYouEnabled,
+            onChanged: (v) async {
+              final p = ref.read(displayPrefsProvider);
+              p.materialYouEnabled = v;
+              await p.save();
+              ref.invalidate(displayPrefsProvider);
+            },
+          ),
         ],
       ),
     );
@@ -698,6 +711,26 @@ class _PlaybackPageState extends ConsumerState<PlaybackPage> {
             onChanged: (v) async {
               final prefs = ref.read(playbackPrefsProvider);
               prefs.rgMode = v;
+              await prefs.save();
+              setState(() {});
+            },
+          ),
+          Divider(height: 32, color: context.dividerSoft),
+          SwitchListTile.adaptive(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Auto-play when Bluetooth connects',
+                style: TextStyle(fontWeight: FontWeight.w700)),
+            subtitle: Text(
+              'When a BT output becomes active and the queue is loaded '
+              'but paused, automatically resume playback. '
+              'Headphone-removal still auto-pauses (via the music session) '
+              'regardless of this toggle.',
+              style: TextStyle(color: context.textMuted, fontSize: 12),
+            ),
+            value: ref.watch(playbackPrefsProvider).autoPlayOnBtConnect,
+            onChanged: (v) async {
+              final prefs = ref.read(playbackPrefsProvider);
+              prefs.autoPlayOnBtConnect = v;
               await prefs.save();
               setState(() {});
             },

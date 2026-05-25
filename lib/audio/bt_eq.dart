@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:audio_session/audio_session.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../core/playback_prefs.dart';
 import 'player.dart';
 
 /// Per-Bluetooth-device EQ override. The default EQ
@@ -21,11 +22,12 @@ class BtEqService {
 
   final AudioEngine _engine;
   final Future<List<double>> Function() _defaultGains;
+  final PlaybackPrefs _prefs;
   StreamSubscription<AudioDevicesChangedEvent>? _sub;
   String? _activeKey;
   final _activeKeyStream = StreamController<String?>.broadcast();
 
-  BtEqService(this._engine, this._defaultGains);
+  BtEqService(this._engine, this._defaultGains, this._prefs);
 
   /// Currently-active BT device key, or null. UI label.
   Stream<String?> get activeKeyStream => _activeKeyStream.stream;
@@ -88,6 +90,7 @@ class BtEqService {
     );
     final newKey = bt.name.isEmpty ? null : '${bt.name}|${bt.type.name}';
     if (newKey == _activeKey) return;
+    final wasNull = _activeKey == null;
     _activeKey = newKey;
     _activeKeyStream.add(newKey);
 
@@ -98,6 +101,16 @@ class BtEqService {
       // No saved override for the new active device → fall back to
       // whatever the user's default EQ is.
       await _engine.applyEqGains(await _defaultGains());
+    }
+
+    // Auto-play on BT connect: when a BT output just became active
+    // (was null, now isn't), the user opted in, the queue isn't
+    // empty, and we're not already playing → kick playback off.
+    if (newKey != null && wasNull && _prefs.autoPlayOnBtConnect) {
+      final state = _engine.raw.playerState;
+      if (_engine.currentQueue.isNotEmpty && !state.playing) {
+        unawaited(_engine.play());
+      }
     }
   }
 }

@@ -7,6 +7,40 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.20.1] — 2026-05-25
+
+### Added (Material You + auto-play BT)
+- **Material You dynamic palette** (Android 12+). Settings →
+  Display → "Use system colours (Material You)". When on AND the
+  OS exposes a palette, `MaterialApp.router` wraps with
+  `DynamicColorBuilder` and the `ColorScheme` follows the
+  wallpaper. Brand accent `#1ED760` remains the fallback when the
+  OS doesn't expose a palette (pre-Android 12, or palette
+  unavailable). Hardcoded accent splashes (heart icon, EQ-active,
+  Now Playing transport) stay green by design — those are brand,
+  not theme.
+- **`AppTheme.fromDynamic(ColorScheme)`** builds the dynamic
+  variant: dynamic palette for `colorScheme`, our background /
+  card / appBar treatment overlaid on top.
+- **Auto-play on Bluetooth connect** (Settings → Playback). When
+  a BT output becomes active and the queue is loaded but paused,
+  resume automatically. Default off — opt-in because some users
+  explicitly pause before donning headphones.
+- `BtEqService` extended with the auto-play hook (reuses the same
+  `devicesChangedEventStream` subscription that already drives the
+  per-device EQ override).
+
+### Confirmed (no code change)
+- **Headphone-removal auto-pause** has been on since v0.9.x via
+  `AudioSessionConfiguration.music` — the OS sends
+  `AUDIO_BECOMING_NOISY` on unplug, and the session config makes
+  just_audio pause automatically. The new auto-play-on-connect
+  toggle complements it: pause on remove + resume on connect.
+
+### Dep
+- Added `dynamic_color: ^1.7.0` for the Material You palette
+  resolution (no other consumer in the app today).
+
 ## [0.20.0] — 2026-05-25
 
 ### Added (Quick Settings tile — combo 4 kickoff)

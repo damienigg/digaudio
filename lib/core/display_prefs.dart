@@ -9,6 +9,7 @@ class DisplayPrefs {
   static const _kThemeMode = 'display.theme_mode';
   static const _kLongPressPlays = 'display.long_press_plays';
   static const _kNowPlayingTint = 'display.now_playing_tint';
+  static const _kMaterialYou = 'display.material_you';
 
   ThemeMode themeMode = ThemeMode.dark;
 
@@ -23,6 +24,13 @@ class DisplayPrefs {
   /// adds life. Toggle off if the colour shifts are distracting.
   bool nowPlayingTint = true;
 
+  /// Material You — when on (and the OS provides a dynamic palette,
+  /// i.e. Android 12+), the app's `ColorScheme` follows the system
+  /// wallpaper. Brand accent stays the fallback whenever the OS
+  /// doesn't expose a palette. Default off so existing users don't
+  /// see a surprise re-skin on update.
+  bool materialYouEnabled = false;
+
   Future<void> load() async {
     final p = await SharedPreferences.getInstance();
     themeMode = switch (p.getString(_kThemeMode)) {
@@ -32,6 +40,7 @@ class DisplayPrefs {
     };
     longPressPlays = p.getBool(_kLongPressPlays) ?? false;
     nowPlayingTint = p.getBool(_kNowPlayingTint) ?? true;
+    materialYouEnabled = p.getBool(_kMaterialYou) ?? false;
   }
 
   Future<void> save() async {
@@ -39,5 +48,6 @@ class DisplayPrefs {
     await p.setString(_kThemeMode, themeMode.name);
     await p.setBool(_kLongPressPlays, longPressPlays);
     await p.setBool(_kNowPlayingTint, nowPlayingTint);
+    await p.setBool(_kMaterialYou, materialYouEnabled);
   }
 }

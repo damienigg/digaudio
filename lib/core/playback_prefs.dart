@@ -15,6 +15,7 @@ class PlaybackPrefs {
   static const _kSpeed = 'pb.speed';
   static const _kCrossfadeMs = 'pb.crossfade.ms';
   static const _kRgMode = 'pb.rg.mode';
+  static const _kAutoPlayBt = 'pb.autoplay.bt';
 
   /// Default cap for the auto-cache pool. Pinned downloads don't count against
   /// it. 2 GB matches what Spotify ships and survives a long road trip without
@@ -58,6 +59,12 @@ class PlaybackPrefs {
   /// and we leave volume at 1.0.
   String rgMode = 'off';
 
+  /// When a Bluetooth output becomes active and the engine has a queue
+  /// loaded but isn't currently playing, automatically resume. Off by
+  /// default — opt-in because some users explicitly pause before
+  /// putting headphones on.
+  bool autoPlayOnBtConnect = false;
+
   Future<void> load() async {
     final p = await SharedPreferences.getInstance();
     eqEnabled = p.getBool(_kEqEnabled) ?? false;
@@ -67,6 +74,7 @@ class PlaybackPrefs {
     playbackSpeed = p.getDouble(_kSpeed) ?? 1.0;
     crossfadeMs = p.getInt(_kCrossfadeMs) ?? 0;
     rgMode = p.getString(_kRgMode) ?? 'off';
+    autoPlayOnBtConnect = p.getBool(_kAutoPlayBt) ?? false;
     final raw = p.getString(_kEqGains);
     if (raw != null && raw.isNotEmpty) {
       eqGainsDb = (jsonDecode(raw) as List).map((e) => (e as num).toDouble()).toList();
@@ -82,6 +90,7 @@ class PlaybackPrefs {
     await p.setDouble(_kSpeed, playbackSpeed);
     await p.setInt(_kCrossfadeMs, crossfadeMs);
     await p.setString(_kRgMode, rgMode);
+    await p.setBool(_kAutoPlayBt, autoPlayOnBtConnect);
     await p.setString(_kEqGains, jsonEncode(eqGainsDb));
   }
 }

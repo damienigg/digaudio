@@ -1,7 +1,7 @@
 name: digaudio
 description: "digaudio — a lightweight, modern, high-quality audio player (local + Subsonic)."
 publish_to: 'none'
-version: 0.20.0+46
+version: 0.20.1+47
 
 environment:
   sdk: ^3.5.4
@@ -42,6 +42,11 @@ dependencies:
   # UI
   cached_network_image: ^3.4.1
   palette_generator: ^0.3.3+5
+  # Material You — pulls the system wallpaper palette on Android 12+.
+  # When the user toggles "Use system colours" in Settings → Display,
+  # the colorScheme follows the wallpaper; brand accent (#1ED760)
+  # remains the fallback when the OS doesn't expose a palette.
+  dynamic_color: ^1.7.0
 
   # Sharing (playlist export) + picking (playlist import)
   share_plus: ^10.1.2

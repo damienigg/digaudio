@@ -115,6 +115,7 @@ final btEqProvider = Provider<BtEqService>((ref) {
   final svc = BtEqService(
     ref.watch(audioEngineProvider),
     () async => ref.read(playbackPrefsProvider).eqGainsDb,
+    ref.read(playbackPrefsProvider),
   );
   ref.onDispose(svc.stop);
   return svc;
