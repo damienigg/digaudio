@@ -15,6 +15,7 @@ import '../library/lastfm.dart';
 import '../library/local.dart';
 import '../library/play_history.dart';
 import '../library/ratings.dart';
+import '../library/selection.dart';
 import '../library/server_health.dart';
 import '../library/smart_playlists.dart';
 import '../library/subsonic_cache.dart';
@@ -193,6 +194,12 @@ final playHistoryProvider = Provider<PlayHistoryManager>((ref) =>
 
 final trackPositionsProvider = Provider<TrackPositionsManager>((ref) =>
     TrackPositionsManager(ref.watch(dbProvider)));
+
+/// Global multi-select state for TrackTile lists. Empty Map = no
+/// selection mode; non-empty = the bulk-action bar appears in AppShell.
+final selectionProvider =
+    StateNotifierProvider<SelectionNotifier, Map<String, Track>>(
+        (_) => SelectionNotifier());
 
 final ratingsManagerProvider = Provider<RatingsManager>((ref) {
   final mgr = RatingsManager(() => ref.read(subsonicProvider));

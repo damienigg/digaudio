@@ -27,19 +27,37 @@ class TrackTile extends ConsumerWidget {
     final cacheState = ref.watch(cacheStateProvider).valueOrNull ?? const {};
     // null = uncached, false = auto-cached (LRU-evictable), true = pinned
     final cachePinned = cacheState[t.uniqueKey];
-    // Power-user toggle: long-press = play instead of opening the actions
-    // sheet. The trailing ⋮ remains the entry point to the sheet.
-    final longPressPlays = ref.read(displayPrefsProvider).longPressPlays;
+    final selection = ref.watch(selectionProvider);
+    final selecting = selection.isNotEmpty;
+    final isSelected = selection.containsKey(t.uniqueKey);
     final openActions = onMore ?? () => showTrackActions(context, ref, t);
+
+    // Long-press always toggles selection (standard mobile pattern;
+    // overrides the legacy long-press = play / sheet options which are
+    // now reachable via tap + the ⋮ button respectively). When already
+    // in selection mode, tap also toggles instead of playing.
     return InkWell(
-      onTap: () => engine.setQueue(queue, initialIndex: index),
-      onLongPress: longPressPlays
-          ? () => engine.setQueue(queue, initialIndex: index)
-          : openActions,
-      child: Padding(
+      onTap: selecting
+          ? () => ref.read(selectionProvider.notifier).toggle(t)
+          : () => engine.setQueue(queue, initialIndex: index),
+      onLongPress: () => ref.read(selectionProvider.notifier).toggle(t),
+      child: Container(
+        color: isSelected ? const Color(0x331ED760) : null,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         child: Row(
           children: [
+            if (selecting)
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Icon(
+                  isSelected
+                      ? Icons.check_circle
+                      : Icons.radio_button_unchecked,
+                  color: isSelected
+                      ? const Color(0xFF1ED760)
+                      : context.textTertiary,
+                ),
+              ),
             Artwork(coverArt: t.coverArt, origin: t.origin, size: 48),
             const SizedBox(width: 12),
             Expanded(

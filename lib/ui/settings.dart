@@ -394,20 +394,10 @@ class DisplayPage extends ConsumerWidget {
                     fontSize: 11,
                     letterSpacing: 1.5)),
           ),
-          _DisplayToggle(
-            title: 'Long-press plays the track',
-            subtitle:
-                'Tap = browse / hold = play. The track sheet moves to the ⋮ button on the right.',
-            value: ref.watch(displayPrefsProvider).longPressPlays,
-            onChanged: (v) async {
-              final p = ref.read(displayPrefsProvider);
-              p.longPressPlays = v;
-              await p.save();
-              // The toggle is read live by TrackTile via ref.read so no
-              // global invalidation is needed; just trigger a rebuild.
-              ref.invalidate(displayPrefsProvider);
-            },
-          ),
+          // longPressPlays toggle removed in v0.16.3 — long-press is now
+          // dedicated to entering selection mode (standard mobile
+          // pattern). The pref field stays in DisplayPrefs for forward
+          // compatibility but is no longer surfaced or read.
           _DisplayToggle(
             title: 'Now Playing colour tint',
             subtitle:

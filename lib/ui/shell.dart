@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../audio/providers.dart';
 import 'widgets/mini_player.dart';
+import 'widgets/selection_bar.dart';
 
 /// The persistent bottom-nav shell: tabs preserve their own navigation stack,
 /// and the mini-player sits above the bar so it's always reachable. A thin
@@ -22,12 +23,14 @@ class AppShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final reachable = ref.watch(serverReachableProvider).valueOrNull ?? true;
+    final selecting = ref.watch(selectionProvider).isNotEmpty;
     return Scaffold(
       body: shell,
       bottomNavigationBar: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (!reachable) const _OfflineBanner(),
+          if (selecting) const SelectionBar(),
           const MiniPlayer(),
           NavigationBar(
             selectedIndex: shell.currentIndex,

@@ -7,6 +7,45 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.16.3] — 2026-05-25
+
+### Added (Bulk select — finishes category A)
+- **Long-press any track tile to enter multi-select mode.** Standard
+  mobile pattern (Gmail / Google Photos / Spotify). When selection
+  is non-empty, tap also toggles instead of playing.
+- **SelectionBar** above the mini-player when ≥1 track is selected.
+  Five bulk actions:
+  - **Play** — replaces the current queue with the selection
+  - **Add to queue** — appends to the end
+  - **Play next** — inserts right after current (reverse-iterates
+    so the first-selected lands next)
+  - **Add to playlist** — opens a multi-add variant of the local
+    playlist picker
+  - **Add to favourites** — bulk-fav every selected key
+  - X button cancels selection
+- Selection state is **global** on purpose — start in Library,
+  navigate to Search, add more, act on the union.
+
+### Changed (breaking-ish for v0.16.2 users)
+- **Long-press always enters selection mode now.** This supersedes
+  the `longPressPlays` toggle introduced in v0.16.2. The toggle is
+  removed from Settings → Display → Behaviour; the underlying
+  `DisplayPrefs.longPressPlays` field is kept (silently unread) so
+  prefs don't fail to load on existing installs.
+- Rationale: dual long-press meaning ("play OR enter selection")
+  isn't discoverable; the selection-mode pattern is the dominant
+  mobile idiom, and the standalone toggle was a stop-gap before
+  this batch landed.
+
+### Internal
+- `SelectionNotifier` keeps `Map<String, Track>` (key + full Track
+  for actions that need more than the key — playNext, queue, etc.).
+- Selection bar lives in `AppShell` between the offline banner and
+  the mini-player; renders only when `selectionProvider` is
+  non-empty.
+- TrackTile shows a leading check-circle when in selection mode and
+  tints itself accent-translucent when selected.
+
 ## [0.16.2] — 2026-05-25
 
 ### Added (UX polish — last items of category A)
