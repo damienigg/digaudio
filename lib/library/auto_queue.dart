@@ -5,6 +5,7 @@ import '../core/settings.dart';
 import '../domain.dart';
 import '../library/local.dart';
 import '../subsonic/client.dart';
+import 'lastfm.dart';
 import 'similarity.dart';
 import 'subsonic_cache.dart';
 
@@ -24,7 +25,13 @@ class AutoQueueService {
   final SubsonicClient? Function() _subsonic;
   final SubsonicLibraryCache _libraryCache;
   final SettingsStore _settings;
+  final LastfmClient _lastfm;
   final int _subsonicFallbackSize;
+  // Last.fm match (0..1) scaled into the same integer score space as
+  // [Similarity.score]. K = 12 so a perfect match (1.0) outranks an
+  // artist-only metadata hit (+10) — Last.fm's signal is stronger
+  // evidence than "same artist" alone.
+  static const _lastfmBoostK = 12;
 
   StreamSubscription<int?>? _sub;
   bool _enabled = true;
@@ -38,12 +45,14 @@ class AutoQueueService {
     required SubsonicClient? Function() subsonic,
     required SubsonicLibraryCache libraryCache,
     required SettingsStore settings,
+    required LastfmClient lastfm,
     int subsonicFallbackSize = 200,
   })  : _engine = engine,
         _local = local,
         _subsonic = subsonic,
         _libraryCache = libraryCache,
         _settings = settings,
+        _lastfm = lastfm,
         _subsonicFallbackSize = subsonicFallbackSize;
 
   bool get enabled => _enabled;
@@ -82,7 +91,32 @@ class AutoQueueService {
   Future<Track?> _pickSimilar(Track seed, Set<String> exclude) async {
     final locals = await _local.getAllSongs();
     final remotes = await _ensureSubsonicPool();
-    return Similarity.pickBest(seed, [...locals, ...remotes], exclude: exclude);
+    final candidates = [...locals, ...remotes];
+
+    // Optional Last.fm boost. Empty map when the key isn't baked in or the
+    // call fails — the loop below collapses to pure metadata in that case.
+    final boost = await _lastfm.similarTracks(
+      artist: seed.artist,
+      track: seed.title,
+    );
+    if (boost.isEmpty) {
+      return Similarity.pickBest(seed, candidates, exclude: exclude);
+    }
+
+    Track? best;
+    var bestScore = 0;
+    for (final c in candidates) {
+      if (exclude.contains(c.uniqueKey) || c.uniqueKey == seed.uniqueKey) continue;
+      var s = Similarity.score(seed, c);
+      final k = '${(c.artist ?? '').toLowerCase()}|${c.title.toLowerCase()}';
+      final match = boost[k];
+      if (match != null) s += (match * _lastfmBoostK).round();
+      if (s > bestScore) {
+        best = c;
+        bestScore = s;
+      }
+    }
+    return best;
   }
 
   /// Loads the full cached library for the active server. Falls back to a

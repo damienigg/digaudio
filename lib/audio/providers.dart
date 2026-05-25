@@ -11,6 +11,7 @@ import '../library/auto_queue.dart';
 import '../library/collections.dart';
 import '../library/downloads.dart';
 import '../library/importer.dart';
+import '../library/lastfm.dart';
 import '../library/local.dart';
 import '../library/play_history.dart';
 import '../library/ratings.dart';
@@ -122,6 +123,12 @@ final trackResolverProvider = Provider<TrackResolver>((ref) => TrackResolver(
 final subsonicCacheProvider = Provider<SubsonicLibraryCache>((ref) =>
     SubsonicLibraryCache(ref.watch(dbProvider)));
 
+/// Last.fm client — `--dart-define=LASTFM_API_KEY=...` at build time
+/// (sourced from a GitHub repo secret in CI). With no key, [enabled]
+/// is false and the autoqueue silently falls back to pure metadata.
+const _lastfmKey = String.fromEnvironment('LASTFM_API_KEY', defaultValue: '');
+final lastfmClientProvider = Provider<LastfmClient>((_) => LastfmClient(_lastfmKey));
+
 final autoQueueProvider = Provider<AutoQueueService>((ref) {
   final svc = AutoQueueService(
     engine: ref.watch(audioEngineProvider),
@@ -129,6 +136,7 @@ final autoQueueProvider = Provider<AutoQueueService>((ref) {
     subsonic: () => ref.read(subsonicProvider),
     libraryCache: ref.watch(subsonicCacheProvider),
     settings: ref.watch(settingsStoreProvider),
+    lastfm: ref.watch(lastfmClientProvider),
   );
   ref.onDispose(svc.dispose);
   return svc;

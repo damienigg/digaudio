@@ -66,6 +66,10 @@ jobs:
         env:
           SUBSONIC_URL: ${{ secrets.SUBSONIC_URL }}
           SUBSONIC_LABEL: ${{ secrets.SUBSONIC_LABEL }}
+          # Optional. When set, autoqueue blends Last.fm's track.getSimilar
+          # signal into the metadata-similarity score. Without it, autoqueue
+          # falls back to pure metadata (no functional regression).
+          LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
         run: |
           DEFINES=()
           if [ -n "$SUBSONIC_URL" ]; then
@@ -73,6 +77,9 @@ jobs:
           fi
           if [ -n "$SUBSONIC_LABEL" ]; then
             DEFINES+=(--dart-define=SUBSONIC_LABEL="$SUBSONIC_LABEL")
+          fi
+          if [ -n "$LASTFM_API_KEY" ]; then
+            DEFINES+=(--dart-define=LASTFM_API_KEY="$LASTFM_API_KEY")
           fi
           flutter build apk --release "${DEFINES[@]}"
 

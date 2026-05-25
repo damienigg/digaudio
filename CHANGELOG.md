@@ -7,6 +7,24 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.11.2] — 2026-05-25
+
+### Added
+- **Last.fm `track.getSimilar` ranker** for AutoQueue. When a key is
+  baked into the build, the picker fetches Last.fm's similar tracks
+  for the current seed and adds a per-candidate boost (Last.fm
+  match × 12, so a perfect 1.0 outranks an artist-only metadata
+  hit of +10). Without a key, behaviour is identical to before —
+  pure metadata, no network call.
+
+### Internal
+- `lib/library/lastfm.dart` — `LastfmClient` with aggressive timeouts
+  (5 s connect / 10 s receive) and swallow-on-error semantics. The
+  next-track pick must always succeed even if last.fm is down.
+- CI workflow forwards `LASTFM_API_KEY` (optional secret) as a
+  `--dart-define`. Add it under repo Settings → Secrets → Actions
+  to enable; sign up at https://www.last.fm/api/account/create.
+
 ## [0.11.1] — 2026-05-25
 
 ### Added (Batch 3 — polish)
