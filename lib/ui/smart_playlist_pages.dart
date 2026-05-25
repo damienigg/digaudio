@@ -377,17 +377,36 @@ class _RuleDraft {
   }
 
   dynamic _parse(String s) {
-    if (_isNumericField()) return int.tryParse(s) ?? 0;
+    if (_isBoolField()) return value == 'true';
+    if (_isIntField()) return int.tryParse(s) ?? 0;
     return s;
   }
 
   bool isValid() {
+    // Boolean fields don't have a free-text value — they're set via
+    // the segmented true/false control, always valid.
+    if (_isBoolField()) return true;
     if (value.isEmpty) return false;
     if (op == 'between' && value2.isEmpty) return false;
     return true;
   }
 
-  bool _isNumericField() => field == 'year' || field == 'durationSec';
+  /// Plain integer columns from CachedSubsonicSongs.
+  bool _isIntField() =>
+      field == 'year' ||
+      field == 'durationSec' ||
+      _isComputedIntField();
+
+  /// v2 fields backed by subquery COUNT / time-delta — int comparison
+  /// semantics, just not stored as a column.
+  bool _isComputedIntField() =>
+      field == 'playCount30d' ||
+      field == 'playCountAll' ||
+      field == 'lastPlayedDaysAgo';
+
+  /// v2 fields backed by EXISTS / NOT EXISTS joins.
+  bool _isBoolField() =>
+      field == 'favourite' || field == 'pinned' || field == 'cached';
 }
 
 class _RuleRow extends StatelessWidget {
@@ -402,10 +421,14 @@ class _RuleRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isText = !draft._isNumericField();
-    final ops = isText
-        ? const ['eq', 'neq', 'contains']
-        : const ['eq', 'neq', 'gt', 'gte', 'lt', 'lte', 'between'];
+    // Op set varies by family: bool fields force eq, ints get the
+    // full comparator set (no `contains`), text columns get eq/neq/
+    // contains. v1 logic preserved for plain columns.
+    final ops = draft._isBoolField()
+        ? const ['eq']
+        : draft._isIntField()
+            ? const ['eq', 'neq', 'gt', 'gte', 'lt', 'lte', 'between']
+            : const ['eq', 'neq', 'contains'];
     if (!ops.contains(draft.op)) draft.op = ops.first;
 
     return Padding(
@@ -419,12 +442,21 @@ class _RuleRow extends StatelessWidget {
               value: draft.field,
               isExpanded: true,
               items: const [
+                // Plain columns (v1)
                 DropdownMenuItem(value: 'genre', child: Text('Genre')),
                 DropdownMenuItem(value: 'artist', child: Text('Artist')),
                 DropdownMenuItem(value: 'album', child: Text('Album')),
                 DropdownMenuItem(value: 'title', child: Text('Title')),
                 DropdownMenuItem(value: 'year', child: Text('Year')),
                 DropdownMenuItem(value: 'durationSec', child: Text('Duration s')),
+                // v2 boolean joins
+                DropdownMenuItem(value: 'favourite', child: Text('Favourite')),
+                DropdownMenuItem(value: 'pinned', child: Text('Pinned')),
+                DropdownMenuItem(value: 'cached', child: Text('Cached')),
+                // v2 computed ints
+                DropdownMenuItem(value: 'playCount30d', child: Text('Plays (30 d)')),
+                DropdownMenuItem(value: 'playCountAll', child: Text('Plays (all-time)')),
+                DropdownMenuItem(value: 'lastPlayedDaysAgo', child: Text('Days since last play')),
               ],
               onChanged: (v) {
                 draft.field = v ?? 'genre';
@@ -453,43 +485,58 @@ class _RuleRow extends StatelessWidget {
           // Value(s)
           Expanded(
             flex: 3,
-            child: draft.op == 'between'
-                ? Row(
-                    children: [
-                      Expanded(
-                        child: TextFormField(
-                          initialValue: draft.value,
-                          keyboardType: isText
-                              ? TextInputType.text
-                              : TextInputType.number,
-                          decoration: const InputDecoration(hintText: 'min'),
-                          onChanged: (v) {
-                            draft.value = v;
-                            onChange();
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: TextFormField(
-                          initialValue: draft.value2,
-                          keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(hintText: 'max'),
-                          onChanged: (v) {
-                            draft.value2 = v;
-                            onChange();
-                          },
-                        ),
-                      ),
+            child: draft._isBoolField()
+                ? SegmentedButton<String>(
+                    style: const ButtonStyle(
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    segments: const [
+                      ButtonSegment(value: 'true', label: Text('Yes')),
+                      ButtonSegment(value: 'false', label: Text('No')),
                     ],
+                    selected: {draft.value.isEmpty ? 'true' : draft.value},
+                    onSelectionChanged: (s) {
+                      draft.value = s.first;
+                      onChange();
+                    },
                   )
-                : TextFormField(
-                    initialValue: draft.value,
-                    keyboardType: isText
-                        ? TextInputType.text
-                        : TextInputType.number,
-                    decoration: const InputDecoration(hintText: 'value'),
-                    onChanged: (v) {
+                : draft.op == 'between'
+                    ? Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              initialValue: draft.value,
+                              keyboardType: draft._isIntField()
+                                  ? TextInputType.number
+                                  : TextInputType.text,
+                              decoration: const InputDecoration(hintText: 'min'),
+                              onChanged: (v) {
+                                draft.value = v;
+                                onChange();
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: TextFormField(
+                              initialValue: draft.value2,
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(hintText: 'max'),
+                              onChanged: (v) {
+                                draft.value2 = v;
+                                onChange();
+                              },
+                            ),
+                          ),
+                        ],
+                      )
+                    : TextFormField(
+                        initialValue: draft.value,
+                        keyboardType: draft._isIntField()
+                            ? TextInputType.number
+                            : TextInputType.text,
+                        decoration: const InputDecoration(hintText: 'value'),
+                        onChanged: (v) {
                       draft.value = v;
                       onChange();
                     },

@@ -117,25 +117,133 @@ class SmartPlaylistsManager {
         : ' AND (${whereSql.join(match == 'any' ? ' OR ' : ' AND ')})';
     final orderClause = _orderClause(orderBy, orderDir);
 
-    final sql = 'SELECT * FROM cached_subsonic_songs '
-        'WHERE server_id = ? $filterClause '
+    // Alias `s` lets v2 join-based fields reference the outer row
+    // unambiguously (`s.song_id`) from inside subqueries.
+    final sql = 'SELECT s.* FROM cached_subsonic_songs s '
+        'WHERE s.server_id = ? $filterClause '
         'ORDER BY $orderClause LIMIT ${limit.clamp(1, 1000)}';
 
     final rows = await _db
-        .customSelect(sql, variables: vars, readsFrom: {_db.cachedSubsonicSongs})
+        .customSelect(sql,
+            variables: vars,
+            readsFrom: {
+              _db.cachedSubsonicSongs,
+              _db.favorites,
+              _db.downloads,
+              _db.recentPlays,
+            })
         .get();
     return rows.map(_rowToTrack).toList();
   }
 
   /// Returns null when the rule is malformed or the field/op is unknown
   /// — silently drops so a single bad rule doesn't tank the whole query.
+  ///
+  /// Three field families:
+  ///   1. Plain columns (v1): genre / year / artist / album / title /
+  ///      durationSec → compared via the usual operators.
+  ///   2. Boolean join fields (v2): favourite / pinned / cached → only
+  ///      `eq` makes sense; rendered as EXISTS / NOT EXISTS.
+  ///   3. Computed int fields (v2): playCount30d / playCountAll /
+  ///      lastPlayedDaysAgo → subquery returns an int; standard int
+  ///      comparators apply.
   String? _ruleToSql(Map<String, dynamic> rule, List<Variable> vars) {
     final field = rule['field'] as String?;
     final op = rule['op'] as String?;
     final value = rule['value'];
-    final col = _fieldToColumn(field);
-    if (col == null || op == null) return null;
+    if (field == null || op == null) return null;
 
+    // ── Family 2: boolean join fields ────────────────────────────────
+    if (field == 'favourite' || field == 'pinned' || field == 'cached') {
+      if (op != 'eq') return null;
+      final wantTrue = value == true || value == 1 || value == 'true';
+      final inner = switch (field) {
+        'favourite' =>
+          "SELECT 1 FROM favorites f "
+              "WHERE f.track_key = 'subsonic:' || s.song_id",
+        'pinned' =>
+          "SELECT 1 FROM downloads d "
+              "WHERE d.track_key = 'subsonic:' || s.song_id AND d.pinned = 1",
+        'cached' =>
+          "SELECT 1 FROM downloads d "
+              "WHERE d.track_key = 'subsonic:' || s.song_id",
+        _ => null,
+      };
+      if (inner == null) return null;
+      return wantTrue ? 'EXISTS ($inner)' : 'NOT EXISTS ($inner)';
+    }
+
+    // ── Family 3: computed int from joins ────────────────────────────
+    final intLhs = _intExpr(field, vars);
+    if (intLhs != null) return _intOp(intLhs, op, value, vars);
+
+    // ── Family 1: plain columns (v1 behaviour) ───────────────────────
+    final col = _fieldToColumn(field);
+    if (col == null) return null;
+    return _columnOp(col, op, value, vars);
+  }
+
+  /// Generates the LHS expression for one of the v2 computed int
+  /// fields. `playCount30d` adds a `played_at >= ?` variable; the
+  /// others don't bind extra vars.
+  String? _intExpr(String field, List<Variable> vars) {
+    switch (field) {
+      case 'playCount30d':
+        final cutoff = DateTime.now().subtract(const Duration(days: 30));
+        vars.add(Variable<int>(cutoff.millisecondsSinceEpoch ~/ 1000));
+        return "(SELECT COUNT(*) FROM recent_plays rp "
+            "WHERE rp.track_key = 'subsonic:' || s.song_id "
+            "AND rp.played_at >= ?)";
+      case 'playCountAll':
+        return "(SELECT COUNT(*) FROM recent_plays rp "
+            "WHERE rp.track_key = 'subsonic:' || s.song_id)";
+      case 'lastPlayedDaysAgo':
+        // (now − last_play_epoch_seconds) / 86_400, falling back to
+        // a huge number when the track was never played so "≥ 90"
+        // matches dormant tracks instead of accidentally selecting
+        // never-played ones (treats them as "infinitely dormant").
+        return "((strftime('%s', 'now') - "
+            "COALESCE((SELECT MAX(rp.played_at) FROM recent_plays rp "
+            "WHERE rp.track_key = 'subsonic:' || s.song_id), 0)) / 86400)";
+    }
+    return null;
+  }
+
+  /// Standard comparator generator for an integer LHS (column or
+  /// subquery). `contains` is intentionally skipped — meaningless on
+  /// ints.
+  String? _intOp(String lhs, String op, dynamic value, List<Variable> vars) {
+    switch (op) {
+      case 'eq':
+        vars.add(Variable<int>((value as num).toInt()));
+        return '$lhs = ?';
+      case 'neq':
+        vars.add(Variable<int>((value as num).toInt()));
+        return '$lhs != ?';
+      case 'gt':
+        vars.add(Variable<int>((value as num).toInt()));
+        return '$lhs > ?';
+      case 'gte':
+        vars.add(Variable<int>((value as num).toInt()));
+        return '$lhs >= ?';
+      case 'lt':
+        vars.add(Variable<int>((value as num).toInt()));
+        return '$lhs < ?';
+      case 'lte':
+        vars.add(Variable<int>((value as num).toInt()));
+        return '$lhs <= ?';
+      case 'between':
+        if (value is! List || value.length != 2) return null;
+        vars.add(Variable<int>((value[0] as num).toInt()));
+        vars.add(Variable<int>((value[1] as num).toInt()));
+        return '$lhs BETWEEN ? AND ?';
+    }
+    return null;
+  }
+
+  /// Column comparator generator — preserves the original v1 behaviour
+  /// (handles eq / neq / gt / gte / lt / lte / between / contains).
+  String? _columnOp(String col, String op, dynamic value, List<Variable> vars) {
     switch (op) {
       case 'eq':
         vars.add(_var(value));
@@ -170,17 +278,17 @@ class SmartPlaylistsManager {
   String? _fieldToColumn(String? field) {
     switch (field) {
       case 'genre':
-        return 'genre';
+        return 's.genre';
       case 'year':
-        return 'year';
+        return 's.year';
       case 'artist':
-        return 'artist';
+        return 's.artist';
       case 'album':
-        return 'album';
+        return 's.album';
       case 'durationSec':
-        return 'duration_sec';
+        return 's.duration_sec';
       case 'title':
-        return 'title';
+        return 's.title';
     }
     return null;
   }
@@ -191,13 +299,13 @@ class SmartPlaylistsManager {
       case 'random':
         return 'RANDOM()';
       case 'year':
-        return 'year $d';
+        return 's.year $d';
       case 'title':
-        return 'title $d';
+        return 's.title $d';
       case 'artist':
-        return 'artist $d';
+        return 's.artist $d';
       case 'durationSec':
-        return 'duration_sec $d';
+        return 's.duration_sec $d';
     }
     return 'RANDOM()';
   }

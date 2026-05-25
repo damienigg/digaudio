@@ -7,6 +7,50 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.21.0] — 2026-05-25
+
+### Added (Smart playlists v2 — joins for the rules engine)
+- **6 new rule fields** beyond v1's plain `CachedSubsonicSongs`
+  columns:
+  - **Boolean joins**: `favourite` / `pinned` / `cached` — `eq`
+    only; renders as `EXISTS (…)` / `NOT EXISTS (…)` against the
+    matching table.
+  - **Computed ints**: `playCount30d` / `playCountAll` — subquery
+    `COUNT(*) FROM recent_plays WHERE track_key = 'subsonic:' ||
+    s.song_id` (with a date cutoff for the 30 d variant). Full
+    comparator set applies.
+  - **`lastPlayedDaysAgo`** — `(strftime('%s', 'now') -
+    COALESCE(MAX(played_at), 0)) / 86400`. Never-played tracks
+    return ∞ days ago so "≥ 90" matches dormant + never-played
+    alike (treats never-played as "infinitely dormant" — usually
+    the desired Throwback semantics).
+- **Now expressible**: `favourite eq Yes AND playCount30d gte 3`
+  → recurring favourites this month. `favourite eq Yes AND
+  lastPlayedDaysAgo gte 180 AND year between 1990 1999` →
+  90s favourites you haven't touched in 6 months — a real
+  Throwback mix the v1 rule set couldn't write.
+
+### Editor UI
+- Field dropdown gains the 6 new fields, grouped visually
+  (columns / boolean joins / computed ints).
+- Op set adapts: bool fields lock to `eq`, ints get the full
+  comparator set (no `contains`), text columns unchanged.
+- Value editor swaps to a `Yes` / `No` `SegmentedButton` for
+  bool fields; numeric keyboard for int fields; text for the rest.
+
+### Internal
+- `SmartPlaylistsManager._ruleToSql` refactored into three
+  dispatchers: `_intExpr` (builds the LHS subquery for v2
+  computed ints), `_intOp` (standard int comparator generator),
+  `_columnOp` (preserves v1 column behaviour). Family routing
+  happens up front in `_ruleToSql`.
+- Main query gains alias `s` so subqueries can reference the
+  outer row unambiguously (`s.song_id`). `_fieldToColumn` +
+  `_orderClause` updated to prefix.
+- `readsFrom` widened to include Favorites, Downloads,
+  RecentPlays so drift's invalidation tracks the right
+  surface area.
+
 ## [0.20.2] — 2026-05-25
 
 ### Fixed
