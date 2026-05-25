@@ -7,6 +7,19 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.13.1] — 2026-05-25
+
+### Added
+- **Home hero strip.** The Home page gains a brand strip at the top:
+  the launcher icon (72 dp, rounded) + "digaudio" + "Dig your audio."
+  tagline. Adds a bit of life on the main screen instead of jumping
+  straight into "Newest releases".
+- `assets/icon/digaudio_icon.png` registered as a runtime asset
+  (separate from the build-time launcher icon generator, which
+  consumes the same PNG but doesn't bundle it for `Image.asset`).
+  `cacheWidth: 192` so the 1024 source is decoded near display size,
+  not at full resolution.
+
 ## [0.13.0] — 2026-05-25
 
 ### Added (release signing — opt-in)

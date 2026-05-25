@@ -37,6 +37,7 @@ class HomePage extends ConsumerWidget {
               child: ListView(
                 padding: const EdgeInsets.only(bottom: 24),
                 children: [
+                  const _HomeHero(),
                   _Section(title: 'Newest releases', child: _AlbumRow(state: newestAlbums)),
                   _Section(title: 'Random picks', child: _TracksColumn(state: random)),
                 ],
@@ -44,6 +45,52 @@ class HomePage extends ConsumerWidget {
             ),
     );
   }
+}
+
+/// Top-of-home brand strip — icon (large) + name + tagline. Shown only
+/// when a Subsonic server is configured (the SetupHint already has its
+/// own hero). `cacheWidth: 192` decodes the 1024 source at ~2× the
+/// display size — sharp on retina without loading the full bitmap.
+class _HomeHero extends StatelessWidget {
+  const _HomeHero();
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
+        child: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Image.asset(
+                'assets/icon/digaudio_icon.png',
+                width: 72,
+                height: 72,
+                cacheWidth: 192,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('digaudio',
+                      style: TextStyle(
+                          fontSize: 26,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -0.5)),
+                  const SizedBox(height: 2),
+                  Text('Dig your audio.',
+                      style: TextStyle(
+                          color: context.textTertiary,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          fontStyle: FontStyle.italic)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
 }
 
 class _SetupHint extends StatelessWidget {

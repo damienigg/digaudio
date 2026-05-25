@@ -1,7 +1,7 @@
 name: digaudio
 description: "digaudio — a lightweight, modern, high-quality audio player (local + Subsonic)."
 publish_to: 'none'
-version: 0.13.0+26
+version: 0.13.1+27
 
 environment:
   sdk: ^3.5.4
@@ -57,6 +57,11 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    # Bundled at runtime for the Home page hero (the build-time launcher
+    # icon generator already pulls from this same file, but at runtime
+    # Image.asset needs the path registered explicitly).
+    - assets/icon/digaudio_icon.png
 
 # Run `dart run flutter_launcher_icons` to regenerate launcher icons from the
 # PNGs in assets/icon/. Source PNGs are produced by `tool/make_icon.py`.
