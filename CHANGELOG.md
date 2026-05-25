@@ -7,6 +7,31 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.24.1] — 2026-05-25
+
+### Added (ListenBrainz scrobble — token-based)
+- **`ListenBrainzClient`** posts to `api.listenbrainz.org/1/submit-listens`
+  with a user token (Bearer-style `Authorization: Token <uuid>`).
+  Two listen types fire from the same hooks Subsonic scrobbling
+  uses:
+  - **`playing_now`** at track start (any origin — works for
+    local + Subsonic tracks since LB doesn't need a server URL).
+  - **`single`** when the played-duration threshold crosses
+    (≥ 4 min OR ≥ 50 % of track) — same trigger as the Subsonic
+    `submission=true` scrobble so the two scrobble counters stay
+    aligned.
+- **`PlaybackPrefs.listenbrainzToken`** persisted in SharedPreferences
+  (same sensitivity as the Last.fm API key — revocable, per-user,
+  non-destructive on leak).
+- **Settings → Playback → ListenBrainz** card with a hidden token
+  field (visibility toggle) + active check mark when set + a
+  one-paragraph explanation linking to the LB profile token page.
+
+### Compatibility
+- Subsonic server-side scrobbling continues to fire in parallel —
+  the two routes are independent; LB lets users scrobble even when
+  their Subsonic server doesn't forward to anything.
+
 ## [0.24.0] — 2026-05-25
 
 ### Added (Now-Playing share)

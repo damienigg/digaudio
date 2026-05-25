@@ -17,6 +17,7 @@ class PlaybackPrefs {
   static const _kRgMode = 'pb.rg.mode';
   static const _kAutoPlayBt = 'pb.autoplay.bt';
   static const _kCacheRefreshDays = 'pb.cache.refresh_days';
+  static const _kListenbrainzToken = 'pb.listenbrainz.token';
 
   /// Default cap for the auto-cache pool. Pinned downloads don't count against
   /// it. 2 GB matches what Spotify ships and survives a long road trip without
@@ -72,6 +73,13 @@ class PlaybackPrefs {
   /// without the user having to remember to tap "Sync".
   int cacheRefreshDays = 7;
 
+  /// ListenBrainz user token (from https://listenbrainz.org/profile/).
+  /// When set, the engine scrobbles to LB in addition to the Subsonic
+  /// server. Stored in plain SharedPreferences — token has same
+  /// sensitivity profile as the Last.fm API key (revocable, per-user,
+  /// non-destructive on leak).
+  String listenbrainzToken = '';
+
   Future<void> load() async {
     final p = await SharedPreferences.getInstance();
     eqEnabled = p.getBool(_kEqEnabled) ?? false;
@@ -83,6 +91,7 @@ class PlaybackPrefs {
     rgMode = p.getString(_kRgMode) ?? 'off';
     autoPlayOnBtConnect = p.getBool(_kAutoPlayBt) ?? false;
     cacheRefreshDays = p.getInt(_kCacheRefreshDays) ?? 7;
+    listenbrainzToken = p.getString(_kListenbrainzToken) ?? '';
     final raw = p.getString(_kEqGains);
     if (raw != null && raw.isNotEmpty) {
       eqGainsDb = (jsonDecode(raw) as List).map((e) => (e as num).toDouble()).toList();
@@ -100,6 +109,7 @@ class PlaybackPrefs {
     await p.setString(_kRgMode, rgMode);
     await p.setBool(_kAutoPlayBt, autoPlayOnBtConnect);
     await p.setInt(_kCacheRefreshDays, cacheRefreshDays);
+    await p.setString(_kListenbrainzToken, listenbrainzToken);
     await p.setString(_kEqGains, jsonEncode(eqGainsDb));
   }
 }

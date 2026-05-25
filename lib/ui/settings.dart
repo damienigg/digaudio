@@ -724,6 +724,16 @@ class _PlaybackPageState extends ConsumerState<PlaybackPage> {
             },
           ),
           Divider(height: 32, color: context.dividerSoft),
+          _ListenBrainzCard(
+            token: ref.watch(playbackPrefsProvider).listenbrainzToken,
+            onChanged: (v) async {
+              final prefs = ref.read(playbackPrefsProvider);
+              prefs.listenbrainzToken = v;
+              await prefs.save();
+              setState(() {});
+            },
+          ),
+          Divider(height: 32, color: context.dividerSoft),
           SwitchListTile.adaptive(
             contentPadding: EdgeInsets.zero,
             title: const Text('Auto-play when Bluetooth connects',
@@ -1125,6 +1135,77 @@ class _BtEqCardState extends ConsumerState<_BtEqCard> {
               ),
             ),
         ],
+      ],
+    );
+  }
+}
+
+/// ListenBrainz token field. When set, the engine also scrobbles
+/// "playing_now" + "single" listens to listenbrainz.org alongside the
+/// Subsonic server scrobble. Get a token from
+/// https://listenbrainz.org/profile/ → "User token".
+class _ListenBrainzCard extends StatefulWidget {
+  final String token;
+  final ValueChanged<String> onChanged;
+  const _ListenBrainzCard({required this.token, required this.onChanged});
+  @override
+  State<_ListenBrainzCard> createState() => _ListenBrainzCardState();
+}
+
+class _ListenBrainzCardState extends State<_ListenBrainzCard> {
+  late final TextEditingController _ctrl;
+  bool _obscure = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = TextEditingController(text: widget.token);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final active = widget.token.isNotEmpty;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Text('ListenBrainz',
+                style: TextStyle(fontWeight: FontWeight.w700)),
+            const SizedBox(width: 8),
+            if (active)
+              const Icon(Icons.check_circle, size: 14, color: _accent),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Open scrobbling alternative to Last.fm. Paste a user token '
+          'from https://listenbrainz.org/profile/ → "User token" — the '
+          'engine then sends "playing_now" at track start and a '
+          '"single" listen at the Last.fm threshold. Subsonic scrobbling '
+          '(if your server has it) keeps running in parallel.',
+          style: TextStyle(color: context.textMuted, fontSize: 12),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _ctrl,
+          obscureText: _obscure,
+          decoration: InputDecoration(
+            hintText: 'User token (UUID)',
+            suffixIcon: IconButton(
+              tooltip: _obscure ? 'Show token' : 'Hide token',
+              icon: Icon(_obscure ? Icons.visibility : Icons.visibility_off),
+              onPressed: () => setState(() => _obscure = !_obscure),
+            ),
+          ),
+          onChanged: widget.onChanged,
+        ),
       ],
     );
   }
