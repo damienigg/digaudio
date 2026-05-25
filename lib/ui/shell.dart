@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../audio/providers.dart';
+import 'widgets/download_banner.dart';
 import 'widgets/mini_player.dart';
 import 'widgets/selection_bar.dart';
 
@@ -24,12 +25,15 @@ class AppShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final reachable = ref.watch(serverReachableProvider).valueOrNull ?? true;
     final selecting = ref.watch(selectionProvider).isNotEmpty;
+    final downloadActive =
+        ref.watch(downloadQueueStateProvider).valueOrNull?.isActive ?? false;
     return Scaffold(
       body: shell,
       bottomNavigationBar: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (!reachable) const _OfflineBanner(),
+          if (downloadActive) const DownloadBanner(),
           if (selecting) const SelectionBar(),
           const MiniPlayer(),
           NavigationBar(

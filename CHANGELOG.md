@@ -7,6 +7,44 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.22.2] — 2026-05-25
+
+### Added (Background download queue + in-app progress)
+- **`DownloadQueueService`** wraps `DownloadsManager.download`.
+  `enqueue(Track)` / `enqueueAll(Iterable<Track>)` add to a
+  pending list; an internal loop pops one at a time and runs the
+  underlying download. Concurrency = 1 (concurrent downloads to
+  one server contend for the same connection — serial is closer
+  to wall-clock optimum).
+- **Queue persistence is in-memory** — the loop survives app
+  backgrounding (process stays alive via audio_service), but a
+  full app kill loses the queue. Acceptable for v1.
+- **`DownloadBanner`** (above the mini-player, same slot family
+  as the offline banner / selection bar): shows the current
+  track + queued count + a live progress bar (driven by
+  `DownloadsManager.progressStream`) + Cancel button.
+- **Cancel** clears the pending list; the in-flight job
+  continues (Dio's stream-write semantics don't expose mid-stream
+  cancel without restructuring). User-facing effect = "stops
+  queuing more" which is what people usually mean.
+- **Bulk-select gets a Download action** — pin every selected
+  Subsonic track via the new queue (local tracks silently
+  skipped). Pair with long-press → select-album → Download for
+  one-tap album pin.
+
+### Changed
+- Per-track `Download for offline` action in the track sheet
+  now enqueues (`Queued "X"` toast) instead of awaiting a
+  blocking foreground download. Backing out of the sheet no
+  longer interrupts anything.
+
+### Not done in this batch (deferred)
+- **Multi-server unified search** (originally planned as v0.22.3)
+  needs `Track.serverId` added across the model + parsers +
+  source builders (the engine streams via the active server's
+  URI, which would 404 for a track from a different server).
+  Cross-cutting refactor — split into its own milestone.
+
 ## [0.22.1] — 2026-05-25
 
 ### Added

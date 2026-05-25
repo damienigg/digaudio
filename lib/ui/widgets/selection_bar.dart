@@ -78,6 +78,21 @@ class SelectionBar extends ConsumerWidget {
                 ref.read(selectionProvider.notifier).clear();
               },
             ),
+            IconButton(
+              icon: const Icon(Icons.download_for_offline_outlined),
+              tooltip: 'Download (Subsonic tracks)',
+              onPressed: () {
+                final messenger = ScaffoldMessenger.of(context);
+                ref.read(downloadQueueProvider).enqueueAll(tracks);
+                // enqueueAll filters non-Subsonic / already-queued silently;
+                // just acknowledge with the input count.
+                messenger.showSnackBar(SnackBar(
+                  content: Text('Queued ${tracks.length} for download'),
+                  duration: const Duration(seconds: 2),
+                ));
+                ref.read(selectionProvider.notifier).clear();
+              },
+            ),
             const SizedBox(width: 4),
             // Accent-coloured Play button so the primary action stands
             // out — replaces the current queue with the selection.

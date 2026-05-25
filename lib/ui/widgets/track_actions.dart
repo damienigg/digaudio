@@ -265,21 +265,14 @@ class _DownloadTile extends ConsumerWidget {
       if (subsonic == null) {
         subtitle = 'No active server';
       } else {
-        onTap = () async {
+        onTap = () {
           final messenger = ScaffoldMessenger.of(context);
           Navigator.pop(context);
+          ref.read(downloadQueueProvider).enqueue(track);
           messenger.showSnackBar(SnackBar(
-            content: Text('Downloading "${track.title}"…'),
-            duration: const Duration(minutes: 5),
+            content: Text('Queued "${track.title}"'),
+            duration: const Duration(seconds: 2),
           ));
-          try {
-            await downloads.download(track, subsonic);
-            messenger.hideCurrentSnackBar();
-            messenger.showSnackBar(SnackBar(content: Text('Downloaded "${track.title}"')));
-          } catch (e) {
-            messenger.hideCurrentSnackBar();
-            messenger.showSnackBar(SnackBar(content: Text('Download failed: $e')));
-          }
         };
       }
     }

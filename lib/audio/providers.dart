@@ -9,6 +9,7 @@ import '../core/settings.dart';
 import '../domain.dart';
 import '../library/auto_queue.dart';
 import '../library/collections.dart';
+import '../library/download_queue.dart';
 import '../library/downloads.dart';
 import '../library/importer.dart';
 import '../library/lastfm.dart';
@@ -191,6 +192,25 @@ final favoriteKeysProvider = StreamProvider<List<String>>((ref) =>
 /// the badge on track tiles and the dynamic label in the actions sheet.
 final cacheStateProvider = StreamProvider<Map<String, bool>>((ref) =>
     ref.watch(downloadsProvider).cacheStateStream());
+
+/// Per-download progress map (trackKey → 0..1). Powers the live bar
+/// inside the download-queue banner.
+final downloadProgressProvider = StreamProvider<Map<String, double>>((ref) =>
+    ref.watch(downloadsProvider).progressStream);
+
+/// Background queue of pinned downloads. Wraps DownloadsManager so
+/// callers can fire-and-forget instead of awaiting each tap.
+final downloadQueueProvider = Provider<DownloadQueueService>((ref) {
+  final svc = DownloadQueueService(
+    ref.watch(downloadsProvider),
+    () => ref.read(subsonicProvider),
+  );
+  ref.onDispose(svc.dispose);
+  return svc;
+});
+
+final downloadQueueStateProvider = StreamProvider<DownloadQueueState>((ref) =>
+    ref.watch(downloadQueueProvider).stateStream);
 
 /// Stream of all local playlists.
 final localPlaylistsProvider = StreamProvider<List<LocalPlaylist>>((ref) =>
