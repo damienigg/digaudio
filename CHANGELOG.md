@@ -7,6 +7,18 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.23.1] — 2026-05-25
+
+### Added (Notification rich actions — skip 10 s)
+- **Skip 10 s back / forward** buttons in the expanded
+  notification, lockscreen, and Android Auto. `AudioEngine`
+  overrides `fastForward()` / `rewind()` with explicit `±10 s`
+  arithmetic + bound-clamping (negative → 0, past-end →
+  duration). `_broadcastState` adds `MediaAction.fastForward` +
+  `MediaAction.rewind` to the systemActions set.
+- Useful for podcasts / mixes; doesn't replace the prev / next
+  controls in the compact notification (those stay primary).
+
 ## [0.23.0] — 2026-05-25
 
 ### Added (Sleep-timer fade-out)

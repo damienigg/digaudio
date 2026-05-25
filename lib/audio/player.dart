@@ -574,6 +574,23 @@ class AudioEngine extends BaseAudioHandler {
   @override
   Future<void> seek(Duration position) => _primary.seek(position);
 
+  /// Notification rich actions: skip 10 s forward / back. Standard
+  /// podcast-style shortcuts surfaced via MediaAction.fastForward /
+  /// .rewind in _broadcastState. Clamps to track bounds (negative
+  /// seek = 0; past-end = duration).
+  @override
+  Future<void> fastForward() async {
+    final dur = _primary.duration;
+    final next = _primary.position + const Duration(seconds: 10);
+    await _primary.seek(dur == null ? next : (next > dur ? dur : next));
+  }
+
+  @override
+  Future<void> rewind() async {
+    final next = _primary.position - const Duration(seconds: 10);
+    await _primary.seek(next < Duration.zero ? Duration.zero : next);
+  }
+
   @override
   Future<void> skipToNext() async {
     final nextIdx = _peekNextIndex();
@@ -755,6 +772,8 @@ class AudioEngine extends BaseAudioHandler {
         MediaAction.seek,
         MediaAction.skipToPrevious,
         MediaAction.skipToNext,
+        MediaAction.fastForward,
+        MediaAction.rewind,
         MediaAction.setShuffleMode,
         MediaAction.setRepeatMode,
         MediaAction.setSpeed,
