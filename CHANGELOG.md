@@ -7,6 +7,24 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.15.2] — 2026-05-25
+
+### Added (Subsonic radio mode)
+- **"Start radio"** action in the per-track sheet (Subsonic tracks
+  only). Seeds the playback queue with the chosen track + up to 30
+  similar tracks pulled from the server's own similarity engine
+  (`getSimilarSongs2`). Different engine than digaudio's metadata
+  similarity / Last.fm ranker — taps into whatever Subsonic /
+  Navidrome / Gonic computes server-side.
+- `SubsonicClient.getSimilarSongs(songId, count)` — empty list on
+  any failure so the caller can fall back gracefully.
+
+### Note
+- The radio queue isn't auto-refilled today (when the 30 tracks
+  end, the regular auto-queue lookahead takes over). A future
+  patch could keep refilling via `getSimilarSongs` on the last
+  played track for a truly endless radio stream.
+
 ## [0.15.1] — 2026-05-25
 
 ### Added (Library — Genre + Decade browsers)

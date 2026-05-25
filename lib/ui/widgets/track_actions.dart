@@ -76,6 +76,32 @@ class _TrackActionsSheet extends ConsumerWidget {
                 engine.appendToQueue(track);
               },
             ),
+            if (track.origin == MediaOrigin.subsonic)
+              ListTile(
+                leading: const Icon(Icons.radio),
+                title: const Text('Start radio'),
+                subtitle: const Text(
+                    'Seeds a queue from this track using the Subsonic server\'s similarity engine.',
+                    style: TextStyle(fontSize: 11)),
+                onTap: () async {
+                  final messenger = ScaffoldMessenger.of(context);
+                  final s = ref.read(subsonicProvider);
+                  Navigator.pop(context);
+                  if (s == null) {
+                    messenger.showSnackBar(
+                        const SnackBar(content: Text('No active server.')));
+                    return;
+                  }
+                  final similar = await s.getSimilarSongs(track.id, count: 30);
+                  if (similar.isEmpty) {
+                    messenger.showSnackBar(SnackBar(
+                        content: Text(
+                            'No similar tracks for "${track.title}" — server returned empty.')));
+                    return;
+                  }
+                  await engine.setQueue([track, ...similar]);
+                },
+              ),
             if (track.origin == MediaOrigin.subsonic) _DownloadTile(track: track),
           ],
         ),

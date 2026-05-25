@@ -163,6 +163,25 @@ class SubsonicClient {
     );
   }
 
+  /// Server-side similarity (the same engine Subsonic uses for its own
+  /// "radio" feature). Returns up to [count] tracks that sound similar
+  /// to [songId] according to the server. Empty list on any failure —
+  /// callers fall back to whatever autoqueue would have picked.
+  Future<List<Track>> getSimilarSongs(String songId, {int count = 30}) async {
+    try {
+      final r = await _get('getSimilarSongs2', {
+        'id': songId,
+        'count': '$count',
+      });
+      final list = (r['similarSongs2']?['song'] as List?) ?? const [];
+      return list
+          .map((e) => _parseSong(e as Map<String, dynamic>))
+          .toList();
+    } catch (_) {
+      return const [];
+    }
+  }
+
   Future<Track?> getSong(String id) async {
     try {
       final r = await _get('getSong', {'id': id});
