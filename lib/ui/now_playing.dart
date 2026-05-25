@@ -78,10 +78,27 @@ class _PlayerTab extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 24),
-            Text(track.title, maxLines: 1, overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
-            const SizedBox(height: 4),
-            Text(track.displayArtist, style: TextStyle(color: context.textTertiary, fontSize: 14)),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(track.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontSize: 22, fontWeight: FontWeight.w800)),
+                      const SizedBox(height: 4),
+                      Text(track.displayArtist,
+                          style: TextStyle(
+                              color: context.textTertiary, fontSize: 14)),
+                    ],
+                  ),
+                ),
+                _FavoriteToggle(track: track),
+              ],
+            ),
             const SizedBox(height: 12),
             Slider(
               value: position.inMilliseconds.toDouble().clamp(0, duration.inMilliseconds.toDouble()),
@@ -298,6 +315,29 @@ class _SyncedLyricsViewState extends ConsumerState<_SyncedLyricsView> {
           ),
         );
       },
+    );
+  }
+}
+
+/// Direct favorite toggle on Now Playing — no need to dive into the
+/// actions sheet. Reads [favoriteKeysProvider] so it lights up the
+/// instant any other surface (track tile, actions sheet) toggles.
+class _FavoriteToggle extends ConsumerWidget {
+  final Track track;
+  const _FavoriteToggle({required this.track});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final favKeys = ref.watch(favoriteKeysProvider).valueOrNull ?? const [];
+    final isFav = favKeys.contains(track.uniqueKey);
+    return IconButton(
+      tooltip: isFav ? 'Remove from favorites' : 'Add to favorites',
+      iconSize: 28,
+      icon: Icon(
+        isFav ? Icons.favorite : Icons.favorite_border,
+        color: isFav ? _accent : context.textSecondary,
+      ),
+      onPressed: () => ref.read(favoritesProvider).toggle(track.uniqueKey),
     );
   }
 }

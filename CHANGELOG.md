@@ -7,6 +7,17 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.12.2] — 2026-05-25
+
+### Fixed (UX)
+- **Direct heart toggle on Now Playing.** Until now favourites were
+  only reachable through the per-track actions sheet (long-press or
+  ⋮), which was non-obvious from the big artwork view. The Player
+  tab now shows a Spotify-style heart icon next to the title — one
+  tap to favourite the currently playing track. Stays in sync with
+  every other surface (track tile badge, actions sheet) via the
+  existing `favoriteKeysProvider`.
+
 ## [0.12.1] — 2026-05-25
 
 ### Added (Stats polish)
