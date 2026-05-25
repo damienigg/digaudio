@@ -1,4 +1,4 @@
-# Features — digaudio (v0.21.2)
+# Features — digaudio (v0.22.2)
 
 What's shipped, where to find it. Each row gives the entry point + a one-line description. **TEST_PLAN.md** covers acceptance tests, **TODO.md** covers what's left.
 
@@ -51,7 +51,7 @@ What's shipped, where to find it. Each row gives the entry point + a one-line de
 
 | Feature | Where |
 |---|---|
-| Home (newest releases + random + brand hero) | Home tab |
+| Home (newest releases + **recently played** + random + brand hero) | Home tab |
 | **Search** — FTS-first (instant, accent-insensitive, prefix-AND) + remote merge | Search tab |
 | Tracks / Albums / Artists / Genres / Decades / Playlists | Library tab — 6 sub-tabs |
 | Alphabetical quick-scroll | Library → Artists |
@@ -141,6 +141,7 @@ What's shipped, where to find it. Each row gives the entry point + a one-line de
 - Subsonic salt+token auth (no plain-text passwords on wire).
 - Server reachability ping (every 60 s) → offline banner above mini-player.
 - Subsonic library cache (drift): full song-level metadata for autoqueue scoring + Genre/Decade browsers + smart playlists + FTS.
+- **Cache auto-refresh** (v0.22.0) — Settings → Playback → Subsonic library cache → Auto-refresh dropdown (Off / Daily / 3 d / Weekly / 2 wk / Monthly). On boot if older than threshold + already-synced, background rebuild kicks off.
 - Subsonic scrobble at track-start + at Last.fm-style played-threshold.
 
 ## Theme & UI
@@ -151,7 +152,14 @@ What's shipped, where to find it. Each row gives the entry point + a one-line de
 - Brand accent `#1ED760` everywhere.
 - Custom launcher icon (golden shovel + "DIG" + music notes, v0.12.3).
 - Bottom-nav shell (Home / Search / Library) + persistent mini-player.
-- Offline banner + Selection bar appear conditionally above the mini-player.
+- Offline banner + **Download banner** + Selection bar appear conditionally above the mini-player.
+
+## Background download queue (v0.22.2)
+
+- `DownloadQueueService` wraps `DownloadsManager`. `enqueue(t)` / `enqueueAll(tracks)` — concurrency 1 (one server's bandwidth saturates anyway).
+- **DownloadBanner** above mini-player when active — current track + queued count + live progress bar + Cancel (clears pending; in-flight finishes).
+- Per-track "Download for offline" routes through the queue (`Queued "X"` toast).
+- **Bulk Download** via the SelectionBar — filters non-Subsonic tracks silently. Pair with long-press → select-album → Download for one-tap album pin.
 
 ## Build & release
 

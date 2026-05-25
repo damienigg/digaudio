@@ -1,4 +1,4 @@
-# TODO — digaudio (post-v0.21.2)
+# TODO — digaudio (post-v0.22.2)
 
 What's left, organised by category + combo. Effort tags: **S** ≈ 30 min, **M** ≈ 1 h, **L** ≈ several hours (own session).
 
@@ -37,16 +37,17 @@ What's left, organised by category + combo. Effort tags: **S** ≈ 30 min, **M**
 - **Listening parties / shared queue** — *(L)*  
   Real-time playback-state sync across multiple devices (WebSocket relay or Tailscale-local mesh). Defer until there's a real use case.
 
-### F · Library management — 4/5 remaining
+### F · Library management — 1/5 remaining
 
-- **Subsonic library cache auto-refresh** — *(S)*  
-  Today you tap "Sync" manually. Add a `cacheRefreshDays` pref (default 7) — on app start, if `lastSync < now − N days`, kick off a sync in the background.
-- **Multi-server unified search** — *(M)*  
-  Today Search hits the active server only. Fan out across all configured servers, dedupe by track key + title-artist match.
-- **Background download queue with system notification** — *(M)*  
-  Today an explicit `download(track)` is foreground — back out of the app and there's no visible progress. Wrap pinned downloads in a `foregroundService`-backed queue with a system notification showing progress + cancel button.
-- **"Recently added" on Home** — *(S)*  
-  Subsonic supports `type=recent` on `getAlbumList2`. Add a Home section between "Newest releases" and "Random picks".
+- ~~**Subsonic library cache auto-refresh**~~ — **DONE v0.22.0**
+- ~~**"Recently played" on Home**~~ — **DONE v0.22.1** (the original "Recently added" wording was wrong — `type=recent` is play-history; "Newest releases" already covers recently-added)
+- ~~**Background download queue**~~ — **DONE v0.22.2** with in-app progress banner (system notification omitted for v1 — would conflict with audio_service's notification + need POST_NOTIFICATIONS permission flow)
+- **Multi-server unified search** — *(L, was M)*  
+  Cross-cutting refactor: needs `Track.serverId` field added across
+  the model + every parser + the source builder (engine currently
+  streams via active-server URI, which would 404 for a track from
+  a different server). Plus a UI affordance to show which server
+  each result came from. Bumped to L; own milestone.
 
 ### G · Long-tail polish — 0/7
 
@@ -87,12 +88,13 @@ What's left, organised by category + combo. Effort tags: **S** ≈ 30 min, **M**
 
 ## Suggested versioning sequence
 
-- **v0.22.x** — F batch: cache auto-refresh (S) + Recently-added on Home (S) + multi-server search (M) + background DL queue (M)
+- ~~**v0.22.x** — F batch~~ DONE (cache auto-refresh / Recently played / DL queue; multi-server search deferred as L)
 - **v0.23.x** — G batch: i18n (M) + accessibility (S) + sleep-timer fade (S) + notif rich actions (S)
 - **v0.24.x** — E batch: ListenBrainz (S) + direct Last.fm (S) + Now-Playing share (S)
 - **v0.25.x** — Homescreen widget (L, own session)
 - **v0.26.x** — Voice search in-app (M)
 - **v0.27.x** — Wear OS companion (L, own session)
+- **v0.28.x** — Multi-server unified search (L, cross-cutting Track.serverId refactor)
 - **v1.0.0** — first "release" milestone after a real-device validation pass on every section of `TEST_PLAN.md`
 
 ## Items deliberately not on the roadmap
