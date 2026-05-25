@@ -316,35 +316,20 @@ All 7 items shipped. Bulk select was the last, in v0.16.3.
 ### B · Discovery & smart mixes — **DONE**
 All 7 items shipped. Smart playlists is the centerpiece; 4 builtins seeded.
 
-### C · Audio fidelity — 4/5 shipped (true crossfade deferred)
+### C · Audio fidelity — **5/5 DONE**
 
 - ~~Replay Gain via OpenSubsonic~~ — **DONE v0.17.2** (off / track / album)
 - ~~EQ presets~~ — **DONE v0.17.0** (Flat / Rock / Jazz / Vocal / Bass boost / Treble boost)
 - ~~Per-Bluetooth-device EQ profile~~ — **DONE v0.17.3** (save current EQ per BT device, auto-apply on connect)
-- ~~Gapless playback verification~~ — **DONE v0.17.1** (was always on via `ConcatenatingAudioSource`; settings note added)
-- **True crossfade with overlap** *(L, deferred)*  
-  `ConcatenatingAudioSource` produces one audio stream — true
-  overlap needs **two `AudioPlayer` instances** + manual queue
-  orchestration:
-  - Auto-advance suppression on the primary player (otherwise it
-    re-emits the new track from 0 while the secondary is mid-fade
-    on the same track → audible echo)
-  - Primary / secondary role swap on each transition
-  - `positionStream` source-of-truth switch during the overlap
-    window (UI must follow the audible player, not the muted one)
-  - Pause / play / seek logic that always targets the audible player
-  - Per-source preloading + disposal lifecycle
-  
-  Risk: the existing single-player + ConcatenatingAudioSource
-  flow is what every existing feature (queue editor, album mode,
-  per-track resume, scrobble, autoqueue, etc.) builds on. A
-  rewrite without a careful test plan would break several of
-  those.
-  
-  Pseudo-crossfade (v0.14.0) covers the common case — most
-  popular music has fade-out tails or extended outros that mask
-  the missing overlap. True overlap matters mostly for classical /
-  orchestral with abrupt endings.
+- ~~Gapless playback verification~~ — **DONE v0.17.1** (was always on via the old `ConcatenatingAudioSource`; now via the preloaded-secondary swap in the new two-player engine)
+- ~~**True crossfade with overlap**~~ — **DONE v0.18.0**
+  - Two `AudioPlayer` instances (`_primary` audible / `_secondary` preloaded)
+  - Manual queue orchestration (no `ConcatenatingAudioSource`)
+  - Overlap fade when `crossfadeMs > 0`: secondary fades in while primary fades out, then swap
+  - Instant swap when `crossfadeMs == 0`: still gapless (preloaded secondary jumps in at primary's end)
+  - All UI streams re-piped through engine-owned broadcast controllers + inner subs re-attached on swap
+  - Engine-level loop (`all` wraps, `one` delegates to source loop) + engine-level shuffle (pins current track at 0, shuffles rest, restores via `_originalOrder`)
+  - `_silenceSecondary()` called by all skip paths so a mid-fade secondary never plays in the background after a user jump
 
 ### D · Platform integration (0/7 shipped)
 

@@ -1,7 +1,7 @@
 name: digaudio
 description: "digaudio — a lightweight, modern, high-quality audio player (local + Subsonic)."
 publish_to: 'none'
-version: 0.17.3+43
+version: 0.18.0+44
 
 environment:
   sdk: ^3.5.4

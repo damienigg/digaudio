@@ -7,16 +7,71 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-### Deferred to its own session (originally planned as v0.18.0)
-- **True crossfade with overlap** — needs a real refactor of the
-  engine: `ConcatenatingAudioSource` produces one stream, so true
-  overlap requires two `AudioPlayer` instances + manual queue
-  orchestration (auto-advance suppression, primary/secondary swap,
-  position-stream source-of-truth switch). The pseudo-crossfade in
-  v0.14.0 covers the common case; true overlap mostly matters for
-  classical / orchestral with abrupt endings. Deferred with a
-  dedicated test plan in `STATUS.md` so it can be picked up
-  cleanly in a focused session.
+## [0.18.0] — 2026-05-25
+
+### Added (TRUE crossfade — engine refactor)
+- **`AudioEngine` rewritten with two `AudioPlayer` instances.**
+  `_primary` is the audibly-playing one; `_secondary` either idles
+  or preloads the next track. The queue (`_tracks`) is managed
+  manually — no more `ConcatenatingAudioSource` — so we can
+  suppress auto-advance and replace it with our own transitions:
+  - **Overlap fade** when `crossfadeMs > 0`: secondary starts at
+    volume 0 + ramps up to the next track's RG-adjusted target
+    while primary ramps down to 0 over the fade window. After
+    completion, `_primary` and `_secondary` swap roles.
+  - **Instant swap** when `crossfadeMs == 0`: secondary already
+    has the next track preloaded, primary stops at the same moment
+    secondary starts at full volume → **gapless even without
+    overlap** (a real improvement vs. the old single-player flow
+    where setAudioSource on track end would briefly underrun).
+
+### Internal — stream multiplexing
+- All UI-facing streams (`playerStateStream`, `positionStream`,
+  `durationStream`, `bufferedPositionStream`, `currentIndexStream`,
+  `currentTrackStream`, `loopModeStream`, `shuffleModeStream`) are
+  now **engine-owned broadcast controllers**, fed by inner subs on
+  whichever player is currently primary. `_wirePrimary()` cancels
+  and re-attaches those inner subs on every swap so external
+  subscribers (Now Playing, mini-player, etc.) stay valid across
+  transitions without any code on their side.
+
+### Engine — manual loop + shuffle
+- **`LoopMode.one`** delegates to just_audio's per-source loop
+  (seamless single-track repeat).
+- **`LoopMode.all`** is handled by `_peekNextIndex()` — wraps to
+  index 0 when we'd advance past the last track.
+- **Shuffle** is engine-level now (`_applyShuffle` pins the current
+  track at index 0 then shuffles the rest). Toggle off restores the
+  insertion order via `_originalOrder`. The old just_audio
+  per-source `shuffle()` was a no-op in single-source mode.
+
+### Engine — secondary safety
+- `_silenceSecondary()` is called by `skipToPrevious`,
+  `skipToQueueItem`, and the `_instantAdvance` fallback path —
+  guarantees a mid-fade secondary doesn't keep playing in the
+  background when the user jumps elsewhere.
+
+### Equalizer
+- Two `AndroidEqualizer` instances (one per player) kept in sync
+  via `applyEqGains` / `setEqEnabled` so a fade across an EQ change
+  doesn't sound like a sudden tone shift.
+
+### Compatibility
+- Every public method preserved: `setQueue`, `playSingle`,
+  `appendToQueue`, `playNext`, `moveInQueue`, `removeFromQueue`,
+  all `BaseAudioHandler` overrides, plus convenience aliases
+  (`next`, `previous`, `setShuffle`, `setRepeat`, `seekToIndex`,
+  `setVolume`). `raw` getter still works (now returns `_primary`),
+  `equalizer` (returns `_eqA`).
+
+### Known limitations / follow-ups
+- Position UI during the crossfade window reflects whichever player
+  is primary — once the swap happens, the slider snaps to the new
+  track's position. Acceptable for the ~5 s fade window; if it
+  feels jarring we could pause UI updates during the overlap.
+- Repeat-one + crossfade > 0 explicitly suppresses the transition
+  (LoopMode.one delegates to the source's own loop) — the user
+  almost certainly wants the seamless repeat, not a self-crossfade.
 
 ## [0.17.3] — 2026-05-25
 
