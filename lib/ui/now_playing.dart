@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:palette_generator/palette_generator.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../audio/providers.dart';
 import '../domain.dart';
@@ -29,7 +30,12 @@ class NowPlayingPage extends ConsumerWidget {
         appBar: AppBar(
           leading: IconButton(tooltip: 'Close', icon: const Icon(Icons.keyboard_arrow_down), onPressed: () => Navigator.maybePop(context)),
           title: Text(track.album ?? track.title, style: const TextStyle(fontSize: 14)),
-          actions: const [_AlbumModeAction(), _SpeedAction(), _SleepAction()],
+          actions: const [
+            _AlbumModeAction(),
+            _ShareAction(),
+            _SpeedAction(),
+            _SleepAction(),
+          ],
           bottom: const TabBar(
             indicatorColor: _accent,
             tabs: [Tab(text: 'Player'), Tab(text: 'Queue'), Tab(text: 'Lyrics')],
@@ -493,6 +499,29 @@ class _UpNextStrip extends ConsumerWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+/// AppBar action: share the currently-playing track as a text card.
+/// `"Listening to {title} — {artist} · via digaudio"` — kept minimal
+/// (no rich deep-link). Future: Subsonic `createShare` would
+/// generate a server-side URL but needs share permissions on the
+/// server, so out of scope for v1.
+class _ShareAction extends ConsumerWidget {
+  const _ShareAction();
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final track = ref.watch(currentTrackProvider).valueOrNull;
+    return IconButton(
+      tooltip: 'Share track',
+      onPressed: track == null
+          ? null
+          : () => Share.share(
+                'Listening to ${track.title} — ${track.displayArtist}  ·  via digaudio',
+                subject: track.title,
+              ),
+      icon: const Icon(Icons.share_outlined),
     );
   }
 }

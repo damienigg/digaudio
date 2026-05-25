@@ -7,6 +7,19 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.24.0] — 2026-05-25
+
+### Added (Now-Playing share)
+- **Share button** on the Now Playing AppBar (between Album-mode
+  and Speed). Tap → system share sheet with
+  `'Listening to {title} — {artist}  ·  via digaudio'`.
+  Disabled when no track is current.
+- Reuses the `share_plus` dep already in the tree (originally
+  added for playlist JSON export).
+- **Not yet**: Subsonic `createShare` server-side URLs (need
+  share permissions on the server) — would let recipients
+  actually click and play, not just read the text. Future.
+
 ## [0.23.2] — 2026-05-25
 
 ### Changed (Accessibility sweep)
