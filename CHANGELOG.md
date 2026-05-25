@@ -7,6 +7,14 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.21.2] — 2026-05-25
+
+### Changed (select-mode polish)
+- **TrackTile in select mode: artwork becomes a 36 dp check-circle**
+  in the same 48 dp leading slot. Same row footprint (no height
+  jump) but the tap target reads as a checkbox first, artwork
+  second. Out of select mode → artwork stays as-is, no change.
+
 ## [0.21.1] — 2026-05-25
 
 ### Added (Subsonic radio: auto-refill, truly endless)

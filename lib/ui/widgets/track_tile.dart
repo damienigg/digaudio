@@ -46,19 +46,27 @@ class TrackTile extends ConsumerWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         child: Row(
           children: [
+            // In selection mode, the leading 48 dp slot becomes the
+            // check-circle: same footprint as the artwork it replaces
+            // so the row height doesn't jump, but the tap target is
+            // dedicated + unambiguous. Out of selection mode → keep
+            // the artwork as-is.
             if (selecting)
-              Padding(
-                padding: const EdgeInsets.only(right: 8),
+              SizedBox(
+                width: 48,
+                height: 48,
                 child: Icon(
                   isSelected
                       ? Icons.check_circle
                       : Icons.radio_button_unchecked,
+                  size: 36,
                   color: isSelected
                       ? const Color(0xFF1ED760)
                       : context.textTertiary,
                 ),
-              ),
-            Artwork(coverArt: t.coverArt, origin: t.origin, size: 48),
+              )
+            else
+              Artwork(coverArt: t.coverArt, origin: t.origin, size: 48),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
