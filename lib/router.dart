@@ -33,6 +33,7 @@ GoRouter buildRouter() => GoRouter(
         GoRoute(path: '/settings', builder: (_, __) => const SettingsPage()),
         GoRoute(path: '/settings/servers', builder: (_, __) => const ServersPage()),
         GoRoute(path: '/settings/playback', builder: (_, __) => const PlaybackPage()),
+        GoRoute(path: '/settings/display', builder: (_, __) => const DisplayPage()),
         GoRoute(
           path: '/settings/server/:id',
           builder: (_, s) => ServerEditPage(id: s.pathParameters['id']!),

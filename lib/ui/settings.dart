@@ -7,6 +7,8 @@ import '../audio/providers.dart';
 import '../core/playback_prefs.dart';
 import '../core/settings.dart';
 
+const _accent = Color(0xFF1ED760);
+
 /// Top-level Settings hub. Subpages handle the actual configuration.
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -30,6 +32,14 @@ class SettingsPage extends StatelessWidget {
               subtitle: const Text('Storage · auto-queue · equalizer'),
               trailing: const Icon(Icons.chevron_right, color: Colors.white38),
               onTap: () => context.push('/settings/playback'),
+            ),
+            const Divider(height: 1, color: Colors.white12),
+            ListTile(
+              leading: const Icon(Icons.brightness_6_outlined),
+              title: const Text('Display'),
+              subtitle: const Text('Theme'),
+              trailing: const Icon(Icons.chevron_right, color: Colors.white38),
+              onTap: () => context.push('/settings/display'),
             ),
           ],
         ),
@@ -111,7 +121,7 @@ class _ServerTile extends StatelessWidget {
     final status = server.isConfigured
         ? (active ? 'Active' : 'Tap to activate')
         : 'Credentials missing — tap to set';
-    final color = active ? const Color(0xFF1ED760) : Colors.white54;
+    final color = active ? _accent : Colors.white54;
     return ListTile(
       leading: Icon(active ? Icons.cloud_done : Icons.cloud_outlined, color: color),
       title: Row(
@@ -325,6 +335,57 @@ class _ServerEditPageState extends ConsumerState<ServerEditPage> {
                 ],
               ],
             ),
+    );
+  }
+}
+
+/// Display settings — theme mode picker today. Persisted via [DisplayPrefs]
+/// and mirrored into [themeModeProvider] so MaterialApp.router redraws
+/// instantly without a restart.
+///
+/// Note: the light theme is **experimental** — many digaudio widgets
+/// hardcode `Colors.white*` (artefact of the dark-only roots) and render
+/// with low contrast in light mode. Will be migrated incrementally.
+class DisplayPage extends ConsumerWidget {
+  const DisplayPage({super.key});
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final current = ref.watch(themeModeProvider);
+    Widget tile(ThemeMode m, IconData icon, String label, String hint) =>
+        RadioListTile<ThemeMode>(
+          value: m,
+          groupValue: current,
+          activeColor: _accent,
+          secondary: Icon(icon),
+          title: Text(label),
+          subtitle: Text(hint, style: const TextStyle(fontSize: 11)),
+          onChanged: (v) async {
+            if (v == null) return;
+            ref.read(themeModeProvider.notifier).state = v;
+            final prefs = ref.read(displayPrefsProvider);
+            prefs.themeMode = v;
+            await prefs.save();
+          },
+        );
+    return Scaffold(
+      appBar: AppBar(title: const Text('Display')),
+      body: ListView(
+        children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 16, 16, 6),
+            child: Text('Theme',
+                style: TextStyle(
+                    color: Colors.white60,
+                    fontSize: 11,
+                    letterSpacing: 1.5)),
+          ),
+          tile(ThemeMode.dark, Icons.dark_mode, 'Dark', 'Default — every widget tested here.'),
+          tile(ThemeMode.light, Icons.light_mode, 'Light',
+              'Experimental — some surfaces still use dark-only colors.'),
+          tile(ThemeMode.system, Icons.settings_brightness, 'Follow system',
+              'Switches with the OS dark-mode setting.'),
+        ],
+      ),
     );
   }
 }

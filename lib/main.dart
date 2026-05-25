@@ -19,6 +19,9 @@ Future<void> main() async {
   await container.read(downloadsProvider).hydrate();
   final prefs = container.read(playbackPrefsProvider);
   await prefs.load();
+  final display = container.read(displayPrefsProvider);
+  await display.load();
+  container.read(themeModeProvider.notifier).state = display.themeMode;
 
   final handler = await AudioService.init(
     builder: () => AudioEngine(

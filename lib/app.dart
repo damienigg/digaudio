@@ -27,16 +27,22 @@ class _DigaudioAppState extends ConsumerState<DigaudioApp> {
       final autoQueue = ref.read(autoQueueProvider);
       autoQueue.enabled = prefs.autoQueueEnabled;
       autoQueue.start();
+      // Periodic Subsonic ping so the offline banner appears / clears
+      // without any user action.
+      ref.read(serverHealthProvider).start();
     });
   }
 
   @override
-  Widget build(BuildContext context) => MaterialApp.router(
-        title: 'digaudio',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.dark(),
-        darkTheme: AppTheme.dark(),
-        themeMode: ThemeMode.dark,
-        routerConfig: _router,
-      );
+  Widget build(BuildContext context) {
+    final mode = ref.watch(themeModeProvider);
+    return MaterialApp.router(
+      title: 'digaudio',
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.light(),
+      darkTheme: AppTheme.dark(),
+      themeMode: mode,
+      routerConfig: _router,
+    );
+  }
 }

@@ -88,4 +88,80 @@ class AppTheme {
       ),
     );
   }
+
+  /// Experimental light theme — exposes the same accent on a paper-white
+  /// scaffold. Most digaudio widgets currently hardcode `Colors.white*`
+  /// for foreground/dividers (artefact of the dark-only roots); they
+  /// render with low contrast in light mode and will be migrated to
+  /// `Theme.of(context).colorScheme.*` over time. Ship as opt-in.
+  static ThemeData light() {
+    const lightBackground = Color(0xFFFAFAFA);
+    const lightSurface = Color(0xFFFFFFFF);
+    const lightSurfaceHigh = Color(0xFFEFEFEF);
+    final scheme = ColorScheme.fromSeed(
+      seedColor: accent,
+      brightness: Brightness.light,
+      primary: accent,
+      surface: lightSurface,
+    );
+    final base = ThemeData.light(useMaterial3: true);
+    return base.copyWith(
+      colorScheme: scheme,
+      scaffoldBackgroundColor: lightBackground,
+      canvasColor: lightBackground,
+      splashFactory: InkSparkle.splashFactory,
+      visualDensity: VisualDensity.adaptivePlatformDensity,
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: lightSurfaceHigh,
+        indicatorColor: accent.withOpacity(0.22),
+        labelTextStyle: const WidgetStatePropertyAll(
+          TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
+        ),
+      ),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: lightBackground,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: false,
+        titleTextStyle: TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.w700,
+          color: Colors.black,
+        ),
+        iconTheme: IconThemeData(color: Colors.black87),
+      ),
+      cardTheme: CardTheme(
+        color: lightSurface,
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      sliderTheme: SliderThemeData(
+        trackHeight: 3,
+        thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+        overlayShape: SliderComponentShape.noOverlay,
+        activeTrackColor: accent,
+        inactiveTrackColor: Colors.black26,
+        thumbColor: Colors.black,
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: accent,
+          foregroundColor: Colors.black,
+          shape: const StadiumBorder(),
+          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
+          textStyle: const TextStyle(fontWeight: FontWeight.w700),
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: lightSurfaceHigh,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide.none,
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        hintStyle: const TextStyle(color: Colors.black54),
+      ),
+    );
+  }
 }

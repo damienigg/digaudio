@@ -1,7 +1,9 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
 
 import '../core/db.dart';
+import '../core/display_prefs.dart';
 import '../core/playback_prefs.dart';
 import '../core/settings.dart';
 import '../domain.dart';
@@ -12,6 +14,7 @@ import '../library/importer.dart';
 import '../library/local.dart';
 import '../library/play_history.dart';
 import '../library/ratings.dart';
+import '../library/server_health.dart';
 import '../library/subsonic_cache.dart';
 import '../library/wishlist.dart';
 import '../subsonic/client.dart';
@@ -57,6 +60,12 @@ final downloadsProvider = Provider<DownloadsManager>((ref) {
 final localLibraryProvider = Provider<LocalLibrary>((_) => LocalLibrary());
 
 final playbackPrefsProvider = Provider<PlaybackPrefs>((_) => PlaybackPrefs());
+
+final displayPrefsProvider = Provider<DisplayPrefs>((_) => DisplayPrefs());
+
+/// Reactive theme mode — seeded from [DisplayPrefs] in main and updated
+/// from the Display settings picker. MaterialApp.router watches this.
+final themeModeProvider = StateProvider<ThemeMode>((_) => ThemeMode.dark);
 
 /// Reactive mirror of [PlaybackPrefs.playbackSpeed]. The prefs object itself
 /// is mutable and not Riverpod-watched; this StateProvider feeds the AppBar
@@ -163,6 +172,19 @@ final ratingsManagerProvider = Provider<RatingsManager>((ref) {
 /// without re-fetching the underlying track.
 final ratingsChangesProvider = StreamProvider<void>((ref) =>
     ref.watch(ratingsManagerProvider).changes);
+
+/// Periodic Subsonic ping + reachability flag. Started once at app boot
+/// (see [DigaudioApp.initState]) and lives as long as the container.
+final serverHealthProvider = Provider<ServerHealthService>((ref) {
+  final svc = ServerHealthService(() => ref.read(subsonicProvider));
+  ref.onDispose(svc.dispose);
+  return svc;
+});
+
+/// `true` = active server reachable (or no active server). UI flips a
+/// banner on `false`.
+final serverReachableProvider = StreamProvider<bool>((ref) =>
+    ref.watch(serverHealthProvider).stream);
 
 final wishlistProvider = StreamProvider<List<WishlistData>>((ref) =>
     ref.watch(wishlistManagerProvider).watchAll());

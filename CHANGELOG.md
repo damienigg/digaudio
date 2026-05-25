@@ -7,6 +7,29 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.11.1] — 2026-05-25
+
+### Added (Batch 3 — polish)
+- **Online/offline fallback.** A `ServerHealthService` pings the active
+  Subsonic server every 60 s. A thin amber banner appears above the
+  mini-player when the server is unreachable so the user knows they're
+  seeing cached state. Auto-recovers on the next successful ping —
+  no manual retry needed.
+- **Theme toggle** (Settings → Display). Dark / Light / Follow system.
+  The light theme is **experimental** — many widgets still hardcode
+  `Colors.white*` (artefact of the dark-only roots) and render with
+  low contrast in light mode. They'll be migrated to
+  `Theme.of(context).colorScheme.*` incrementally; the toggle ships
+  now so the picker + persistence are in place.
+- **`DisplayPrefs`** in `lib/core/display_prefs.dart` (themeMode today;
+  accent / font scale tomorrow). Loaded in `main()` alongside the
+  playback prefs; mirrored into `themeModeProvider` so MaterialApp
+  redraws on every change.
+
+### Internal
+- `_accent` constant now scoped per-file (settings.dart, now_playing.dart)
+  instead of inlined as `Color(0xFF1ED760)` literals (principle 1).
+
 ## [0.11.0] — 2026-05-25
 
 ### Added (Phase 3 — Android Auto)
