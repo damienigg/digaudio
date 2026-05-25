@@ -140,6 +140,8 @@ class _PlayerTab extends ConsumerWidget {
                 ),
               ],
             ),
+            const SizedBox(height: 8),
+            const _UpNextStrip(),
           ],
         ),
       ),
@@ -350,6 +352,72 @@ class _SyncedLyricsViewState extends ConsumerState<_SyncedLyricsView> {
           ),
         );
       },
+    );
+  }
+}
+
+/// Compact preview of the next 3 tracks in the queue, shown below the
+/// transport on Now Playing → Player tab so the user can see what's
+/// coming without jumping to the Queue tab. Tap a row → skip to that
+/// track. Hides itself if there's nothing queued after the current.
+class _UpNextStrip extends ConsumerWidget {
+  const _UpNextStrip();
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(currentTrackProvider); // rebuild on track change
+    final engine = ref.watch(audioEngineProvider);
+    final queue = engine.currentQueue;
+    final currentIdx = engine.raw.currentIndex ?? 0;
+    final upcoming = (currentIdx + 1 < queue.length)
+        ? queue.sublist(currentIdx + 1, (currentIdx + 4).clamp(0, queue.length))
+        : const <Track>[];
+    if (upcoming.isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 4),
+          child: Text('UP NEXT',
+              style: TextStyle(
+                  color: context.textTertiary,
+                  fontSize: 10,
+                  letterSpacing: 1.5,
+                  fontWeight: FontWeight.w700)),
+        ),
+        for (var i = 0; i < upcoming.length; i++)
+          InkWell(
+            onTap: () => engine.seekToIndex(currentIdx + 1 + i),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                children: [
+                  Artwork(
+                      coverArt: upcoming[i].coverArt,
+                      origin: upcoming[i].origin,
+                      size: 32),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(upcoming[i].title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 12)),
+                        Text(upcoming[i].displayArtist,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                color: context.textTertiary, fontSize: 10)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

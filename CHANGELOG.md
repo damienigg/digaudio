@@ -7,6 +7,33 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.16.1] — 2026-05-25
+
+### Added (Per-track resume + Up Next strip)
+- **Per-track resume position.** The engine debounces position writes
+  to a new `TrackPositions` table (~5 s cadence) for the currently
+  playing track. On re-play of the same track, if the saved
+  position is meaningfully mid-track (≥ 10 s in, ≥ 10 s before end)
+  the engine seeks there automatically once duration is known. Use
+  case: long DJ mixes / audiobooks / podcasts — pause, switch to
+  something else, come back later, resume where you left off.
+- **"Up Next" inline strip** on Now Playing → Player tab. Shows the
+  3 upcoming tracks below the transport row (small artwork + title +
+  artist). Tap a row → skip directly to that track. Hides itself
+  if there's nothing queued after the current.
+
+### Database
+- **Schema v6 → v7** — new `TrackPositions` table (trackKey PK /
+  positionMs / updatedAt).
+
+### Internal
+- `TrackPositionsManager` — `save` (insertOnConflictUpdate),
+  `get`, `clear`. Not a hot table thanks to the 5 s debounce in
+  the engine.
+- `AudioEngine._maybeResume` — one-shot `durationStream` listen
+  that seeks once duration is non-null, then cancels. Avoids a
+  permanent subscription per track switch.
+
 ## [0.16.0] — 2026-05-25
 
 ### Added (Queue editor + Album mode — category A)

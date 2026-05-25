@@ -31,6 +31,7 @@ Future<void> main() async {
       cache: container.read(downloadsProvider),
       prefs: prefs,
       history: container.read(playHistoryProvider),
+      positions: container.read(trackPositionsProvider),
     ),
     config: const AudioServiceConfig(
       androidNotificationChannelId: 'com.digaudio.audio',

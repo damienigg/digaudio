@@ -12,6 +12,7 @@ import '../library/collections.dart';
 import '../library/downloads.dart';
 import '../library/local.dart';
 import '../library/play_history.dart';
+import '../library/track_positions.dart';
 import '../subsonic/client.dart';
 
 /// digaudio's single audio engine + AA bridge.
@@ -35,6 +36,7 @@ class AudioEngine extends BaseAudioHandler {
   final DownloadsManager _cache;
   final PlaybackPrefs _prefs;
   final PlayHistoryManager _history;
+  final TrackPositionsManager _positions;
   final AndroidEqualizer _equalizer = AndroidEqualizer();
   late final AudioPlayer _player = AudioPlayer(
     audioPipeline: AudioPipeline(androidAudioEffects: [_equalizer]),
@@ -47,6 +49,7 @@ class AudioEngine extends BaseAudioHandler {
   String? _nowPlayingKey;
   bool _scrobbledCurrent = false;
   Timer? _fadeInTimer;
+  DateTime _lastPositionSave = DateTime(0);
 
   AudioEngine({
     required SubsonicClient? Function() subsonic,
@@ -55,12 +58,14 @@ class AudioEngine extends BaseAudioHandler {
     required DownloadsManager cache,
     required PlaybackPrefs prefs,
     required PlayHistoryManager history,
+    required TrackPositionsManager positions,
   })  : _subsonic = subsonic,
         _resolver = resolver,
         _favorites = favorites,
         _cache = cache,
         _prefs = prefs,
-        _history = history;
+        _history = history,
+        _positions = positions;
 
   AudioPlayer get raw => _player;
   AndroidEqualizer get equalizer => _equalizer;
@@ -95,6 +100,10 @@ class AudioEngine extends BaseAudioHandler {
       // so the user perceives a continuous mix with the previous track's
       // tail-out.
       _startFadeIn();
+      // Per-track resume: if we have a saved position that's
+      // meaningfully mid-track, seek there once the source has loaded
+      // enough metadata to know its duration.
+      _maybeResume(t);
     });
 
     // Definitive scrobble at ≥4 min played OR ≥50% of duration — Last.fm's
@@ -118,6 +127,35 @@ class AudioEngine extends BaseAudioHandler {
       // Crossfade-out: in the last [crossfadeMs] of the track, ramp
       // volume from 1 → 0 proportional to remaining time.
       _applyFadeOut(pos, _player.duration);
+      // Persist current position every ~5 s so re-opening a paused
+      // long-form track resumes near where the user left off.
+      final now = DateTime.now();
+      if (_nowPlayingKey != null &&
+          now.difference(_lastPositionSave) >= const Duration(seconds: 5)) {
+        _lastPositionSave = now;
+        _positions.save(_nowPlayingKey!, pos);
+      }
+    });
+  }
+
+  /// Looks up the saved position for [t] and seeks if it's
+  /// meaningfully mid-track. Waits for `durationStream` to emit a
+  /// non-null value once before deciding (so we don't seek past the
+  /// end). One-shot subscription, cancelled after the seek.
+  void _maybeResume(Track t) async {
+    final saved = await _positions.get(t.uniqueKey);
+    if (saved == null || saved < const Duration(seconds: 10)) return;
+    if (t.uniqueKey != _nowPlayingKey) return; // user already switched
+    StreamSubscription<Duration?>? sub;
+    sub = _player.durationStream.listen((dur) {
+      if (dur == null) return;
+      sub?.cancel();
+      // Stay clear of the trailing edge — "resume" at 0:02 from end is
+      // worse UX than playing fresh.
+      if (saved < dur - const Duration(seconds: 10) &&
+          t.uniqueKey == _nowPlayingKey) {
+        _player.seek(saved);
+      }
     });
   }
 

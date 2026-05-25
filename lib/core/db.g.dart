@@ -2632,6 +2632,243 @@ class SmartPlaylistsCompanion extends UpdateCompanion<SmartPlaylist> {
   }
 }
 
+class $TrackPositionsTable extends TrackPositions
+    with TableInfo<$TrackPositionsTable, TrackPosition> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $TrackPositionsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _trackKeyMeta =
+      const VerificationMeta('trackKey');
+  @override
+  late final GeneratedColumn<String> trackKey = GeneratedColumn<String>(
+      'track_key', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _positionMsMeta =
+      const VerificationMeta('positionMs');
+  @override
+  late final GeneratedColumn<int> positionMs = GeneratedColumn<int>(
+      'position_ms', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _updatedAtMeta =
+      const VerificationMeta('updatedAt');
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+      'updated_at', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns => [trackKey, positionMs, updatedAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'track_positions';
+  @override
+  VerificationContext validateIntegrity(Insertable<TrackPosition> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('track_key')) {
+      context.handle(_trackKeyMeta,
+          trackKey.isAcceptableOrUnknown(data['track_key']!, _trackKeyMeta));
+    } else if (isInserting) {
+      context.missing(_trackKeyMeta);
+    }
+    if (data.containsKey('position_ms')) {
+      context.handle(
+          _positionMsMeta,
+          positionMs.isAcceptableOrUnknown(
+              data['position_ms']!, _positionMsMeta));
+    } else if (isInserting) {
+      context.missing(_positionMsMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(_updatedAtMeta,
+          updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {trackKey};
+  @override
+  TrackPosition map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return TrackPosition(
+      trackKey: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}track_key'])!,
+      positionMs: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}position_ms'])!,
+      updatedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at'])!,
+    );
+  }
+
+  @override
+  $TrackPositionsTable createAlias(String alias) {
+    return $TrackPositionsTable(attachedDatabase, alias);
+  }
+}
+
+class TrackPosition extends DataClass implements Insertable<TrackPosition> {
+  final String trackKey;
+  final int positionMs;
+  final DateTime updatedAt;
+  const TrackPosition(
+      {required this.trackKey,
+      required this.positionMs,
+      required this.updatedAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['track_key'] = Variable<String>(trackKey);
+    map['position_ms'] = Variable<int>(positionMs);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  TrackPositionsCompanion toCompanion(bool nullToAbsent) {
+    return TrackPositionsCompanion(
+      trackKey: Value(trackKey),
+      positionMs: Value(positionMs),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory TrackPosition.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return TrackPosition(
+      trackKey: serializer.fromJson<String>(json['trackKey']),
+      positionMs: serializer.fromJson<int>(json['positionMs']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'trackKey': serializer.toJson<String>(trackKey),
+      'positionMs': serializer.toJson<int>(positionMs),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  TrackPosition copyWith(
+          {String? trackKey, int? positionMs, DateTime? updatedAt}) =>
+      TrackPosition(
+        trackKey: trackKey ?? this.trackKey,
+        positionMs: positionMs ?? this.positionMs,
+        updatedAt: updatedAt ?? this.updatedAt,
+      );
+  TrackPosition copyWithCompanion(TrackPositionsCompanion data) {
+    return TrackPosition(
+      trackKey: data.trackKey.present ? data.trackKey.value : this.trackKey,
+      positionMs:
+          data.positionMs.present ? data.positionMs.value : this.positionMs,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TrackPosition(')
+          ..write('trackKey: $trackKey, ')
+          ..write('positionMs: $positionMs, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(trackKey, positionMs, updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is TrackPosition &&
+          other.trackKey == this.trackKey &&
+          other.positionMs == this.positionMs &&
+          other.updatedAt == this.updatedAt);
+}
+
+class TrackPositionsCompanion extends UpdateCompanion<TrackPosition> {
+  final Value<String> trackKey;
+  final Value<int> positionMs;
+  final Value<DateTime> updatedAt;
+  final Value<int> rowid;
+  const TrackPositionsCompanion({
+    this.trackKey = const Value.absent(),
+    this.positionMs = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  TrackPositionsCompanion.insert({
+    required String trackKey,
+    required int positionMs,
+    required DateTime updatedAt,
+    this.rowid = const Value.absent(),
+  })  : trackKey = Value(trackKey),
+        positionMs = Value(positionMs),
+        updatedAt = Value(updatedAt);
+  static Insertable<TrackPosition> custom({
+    Expression<String>? trackKey,
+    Expression<int>? positionMs,
+    Expression<DateTime>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (trackKey != null) 'track_key': trackKey,
+      if (positionMs != null) 'position_ms': positionMs,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  TrackPositionsCompanion copyWith(
+      {Value<String>? trackKey,
+      Value<int>? positionMs,
+      Value<DateTime>? updatedAt,
+      Value<int>? rowid}) {
+    return TrackPositionsCompanion(
+      trackKey: trackKey ?? this.trackKey,
+      positionMs: positionMs ?? this.positionMs,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (trackKey.present) {
+      map['track_key'] = Variable<String>(trackKey.value);
+    }
+    if (positionMs.present) {
+      map['position_ms'] = Variable<int>(positionMs.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TrackPositionsCompanion(')
+          ..write('trackKey: $trackKey, ')
+          ..write('positionMs: $positionMs, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDb extends GeneratedDatabase {
   _$AppDb(QueryExecutor e) : super(e);
   $AppDbManager get managers => $AppDbManager(this);
@@ -2646,6 +2883,7 @@ abstract class _$AppDb extends GeneratedDatabase {
   late final $CachedSubsonicSongsTable cachedSubsonicSongs =
       $CachedSubsonicSongsTable(this);
   late final $SmartPlaylistsTable smartPlaylists = $SmartPlaylistsTable(this);
+  late final $TrackPositionsTable trackPositions = $TrackPositionsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -2659,7 +2897,8 @@ abstract class _$AppDb extends GeneratedDatabase {
         missingTracks,
         wishlist,
         cachedSubsonicSongs,
-        smartPlaylists
+        smartPlaylists,
+        trackPositions
       ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules(
@@ -4325,6 +4564,149 @@ typedef $$SmartPlaylistsTableProcessedTableManager = ProcessedTableManager<
     ),
     SmartPlaylist,
     PrefetchHooks Function()>;
+typedef $$TrackPositionsTableCreateCompanionBuilder = TrackPositionsCompanion
+    Function({
+  required String trackKey,
+  required int positionMs,
+  required DateTime updatedAt,
+  Value<int> rowid,
+});
+typedef $$TrackPositionsTableUpdateCompanionBuilder = TrackPositionsCompanion
+    Function({
+  Value<String> trackKey,
+  Value<int> positionMs,
+  Value<DateTime> updatedAt,
+  Value<int> rowid,
+});
+
+class $$TrackPositionsTableFilterComposer
+    extends Composer<_$AppDb, $TrackPositionsTable> {
+  $$TrackPositionsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get trackKey => $composableBuilder(
+      column: $table.trackKey, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get positionMs => $composableBuilder(
+      column: $table.positionMs, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnFilters(column));
+}
+
+class $$TrackPositionsTableOrderingComposer
+    extends Composer<_$AppDb, $TrackPositionsTable> {
+  $$TrackPositionsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get trackKey => $composableBuilder(
+      column: $table.trackKey, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get positionMs => $composableBuilder(
+      column: $table.positionMs, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
+}
+
+class $$TrackPositionsTableAnnotationComposer
+    extends Composer<_$AppDb, $TrackPositionsTable> {
+  $$TrackPositionsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get trackKey =>
+      $composableBuilder(column: $table.trackKey, builder: (column) => column);
+
+  GeneratedColumn<int> get positionMs => $composableBuilder(
+      column: $table.positionMs, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$TrackPositionsTableTableManager extends RootTableManager<
+    _$AppDb,
+    $TrackPositionsTable,
+    TrackPosition,
+    $$TrackPositionsTableFilterComposer,
+    $$TrackPositionsTableOrderingComposer,
+    $$TrackPositionsTableAnnotationComposer,
+    $$TrackPositionsTableCreateCompanionBuilder,
+    $$TrackPositionsTableUpdateCompanionBuilder,
+    (
+      TrackPosition,
+      BaseReferences<_$AppDb, $TrackPositionsTable, TrackPosition>
+    ),
+    TrackPosition,
+    PrefetchHooks Function()> {
+  $$TrackPositionsTableTableManager(_$AppDb db, $TrackPositionsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$TrackPositionsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$TrackPositionsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$TrackPositionsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> trackKey = const Value.absent(),
+            Value<int> positionMs = const Value.absent(),
+            Value<DateTime> updatedAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              TrackPositionsCompanion(
+            trackKey: trackKey,
+            positionMs: positionMs,
+            updatedAt: updatedAt,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String trackKey,
+            required int positionMs,
+            required DateTime updatedAt,
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              TrackPositionsCompanion.insert(
+            trackKey: trackKey,
+            positionMs: positionMs,
+            updatedAt: updatedAt,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$TrackPositionsTableProcessedTableManager = ProcessedTableManager<
+    _$AppDb,
+    $TrackPositionsTable,
+    TrackPosition,
+    $$TrackPositionsTableFilterComposer,
+    $$TrackPositionsTableOrderingComposer,
+    $$TrackPositionsTableAnnotationComposer,
+    $$TrackPositionsTableCreateCompanionBuilder,
+    $$TrackPositionsTableUpdateCompanionBuilder,
+    (
+      TrackPosition,
+      BaseReferences<_$AppDb, $TrackPositionsTable, TrackPosition>
+    ),
+    TrackPosition,
+    PrefetchHooks Function()>;
 
 class $AppDbManager {
   final _$AppDb _db;
@@ -4347,4 +4729,6 @@ class $AppDbManager {
       $$CachedSubsonicSongsTableTableManager(_db, _db.cachedSubsonicSongs);
   $$SmartPlaylistsTableTableManager get smartPlaylists =>
       $$SmartPlaylistsTableTableManager(_db, _db.smartPlaylists);
+  $$TrackPositionsTableTableManager get trackPositions =>
+      $$TrackPositionsTableTableManager(_db, _db.trackPositions);
 }

@@ -18,6 +18,7 @@ import '../library/ratings.dart';
 import '../library/server_health.dart';
 import '../library/smart_playlists.dart';
 import '../library/subsonic_cache.dart';
+import '../library/track_positions.dart';
 import '../library/wishlist.dart';
 import '../subsonic/client.dart';
 import 'album_mode.dart';
@@ -189,6 +190,9 @@ final smartPlaylistsListProvider = StreamProvider<List<SmartPlaylist>>((ref) =>
 
 final playHistoryProvider = Provider<PlayHistoryManager>((ref) =>
     PlayHistoryManager(ref.watch(dbProvider)));
+
+final trackPositionsProvider = Provider<TrackPositionsManager>((ref) =>
+    TrackPositionsManager(ref.watch(dbProvider)));
 
 final ratingsManagerProvider = Provider<RatingsManager>((ref) {
   final mgr = RatingsManager(() => ref.read(subsonicProvider));

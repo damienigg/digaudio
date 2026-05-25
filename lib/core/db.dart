@@ -77,6 +77,18 @@ class Wishlist extends Table {
   TextColumn get notes => text().nullable()();
 }
 
+/// Last-known playback position per track. Engine debounces position
+/// writes (every ~5 s) so this isn't a hot table. On track replay the
+/// engine seeks here if the saved position is sufficiently mid-track
+/// (avoids the "play resumes at 0:01" bug).
+class TrackPositions extends Table {
+  TextColumn get trackKey => text()();
+  IntColumn get positionMs => integer()();
+  DateTimeColumn get updatedAt => dateTime()();
+  @override
+  Set<Column> get primaryKey => {trackKey};
+}
+
 /// Rules-based playlists that materialise on the fly. The user defines
 /// a set of rules (genre = Rock, year between 2000–2010, …); opening
 /// the playlist runs them against `CachedSubsonicSongs` and shows the
@@ -121,12 +133,13 @@ class CachedSubsonicSongs extends Table {
   Wishlist,
   CachedSubsonicSongs,
   SmartPlaylists,
+  TrackPositions,
 ])
 class AppDb extends _$AppDb {
   AppDb() : super(_open());
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -153,6 +166,9 @@ class AppDb extends _$AppDb {
           }
           if (from < 6) {
             await m.createTable(smartPlaylists);
+          }
+          if (from < 7) {
+            await m.createTable(trackPositions);
           }
         },
       );
