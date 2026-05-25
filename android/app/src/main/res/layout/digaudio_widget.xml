@@ -21,13 +21,18 @@
     android:background="#FF18181B"
     android:padding="8dp">
 
+    <!-- Artwork slot. Defaults to the launcher icon when nothing's
+         playing or while the Dart-side prefetch is in flight; swapped
+         for the current track's 256 px JPEG by setImageViewBitmap once
+         WidgetChannel receives an artworkPath. -->
     <ImageView
-        android:id="@+id/widget_icon"
+        android:id="@+id/widget_art"
         android:layout_width="48dp"
         android:layout_height="48dp"
         android:layout_marginEnd="10dp"
+        android:scaleType="centerCrop"
         android:src="@mipmap/ic_launcher"
-        android:contentDescription="digaudio" />
+        android:contentDescription="Now playing" />
 
     <LinearLayout
         android:layout_width="0dp"

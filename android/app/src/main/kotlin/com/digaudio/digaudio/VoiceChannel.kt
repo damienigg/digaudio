@@ -3,8 +3,6 @@ package com.digaudio.digaudio
 import android.app.Activity
 import android.content.Intent
 import android.speech.RecognizerIntent
-import androidx.activity.ComponentActivity
-import androidx.activity.result.contract.ActivityResultContracts
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
@@ -15,29 +13,21 @@ import io.flutter.plugin.common.MethodChannel
  * dialog) and returns the first hypothesis as a String, or null if
  * cancelled / no recogniser installed / no audio captured.
  *
- * Activity-scoped (not applicationContext) because the launcher must
- * be registered before STARTED — see [register] usage in
- * [MainActivity.onCreate].
+ * Uses the deprecated [Activity.startActivityForResult] /
+ * [Activity.onActivityResult] pair (not `registerForActivityResult`)
+ * because [MainActivity]'s compile-time superclass chain via
+ * AudioServiceActivity → FlutterActivity → FragmentActivity does not
+ * surface `ComponentActivity` in our module's classpath, so the
+ * modern API fails to type-check. Activity-result API still works
+ * fine; deprecation is cosmetic, not functional.
  */
-class VoiceChannel(private val activity: ComponentActivity) {
+class VoiceChannel(private val activity: Activity) {
     companion object {
         private const val CHANNEL = "digaudio/voice"
+        const val REQUEST_CODE = 4242
     }
 
     private var pending: MethodChannel.Result? = null
-
-    private val launcher = activity.registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { res ->
-        val p = pending ?: return@registerForActivityResult
-        pending = null
-        val text = if (res.resultCode == Activity.RESULT_OK) {
-            res.data
-                ?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
-                ?.firstOrNull()
-        } else null
-        p.success(text)
-    }
 
     fun register(engine: FlutterEngine) {
         MethodChannel(engine.dartExecutor.binaryMessenger, CHANNEL)
@@ -58,7 +48,8 @@ class VoiceChannel(private val activity: ComponentActivity) {
                             putExtra(RecognizerIntent.EXTRA_PROMPT, "Search digaudio")
                         }
                         try {
-                            launcher.launch(intent)
+                            @Suppress("DEPRECATION")
+                            activity.startActivityForResult(intent, REQUEST_CODE)
                         } catch (_: Exception) {
                             pending = null
                             result.success(null)
@@ -67,5 +58,20 @@ class VoiceChannel(private val activity: ComponentActivity) {
                     else -> result.notImplemented()
                 }
             }
+    }
+
+    /// Returns true iff this channel consumed the result (caller should
+    /// short-circuit its own super.onActivityResult). False = unrelated
+    /// request, fall through.
+    fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?): Boolean {
+        if (requestCode != REQUEST_CODE) return false
+        val p = pending ?: return true
+        pending = null
+        val text = if (resultCode == Activity.RESULT_OK) {
+            data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+                ?.firstOrNull()
+        } else null
+        p.success(text)
+        return true
     }
 }

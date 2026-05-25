@@ -7,6 +7,22 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.27.1] — 2026-05-26
+
+### Fixed
+- **Kotlin compile error introduced in v0.26.0** — VoiceChannel used
+  `registerForActivityResult`, which needs `ComponentActivity` in the
+  compile-time superclass chain. `AudioServiceActivity → FlutterActivity
+  → FragmentActivity` doesn't surface that in our module's classpath
+  (Flutter 3.24.5 pulls a fragment version where the inheritance isn't
+  visible at compile time), so `MainActivity` failed to type-check.
+  Result: v0.26.0 and v0.27.0 CI builds both red — no APKs were
+  uploaded for either release. Switched to the pre-Jetpack
+  `startActivityForResult` / `onActivityResult` pair, which works on
+  any `Activity` regardless of the fragment version. `flutter analyze`
+  was a false positive (Dart-only); needed the actual Android toolchain
+  to surface this. v0.27.1 is the first build past the regression.
+
 ## [0.27.0] — 2026-05-26
 
 ### Added (Multi-server unified search)
