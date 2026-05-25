@@ -7,6 +7,14 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.12.3] — 2026-05-25
+
+### Changed
+- **New launcher icon (v2).** Golden shovel with embossed "DIG", music
+  notes, and a small dirt mound — replaces the previous shovel-only
+  rendition. Adaptive foreground regenerated via `make_adaptive_fg.py`
+  (~68% inset preserved so launcher masks don't clip).
+
 ## [0.12.2] — 2026-05-25
 
 ### Fixed (UX)
