@@ -37,7 +37,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 4,
+      length: 6,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Library'),
@@ -48,6 +48,8 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
               Tab(text: 'Tracks'),
               Tab(text: 'Albums'),
               Tab(text: 'Artists'),
+              Tab(text: 'Genres'),
+              Tab(text: 'Decades'),
               Tab(text: 'Playlists'),
             ],
           ),
@@ -56,9 +58,93 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
           _TracksTab(),
           _AlbumsTab(),
           _ArtistsTab(),
+          _GenresTab(),
+          _DecadesTab(),
           _PlaylistsTab(),
         ]),
       ),
+    );
+  }
+}
+
+/// Genres come from the Subsonic library cache. Empty list = cache not
+/// synced yet → show a hint pointing the user to Settings → Playback →
+/// Sync library.
+class _GenresTab extends ConsumerWidget {
+  const _GenresTab();
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final activeAsync = ref.watch(activeServerProvider);
+    final active = activeAsync.valueOrNull;
+    if (active == null) {
+      return const _Empty('No active Subsonic server.');
+    }
+    return FutureBuilder<List<({String genre, int count})>>(
+      future: ref.read(subsonicCacheProvider).genres(active.id),
+      builder: (context, snap) {
+        if (snap.connectionState != ConnectionState.done) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final list = snap.data ?? const [];
+        if (list.isEmpty) {
+          return const _Empty(
+              'No genres — sync the library first (Settings → Playback → Sync library).');
+        }
+        return ListView.separated(
+          itemCount: list.length,
+          separatorBuilder: (_, __) =>
+              Divider(height: 1, color: context.dividerSoft),
+          itemBuilder: (_, i) => ListTile(
+            leading: const CircleAvatar(
+              backgroundColor: Color(0xFF1E1E22),
+              child: Icon(Icons.label_outline, size: 18),
+            ),
+            title: Text(list[i].genre),
+            subtitle: Text('${list[i].count} tracks'),
+            onTap: () => context.push(
+                '/genre/${Uri.encodeComponent(list[i].genre)}'),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _DecadesTab extends ConsumerWidget {
+  const _DecadesTab();
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final activeAsync = ref.watch(activeServerProvider);
+    final active = activeAsync.valueOrNull;
+    if (active == null) {
+      return const _Empty('No active Subsonic server.');
+    }
+    return FutureBuilder<List<({int decade, int count})>>(
+      future: ref.read(subsonicCacheProvider).decades(active.id),
+      builder: (context, snap) {
+        if (snap.connectionState != ConnectionState.done) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final list = snap.data ?? const [];
+        if (list.isEmpty) {
+          return const _Empty(
+              'No decades — sync the library first (Settings → Playback → Sync library).');
+        }
+        return ListView.separated(
+          itemCount: list.length,
+          separatorBuilder: (_, __) =>
+              Divider(height: 1, color: context.dividerSoft),
+          itemBuilder: (_, i) => ListTile(
+            leading: const CircleAvatar(
+              backgroundColor: Color(0xFF1E1E22),
+              child: Icon(Icons.history, size: 18),
+            ),
+            title: Text("${list[i].decade}s"),
+            subtitle: Text('${list[i].count} tracks'),
+            onTap: () => context.push('/decade/${list[i].decade}'),
+          ),
+        );
+      },
     );
   }
 }

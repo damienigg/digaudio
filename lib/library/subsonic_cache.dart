@@ -49,6 +49,54 @@ class SubsonicLibraryCache {
     return rows.map(_toTrack).toList(growable: false);
   }
 
+  /// Distinct genres present in the cache, sorted by track count desc.
+  /// Returns `(genre, trackCount)` pairs. Empty if cache not yet synced.
+  Future<List<({String genre, int count})>> genres(String serverId) async {
+    final rows = await _db.customSelect(
+      'SELECT genre, COUNT(*) AS c FROM cached_subsonic_songs '
+      'WHERE server_id = ? AND genre IS NOT NULL AND genre != "" '
+      'GROUP BY genre ORDER BY c DESC, genre ASC',
+      variables: [Variable<String>(serverId)],
+      readsFrom: {_db.cachedSubsonicSongs},
+    ).get();
+    return rows
+        .map((r) => (genre: r.read<String>('genre'), count: r.read<int>('c')))
+        .toList();
+  }
+
+  /// Distinct decades present in the cache (1970, 1980, …). Returns
+  /// `(decade, trackCount)` pairs sorted newest-decade-first.
+  Future<List<({int decade, int count})>> decades(String serverId) async {
+    final rows = await _db.customSelect(
+      'SELECT (year / 10) * 10 AS d, COUNT(*) AS c FROM cached_subsonic_songs '
+      'WHERE server_id = ? AND year IS NOT NULL AND year > 0 '
+      'GROUP BY d ORDER BY d DESC',
+      variables: [Variable<String>(serverId)],
+      readsFrom: {_db.cachedSubsonicSongs},
+    ).get();
+    return rows
+        .map((r) => (decade: r.read<int>('d'), count: r.read<int>('c')))
+        .toList();
+  }
+
+  Future<List<Track>> tracksOfGenre(String serverId, String genre) async {
+    final rows = await (_db.select(_db.cachedSubsonicSongs)
+          ..where((s) => s.serverId.equals(serverId) & s.genre.equals(genre))
+          ..orderBy([(s) => OrderingTerm.asc(s.artist), (s) => OrderingTerm.asc(s.title)]))
+        .get();
+    return rows.map(_toTrack).toList(growable: false);
+  }
+
+  Future<List<Track>> tracksOfDecade(String serverId, int decade) async {
+    final rows = await (_db.select(_db.cachedSubsonicSongs)
+          ..where((s) =>
+              s.serverId.equals(serverId) &
+              s.year.isBetweenValues(decade, decade + 9))
+          ..orderBy([(s) => OrderingTerm.asc(s.year), (s) => OrderingTerm.asc(s.artist)]))
+        .get();
+    return rows.map(_toTrack).toList(growable: false);
+  }
+
   /// Rebuilds the cache for [serverId] by enumerating every album on the
   /// server and storing each song's slim metadata. Reports progress via
   /// [onAlbum] (current 1-based, total). Returns the final song count.

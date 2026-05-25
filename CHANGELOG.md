@@ -7,6 +7,26 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.15.1] — 2026-05-25
+
+### Added (Library — Genre + Decade browsers)
+- **Library → Genres** sub-tab. Lists every distinct genre present in
+  the Subsonic library cache (sorted by track count). Tap → tracks of
+  that genre with Play all + Shuffle buttons.
+- **Library → Decades** sub-tab. Lists every decade (1970s, 1980s, …)
+  present in the cache, newest first. Tap → tracks of that decade,
+  same Play all / Shuffle header.
+- Both require a one-time library sync (Settings → Playback → Sync
+  library); empty hint points the user there.
+
+### Internal
+- `SubsonicLibraryCache.genres(serverId)` / `decades(serverId)` —
+  single-pass aggregation queries.
+- `SubsonicLibraryCache.tracksOfGenre()` / `tracksOfDecade()` —
+  ordered fetch, returns full `Track` list.
+- New routes `/genre/:name` + `/decade/:year`; shared `_BrowsePage`
+  scaffold so the two pages share UI.
+
 ## [0.15.0] — 2026-05-25
 
 ### Added (Stats — combo 1 / category B starter)

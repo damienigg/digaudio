@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'ui/album_page.dart';
 import 'ui/artist_page.dart';
 import 'ui/favorites_page.dart';
+import 'ui/genre_decade_page.dart';
 import 'ui/home.dart';
 import 'ui/library_page.dart';
 import 'ui/local_playlist_page.dart';
@@ -57,5 +58,15 @@ GoRouter buildRouter() => GoRouter(
         GoRoute(path: '/favorites', builder: (_, __) => const FavoritesPage()),
         GoRoute(path: '/wishlist', builder: (_, __) => const WishlistPage()),
         GoRoute(path: '/stats', builder: (_, __) => const StatsPage()),
+        GoRoute(
+          path: '/genre/:name',
+          builder: (_, s) => GenrePage(
+              genre: Uri.decodeComponent(s.pathParameters['name']!)),
+        ),
+        GoRoute(
+          path: '/decade/:year',
+          builder: (_, s) =>
+              DecadePage(decade: int.parse(s.pathParameters['year']!)),
+        ),
       ],
     );
