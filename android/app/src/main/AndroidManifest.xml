@@ -52,6 +52,13 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+
+        <!-- Android Auto discovery — points at res/xml/automotive_app_desc.xml
+             which declares <uses name="media"/>. Without this, AA won't
+             surface the app even though the MediaBrowserService is there. -->
+        <meta-data
+            android:name="com.google.android.gms.car.application"
+            android:resource="@xml/automotive_app_desc" />
     </application>
 
     <queries>

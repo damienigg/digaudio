@@ -1,16 +1,53 @@
+import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:just_audio_background/just_audio_background.dart';
 
 import 'app.dart';
+import 'audio/player.dart';
+import 'audio/providers.dart';
 
+/// Boot order matters: build the Riverpod container, hydrate the prefs +
+/// downloads pool the engine reads at source-build time, **then** spin up
+/// the AudioService handler. Android Auto / MediaSession need a single
+/// process-lifetime handler instance — created here, registered into the
+/// Riverpod graph via [registerAudioEngine].
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await JustAudioBackground.init(
-    androidNotificationChannelId: 'com.digaudio.audio',
-    androidNotificationChannelName: 'digaudio playback',
-    androidNotificationOngoing: true,
-    androidStopForegroundOnPause: true,
+  final container = ProviderContainer();
+
+  // Pre-hydrate the state the handler reads on its first source build.
+  await container.read(downloadsProvider).hydrate();
+  final prefs = container.read(playbackPrefsProvider);
+  await prefs.load();
+
+  final handler = await AudioService.init(
+    builder: () => AudioEngine(
+      subsonic: () => container.read(subsonicProvider),
+      resolver: () => container.read(trackResolverProvider),
+      favorites: container.read(favoritesProvider),
+      cache: container.read(downloadsProvider),
+      prefs: prefs,
+      history: container.read(playHistoryProvider),
+    ),
+    config: const AudioServiceConfig(
+      androidNotificationChannelId: 'com.digaudio.audio',
+      androidNotificationChannelName: 'digaudio playback',
+      androidNotificationOngoing: true,
+      androidStopForegroundOnPause: true,
+      androidNotificationIcon: 'mipmap/ic_launcher',
+    ),
   );
-  runApp(const ProviderScope(child: DigaudioApp()));
+  await handler.init();
+
+  // Restore persisted EQ + speed before the first track plays.
+  await handler.setEqEnabled(prefs.eqEnabled);
+  if (prefs.eqGainsDb.isNotEmpty) await handler.applyEqGains(prefs.eqGainsDb);
+  if (prefs.playbackSpeed != 1.0) await handler.setSpeed(prefs.playbackSpeed);
+
+  registerAudioEngine(handler);
+
+  runApp(UncontrolledProviderScope(
+    container: container,
+    child: const DigaudioApp(),
+  ));
 }

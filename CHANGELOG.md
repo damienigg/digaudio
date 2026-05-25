@@ -7,6 +7,54 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.11.0] — 2026-05-25
+
+### Added (Phase 3 — Android Auto)
+- **Android Auto** support. A custom `AudioHandler` exposes a browsable
+  tree with three top-level nodes: **Favorites**, **Recently played**
+  (last 20 distinct), **Most played** (top 50). Tapping a leaf in AA
+  routes through `playFromMediaId` → `TrackResolver` → single-track
+  queue. The MediaSession surface (notification, lockscreen, Bluetooth,
+  Android Auto) is now driven by the same `playbackState` /
+  `mediaItem` / `queue` streams the in-app UI uses — no parallel paths.
+- **`PlayHistoryManager.recentUnique(n)`** — most-recent N distinct
+  trackKeys, most-recent first. Powers the AA "Recently played" node.
+
+### Changed (significant)
+- **Dropped `just_audio_background`** in favor of `audio_service` direct.
+  JAB's internal `AudioHandler` is private, so customising the
+  browsable tree (mandatory for AA) wasn't possible without forking.
+  audio_service is the underlying engine JAB itself uses, written by
+  the same author (Ryan Heise) and considerably more mature than the
+  beta JAB. No regression risk: `MainActivity` already inherits from
+  `AudioServiceActivity` and the manifest already had the
+  `MediaBrowserService` intent-filter.
+- **`AudioEngine` now extends `BaseAudioHandler`** and broadcasts
+  `playbackState` + `mediaItem` + `queue` so MediaSession reflects the
+  player without a separate bridge. The class file (`lib/audio/player.dart`)
+  is the single source of truth — no duplicated state.
+- **Boot order rewired.** `main()` now hydrates downloads + prefs and
+  builds the handler **before** `runApp`. The handler is registered
+  into Riverpod via `registerAudioEngine()`; `audioEngineProvider`
+  reads the singleton. `app.dart`'s post-frame callback shrunk to its
+  three remaining concerns: speed-mirror StateProvider, AutoQueue
+  start, and (unchanged) router build.
+
+### Android
+- New `res/xml/automotive_app_desc.xml` declaring `<uses name="media"/>`.
+- `AndroidManifest.xml` gains the
+  `com.google.android.gms.car.application` meta-data pointing at it.
+  Without these two files, AA won't surface the app even with a working
+  `MediaBrowserService`.
+
+### Testing notes
+- **AA requires a real-device validation pass.** The CI build will
+  produce an APK, but Android Auto behaviour can only be confirmed
+  on-device (phone connected to a car head unit or AA Desktop Head
+  Unit simulator). Same goes for the new MediaSession bridge — the
+  notification / lockscreen / BT controls should behave identically
+  to before; please flag any regression.
+
 ## [0.10.1] — 2026-05-25
 
 ### Added (Phase 2.1 — streaks + heatmap)

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android Auto descriptor. `<uses name="media"/>` tells AA this app is
+     a media browser (audio playback + browsable tree via MediaBrowserService).
+     Without this file the meta-data in AndroidManifest can't resolve. -->
+<automotiveApp>
+    <uses name="media"/>
+</automotiveApp>

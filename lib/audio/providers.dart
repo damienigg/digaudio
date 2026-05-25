@@ -64,15 +64,24 @@ final playbackPrefsProvider = Provider<PlaybackPrefs>((_) => PlaybackPrefs());
 /// rate. Kept in sync at the one writer (Speed sheet) and at startup.
 final playbackSpeedProvider = StateProvider<double>((_) => 1.0);
 
-final audioEngineProvider = Provider<AudioEngine>((ref) {
-  final engine = AudioEngine(
-    subsonic: () => ref.read(subsonicProvider),
-    cache: ref.watch(downloadsProvider),
-    prefs: ref.watch(playbackPrefsProvider),
-    history: ref.watch(playHistoryProvider),
-  );
-  ref.onDispose(engine.dispose);
-  return engine;
+/// The AudioEngine is now an [AudioService] handler (Android Auto needs
+/// to discover a single, process-lifetime instance via the
+/// MediaBrowserService — multiple instances would race over the same
+/// MediaSession). It's built once in [main] and registered through
+/// [registerAudioEngine]; reading the provider before that throws.
+AudioEngine? _audioEngineSingleton;
+
+void registerAudioEngine(AudioEngine engine) {
+  _audioEngineSingleton = engine;
+}
+
+final audioEngineProvider = Provider<AudioEngine>((_) {
+  final e = _audioEngineSingleton;
+  if (e == null) {
+    throw StateError(
+        'audioEngineProvider read before main() registered the handler');
+  }
+  return e;
 });
 
 final sleepTimerProvider = Provider<SleepTimerService>((ref) {

@@ -126,6 +126,18 @@ class PlayHistoryManager {
     return {for (final r in rows) DateTime.parse(r.read<String>('d')): r.read<int>('c')};
   }
 
+  /// Most-recent N distinct trackKeys, most-recent first. Powers the
+  /// Android Auto "Recently played" browsable node.
+  Future<List<String>> recentUnique(int n) async {
+    final rows = await _db.customSelect(
+      'SELECT track_key, MAX(played_at) AS last FROM recent_plays '
+      'GROUP BY track_key ORDER BY last DESC LIMIT ?',
+      variables: [Variable<int>(n)],
+      readsFrom: {_db.recentPlays},
+    ).get();
+    return rows.map((r) => r.read<String>('track_key')).toList();
+  }
+
   /// Wipes the history (Settings → "Reset stats").
   Future<void> clear() => _db.delete(_db.recentPlays).go();
 

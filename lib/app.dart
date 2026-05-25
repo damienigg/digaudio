@@ -17,30 +17,13 @@ class _DigaudioAppState extends ConsumerState<DigaudioApp> {
   @override
   void initState() {
     super.initState();
-    // Warm the engine + downloads cache + playback prefs as soon as the app
-    // is mounted. EQ is applied only after a track starts playing (Android
-    // attaches the effect to the active audio session), but we restore the
-    // saved enabled-state + gains here so the first track honours them.
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      // Order matters: the engine resolves cache paths + reads
-      // autoCacheEnabled at source-build time, so DownloadsManager.hydrate()
-      // and PlaybackPrefs.load() must complete before any track plays.
-      await ref.read(downloadsProvider).hydrate();
+    // main() already constructed the handler and applied persisted EQ /
+    // speed before runApp. Here we only handle bookkeeping that needs a
+    // Riverpod ref: mirror the speed into the reactive StateProvider for
+    // the Now Playing AppBar, and start the AutoQueue listener.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       final prefs = ref.read(playbackPrefsProvider);
-      await prefs.load();
-      final engine = ref.read(audioEngineProvider);
-      await engine.init();
-      await engine.setEqEnabled(prefs.eqEnabled);
-      if (prefs.eqGainsDb.isNotEmpty) {
-        await engine.applyEqGains(prefs.eqGainsDb);
-      }
-      if (prefs.playbackSpeed != 1.0) {
-        await engine.setSpeed(prefs.playbackSpeed);
-      }
       ref.read(playbackSpeedProvider.notifier).state = prefs.playbackSpeed;
-      // Auto-queue similar songs as the playback queue runs out. The
-      // listener is always attached; `enabled` gates the behaviour and is
-      // restored from PlaybackPrefs.
       final autoQueue = ref.read(autoQueueProvider);
       autoQueue.enabled = prefs.autoQueueEnabled;
       autoQueue.start();
