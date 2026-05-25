@@ -311,7 +311,8 @@ final searchResultsProvider = FutureProvider<SearchResults>((ref) async {
   if (q.isEmpty) return const SearchResults();
   final s = ref.watch(subsonicProvider);
   final local = ref.watch(localLibraryProvider);
-  // Local search: client-side filter (MediaStore has no FTS).
+
+  // Local-MediaStore filter (in-memory; MediaStore has no FTS).
   final allLocal = await local.getAllSongs();
   final lq = q.toLowerCase();
   final localTracks = allLocal.where((t) =>
@@ -320,9 +321,36 @@ final searchResultsProvider = FutureProvider<SearchResults>((ref) async {
       (t.album?.toLowerCase().contains(lq) ?? false)).take(30).toList();
 
   if (s == null) return SearchResults(tracks: localTracks);
-  final remote = await s.search(q);
+
+  // Two parallel queries:
+  //   - FTS5 against the cached Subsonic library → instant, runs even
+  //     when offline, covers everything synced.
+  //   - Subsonic search3 against the live server → catches anything
+  //     added server-side since the last cache sync.
+  // Merged + deduped by uniqueKey, FTS hits first (instant feels
+  // primary), remote-only hits appended.
+  final active = await ref.watch(settingsStoreProvider).active();
+  final ftsFuture = active == null
+      ? Future.value(const <Track>[])
+      : ref.read(subsonicCacheProvider).searchFts(active.id, q, limit: 30);
+  // Remote can fail (offline mode etc.) — fall back to empty results
+  // so FTS still surfaces matches from the cache.
+  final remoteFuture =
+      s.search(q).catchError((_) => const SearchResults());
+
+  final results = await Future.wait([ftsFuture, remoteFuture]);
+  final ftsTracks = results[0] as List<Track>;
+  final remote = results[1] as SearchResults;
+
+  final seen = <String>{
+    ...localTracks.map((t) => t.uniqueKey),
+    ...ftsTracks.map((t) => t.uniqueKey),
+  };
+  final remoteOnly =
+      remote.tracks.where((t) => seen.add(t.uniqueKey)).toList();
+
   return SearchResults(
-    tracks: [...localTracks, ...remote.tracks],
+    tracks: [...localTracks, ...ftsTracks, ...remoteOnly],
     albums: remote.albums,
     artists: remote.artists,
   );

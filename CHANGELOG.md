@@ -7,6 +7,52 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.19.0] — 2026-05-25
+
+### Added (Library FTS — combo 1 complete)
+- **FTS5 virtual table** `cached_subsonic_songs_fts` shadowing the
+  drift-managed `CachedSubsonicSongs`. Searchable cols: title /
+  artist / album / genre, tokenised with
+  `unicode61 remove_diacritics 2` so "café" matches "cafe" and
+  vice versa.
+- **Triggers** keep FTS in sync with the main table on every
+  insert / delete / update — no manual reindex needed when the
+  Subsonic cache rebuilds.
+- **`SubsonicLibraryCache.searchFts(serverId, query, limit)`** —
+  parametrised, sanitises raw user input to a safe FTS5 query
+  (strips non-`[\p{L}\p{N}\s]`, drops 1-char terms, appends `*`
+  for prefix-AND matching → "daf pun" finds "Daft Punk").
+- **Search page now FTS-first.** `searchResultsProvider` fans out
+  to FTS + Subsonic `search3` in parallel via `Future.wait`,
+  dedupes by `uniqueKey`, surfaces FTS hits first (instant), then
+  remote-only additions. Local-MediaStore matches still come from
+  the existing in-memory filter (MediaStore has no FTS).
+- **Offline-resilient**: remote `search3` is wrapped with
+  `catchError` returning empty results, so FTS still surfaces
+  matches from the cache when the server is unreachable.
+
+### Database
+- **Schema v7 → v8** — adds the FTS virtual table + 3 triggers
+  (`cs_fts_ai` / `cs_fts_ad` / `cs_fts_au`). On-upgrade backfills
+  the FTS index from existing `cached_subsonic_songs` rows so
+  installs with a synced cache get instant search without
+  re-syncing. `onCreate` runs the same setup for fresh installs.
+
+### Internal
+- DB schema helpers `_createSubsonicFtsTable` /
+  `_createSubsonicFtsTriggers` extracted so `onCreate` and the v8
+  migration share them.
+- Combo 1 (recommendation engine = Last.fm × library FTS × smart
+  playlists × Subsonic radio) is now **4/4 done**.
+
+### Known limitation
+- The Search page's "Show more" pagination counts FTS results
+  against the remote offset, so it may skip some remote results
+  that are also present in FTS. Real-world impact: low (FTS covers
+  everything in the cache; "Show more" is mainly useful for tracks
+  newer than the last sync, which by definition aren't in FTS).
+  Fix would require tracking provenance per result.
+
 ## [0.18.0] — 2026-05-25
 
 ### Added (TRUE crossfade — engine refactor)

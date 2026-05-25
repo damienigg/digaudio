@@ -97,6 +97,64 @@ class SubsonicLibraryCache {
     return rows.map(_toTrack).toList(growable: false);
   }
 
+  /// Instant FTS5 search over the cached library — title / artist /
+  /// album / genre. Empty list for blank queries OR when the cache for
+  /// [serverId] hasn't been synced yet. Returns up to [limit] tracks.
+  ///
+  /// User input is sanitised to a safe FTS5 query by stripping non-
+  /// alphanumeric chars (FTS5 syntax has special meaning for quotes,
+  /// parens, etc.) and joining whitespace-separated terms with `AND`
+  /// + appending `*` so each term matches as a prefix
+  /// (`daf` → "Daft Punk"). 1-char terms are dropped — they'd flood
+  /// the result with noise.
+  Future<List<Track>> searchFts(String serverId, String query,
+      {int limit = 50}) async {
+    final ftsQuery = _sanitiseFts(query);
+    if (ftsQuery.isEmpty) return const [];
+    final rows = await _db.customSelect(
+      'SELECT s.* FROM cached_subsonic_songs s '
+      'JOIN cached_subsonic_songs_fts f '
+      'ON f.server_id = s.server_id AND f.song_id = s.song_id '
+      'WHERE f.cached_subsonic_songs_fts MATCH ? '
+      'AND s.server_id = ? '
+      'ORDER BY rank LIMIT ?',
+      variables: [
+        Variable<String>(ftsQuery),
+        Variable<String>(serverId),
+        Variable<int>(limit),
+      ],
+      readsFrom: {_db.cachedSubsonicSongs},
+    ).get();
+    return rows.map((r) => Track(
+          id: r.read<String>('song_id'),
+          title: r.read<String>('title'),
+          artist: r.readNullable<String>('artist'),
+          album: r.readNullable<String>('album'),
+          albumId: r.readNullable<String>('album_id'),
+          artistId: r.readNullable<String>('artist_id'),
+          coverArt: r.readNullable<String>('cover_art'),
+          year: r.readNullable<int>('year'),
+          duration: r.readNullable<int>('duration_sec') == null
+              ? null
+              : Duration(seconds: r.read<int>('duration_sec')),
+          genre: r.readNullable<String>('genre'),
+          origin: MediaOrigin.subsonic,
+        )).toList();
+  }
+
+  /// Strip everything but `[\p{L}\p{N}\s]`, drop 1-char terms, and
+  /// produce `term1* AND term2*` for prefix-AND matching. Returns
+  /// empty when the sanitised query is empty (caller should skip).
+  String _sanitiseFts(String raw) {
+    final cleaned = raw.replaceAll(RegExp(r'[^\p{L}\p{N}\s]', unicode: true), ' ');
+    final terms = cleaned
+        .split(RegExp(r'\s+'))
+        .where((t) => t.length >= 2)
+        .toList();
+    if (terms.isEmpty) return '';
+    return terms.map((t) => '$t*').join(' AND ');
+  }
+
   /// Rebuilds the cache for [serverId] by enumerating every album on the
   /// server and storing each song's slim metadata. Reports progress via
   /// [onAlbum] (current 1-based, total). Returns the final song count.

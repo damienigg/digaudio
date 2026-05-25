@@ -139,11 +139,17 @@ class AppDb extends _$AppDb {
   AppDb() : super(_open());
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-        onCreate: (m) => m.createAll(),
+        onCreate: (m) async {
+          await m.createAll();
+          // Fresh installs run the same FTS setup the v8 migration
+          // does — no rows to backfill yet, so just the table + triggers.
+          await _createSubsonicFtsTable();
+          await _createSubsonicFtsTriggers();
+        },
         onUpgrade: (m, from, to) async {
           if (from < 2) {
             await m.createTable(missingTracks);
@@ -170,8 +176,71 @@ class AppDb extends _$AppDb {
           if (from < 7) {
             await m.createTable(trackPositions);
           }
+          if (from < 8) {
+            await _createSubsonicFtsTable();
+            await _createSubsonicFtsTriggers();
+            // Backfill: index every row already in the cache so
+            // existing installs get instant search without re-syncing.
+            await customStatement('''
+              INSERT INTO cached_subsonic_songs_fts(
+                server_id, song_id, title, artist, album, genre)
+              SELECT server_id, song_id, title, artist, album, genre
+              FROM cached_subsonic_songs
+            ''');
+          }
         },
       );
+
+  /// FTS5 virtual table shadowing `cached_subsonic_songs`. Searchable
+  /// cols: title / artist / album / genre. `server_id` + `song_id` are
+  /// UNINDEXED — only used to join back to the main table, not for
+  /// ranking. Tokeniser: unicode61 with diacritic folding so "café"
+  /// matches "cafe".
+  Future<void> _createSubsonicFtsTable() => customStatement('''
+        CREATE VIRTUAL TABLE IF NOT EXISTS cached_subsonic_songs_fts
+        USING fts5(
+          server_id UNINDEXED,
+          song_id UNINDEXED,
+          title,
+          artist,
+          album,
+          genre,
+          tokenize = "unicode61 remove_diacritics 2"
+        )
+      ''');
+
+  /// Triggers keep FTS in sync with the main table for every future
+  /// insert / delete / update. Update = delete + insert (simpler than
+  /// partial column tracking, and the row size here is tiny).
+  Future<void> _createSubsonicFtsTriggers() async {
+    await customStatement('''
+      CREATE TRIGGER IF NOT EXISTS cs_fts_ai
+      AFTER INSERT ON cached_subsonic_songs BEGIN
+        INSERT INTO cached_subsonic_songs_fts(
+          server_id, song_id, title, artist, album, genre)
+        VALUES (new.server_id, new.song_id,
+          new.title, new.artist, new.album, new.genre);
+      END
+    ''');
+    await customStatement('''
+      CREATE TRIGGER IF NOT EXISTS cs_fts_ad
+      AFTER DELETE ON cached_subsonic_songs BEGIN
+        DELETE FROM cached_subsonic_songs_fts
+        WHERE server_id = old.server_id AND song_id = old.song_id;
+      END
+    ''');
+    await customStatement('''
+      CREATE TRIGGER IF NOT EXISTS cs_fts_au
+      AFTER UPDATE ON cached_subsonic_songs BEGIN
+        DELETE FROM cached_subsonic_songs_fts
+        WHERE server_id = old.server_id AND song_id = old.song_id;
+        INSERT INTO cached_subsonic_songs_fts(
+          server_id, song_id, title, artist, album, genre)
+        VALUES (new.server_id, new.song_id,
+          new.title, new.artist, new.album, new.genre);
+      END
+    ''');
+  }
 }
 
 LazyDatabase _open() => LazyDatabase(() async {
