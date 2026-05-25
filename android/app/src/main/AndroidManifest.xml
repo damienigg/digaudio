@@ -49,6 +49,22 @@
             </intent-filter>
         </receiver>
 
+        <!-- Quick Settings tile (Android 7+). User must drag it into
+             their Quick Settings panel manually the first time; the
+             tile then sends a media-button broadcast on tap, picked
+             up by the MediaButtonReceiver above and routed to the
+             AudioService → toggles play/pause on the engine. -->
+        <service
+            android:name=".PlaybackTileService"
+            android:label="digaudio"
+            android:icon="@mipmap/ic_launcher"
+            android:exported="true"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />

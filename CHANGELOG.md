@@ -7,6 +7,39 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.20.0] — 2026-05-25
+
+### Added (Quick Settings tile — combo 4 kickoff)
+- **`PlaybackTileService`** (Kotlin) — Android Quick Settings tile
+  that broadcasts a paired DOWN/UP `ACTION_MEDIA_BUTTON` intent
+  with `KEYCODE_MEDIA_PLAY_PAUSE` on tap. The
+  `MediaButtonReceiver` (declared by the `audio_service` plugin in
+  the manifest) picks it up and routes to the AudioService →
+  toggles `play()` / `pause()` on the engine. No direct service
+  binding needed — relies entirely on Android's standard media-
+  button plumbing.
+- Manifest registration with `BIND_QUICK_SETTINGS_TILE` permission
+  + `QS_TILE` intent filter.
+
+### User onboarding
+- Android API doesn't let an app auto-add its tile to Quick
+  Settings. **First-time setup**:
+  1. Pull down the notification shade twice to expose the full
+     Quick Settings panel.
+  2. Tap the pencil/edit icon.
+  3. Find "digaudio" in the available tiles and drag it into the
+     active set.
+  4. From then on: pull down → tap "digaudio" → play/pause.
+
+### v1 scope
+- Tile shows a static "digaudio" label with INACTIVE state — no
+  two-way sync with the live PlaybackState. Live state would
+  require either a NotificationListenerService (intrusive runtime
+  permission) or a bound service connection, neither of which adds
+  enough value over the existing notification + lockscreen
+  controls to justify the complexity. User can confirm play state
+  via the notification.
+
 ## [0.19.0] — 2026-05-25
 
 ### Added (Library FTS — combo 1 complete)
