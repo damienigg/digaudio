@@ -7,6 +7,40 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.26.0] — 2026-05-25
+
+### Added (Voice search in-app)
+- **Mic icon in the Search AppBar** — tap to dictate a query.
+  Routes through `RecognizerIntent.ACTION_RECOGNIZE_SPEECH`, so
+  the system's Google speech UI handles the listening overlay;
+  the recognised text drops straight into the search field and
+  triggers an immediate search (no 280 ms debounce — the user
+  finished speaking, they want results now).
+- **`VoiceChannel.kt`** — activity-scoped (must register the
+  `ActivityResultLauncher` before `STARTED`). One `recognize`
+  method that returns the top hypothesis or null on
+  cancel / no recogniser / no speech captured.
+- **`VoiceBridge.recognize()`** Dart wrapper.
+- Manifest `<queries>` block extended with
+  `android.speech.RecognitionService` so Android 11+ package
+  visibility doesn't hide the system recogniser.
+
+### v1 scope
+- One-shot only — fires the system dialog, returns one string.
+  No partial-results streaming or in-app waveform overlay
+  (those need the lower-level `SpeechRecognizer` API; defer to a
+  v2 if useful).
+- Permission-free: the system recogniser captures audio in
+  Google's own process, no `RECORD_AUDIO` needed in our app.
+
+### Build & CI
+- Bumped GH Actions past the Node 20 deprecation:
+  `actions/checkout` v4→v6, `actions/cache` v4→v5,
+  `actions/setup-java` v4→v5, `actions/upload-artifact` v4→v7.
+  Forced Node 24 migration is 2026-06-02; v4s would have gone
+  red. No workflow-script changes needed (no API differences
+  affecting our usage).
+
 ## [0.25.0] — 2026-05-25
 
 ### Added (Homescreen widget — mini-player)

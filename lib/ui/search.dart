@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../audio/providers.dart';
 import '../domain.dart';
+import '../voice/voice_bridge.dart';
 import 'widgets/artwork.dart';
 import 'widgets/theme_ext.dart';
 import 'widgets/track_tile.dart';
@@ -50,22 +51,33 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     super.dispose();
   }
 
+  void _applyQuery(String v) {
+    ref.read(searchQueryProvider.notifier).state = v;
+    if (v == _currentQuery) return;
+    _currentQuery = v;
+    setState(() {
+      _extraTracks = const [];
+      _extraAlbums = const [];
+      _extraArtists = const [];
+      _tracksExhausted = false;
+      _albumsExhausted = false;
+      _artistsExhausted = false;
+    });
+  }
+
   void _onChanged(String v) {
     _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 280), () {
-      ref.read(searchQueryProvider.notifier).state = v;
-      if (v != _currentQuery) {
-        _currentQuery = v;
-        setState(() {
-          _extraTracks = const [];
-          _extraAlbums = const [];
-          _extraArtists = const [];
-          _tracksExhausted = false;
-          _albumsExhausted = false;
-          _artistsExhausted = false;
-        });
-      }
-    });
+    _debounce = Timer(const Duration(milliseconds: 280), () => _applyQuery(v));
+  }
+
+  Future<void> _voiceSearch() async {
+    final text = await VoiceBridge.recognize();
+    if (text == null || !mounted) return;
+    _ctrl.text = text;
+    _ctrl.selection = TextSelection.collapsed(offset: text.length);
+    // Bypass the 280 ms debounce — the user spoke a complete query.
+    _debounce?.cancel();
+    _applyQuery(text);
   }
 
   /// Generic "load more" path — each call hits one category at offset
@@ -139,6 +151,13 @@ class _SearchPageState extends ConsumerState<SearchPage> {
           ),
           onChanged: _onChanged,
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.mic),
+            tooltip: 'Voice search',
+            onPressed: _voiceSearch,
+          ),
+        ],
       ),
       body: results.when(
         loading: () => const Center(child: CircularProgressIndicator()),

@@ -109,5 +109,13 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+        <!-- Voice search — RecognizerIntent.ACTION_RECOGNIZE_SPEECH
+             resolves to a RecognitionService. Android 11+ filters
+             cross-app intent visibility, so without this <intent>
+             entry our launcher.launch() throws ActivityNotFoundException
+             even when Google's speech app is installed. -->
+        <intent>
+            <action android:name="android.speech.RecognitionService"/>
+        </intent>
     </queries>
 </manifest>

@@ -125,6 +125,9 @@ Phone-side acceptance checklist. Run through each section; tick the box when ver
 - [ ] **"Show more"** in any section with ≥20 results. → Section grows by 20
 - [ ] **Local + remote mix**. Type a term matching both local and Subsonic. → Local tracks first, then remote
 - [ ] **Works offline**. Airplane mode + type a known term. → FTS-cached results still appear (remote is silently skipped)
+- [ ] **Voice search** (v0.26.0). Tap the mic icon in the Search AppBar. → Google "Listening…" dialog → speak a track / album / artist name → dialog closes → text appears in the field → results appear immediately (no debounce wait)
+- [ ] **Voice search cancel**. Tap mic → tap outside the dialog. → Field unchanged
+- [ ] **Voice search — no recogniser**. On a device with no Google speech app (rare). → Mic tap is silently no-op (graceful fallback)
 
 ## Sleep timer + speed + crossfade
 
