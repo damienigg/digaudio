@@ -1,4 +1,4 @@
-# Features — digaudio (v0.22.2)
+# Features — digaudio (v0.24.1)
 
 What's shipped, where to find it. Each row gives the entry point + a one-line description. **TEST_PLAN.md** covers acceptance tests, **TODO.md** covers what's left.
 
@@ -27,7 +27,7 @@ What's shipped, where to find it. Each row gives the entry point + a one-line de
 | Shuffle | Now Playing transport |
 | Repeat off / one / all | Now Playing transport |
 | Playback speed 0.5× → 2× | Now Playing AppBar |
-| Sleep timer (5/15/30/45/60 min OR end-of-track) | Now Playing AppBar (bedtime) |
+| Sleep timer (5/15/30/45/60 min OR end-of-track) **+ 10 s fade-out** | Now Playing AppBar (bedtime) |
 | Crossfade off / 2 / 5 / 10 s (true overlap) | Settings → Playback → Crossfade |
 | Volume normalisation (Replay Gain) | Settings → Playback → Volume normalisation |
 | Auto-play on BT connect | Settings → Playback (opt-in) |
@@ -123,6 +123,7 @@ What's shipped, where to find it. Each row gives the entry point + a one-line de
 | Album mode + Speed + Sleep timer actions | AppBar |
 | Active queue (editable: drag + swipe) | Queue tab |
 | Lyrics — synced via OpenSubsonic, plain fallback, active-line highlight + auto-scroll | Lyrics tab |
+| **Share track** (system share sheet, text card) | Now Playing AppBar — v0.24.0 |
 
 ## MediaSession surfaces
 
@@ -130,6 +131,7 @@ What's shipped, where to find it. Each row gives the entry point + a one-line de
 |---|---|
 | Lockscreen artwork + transport | ✓ via audio_service |
 | Notification + transport | ✓ via audio_service |
+| **Notification rich actions** (skip 10 s back / forward) | ✓ v0.23.1 |
 | Bluetooth controls | ✓ |
 | **Quick Settings tile** (Android system shade) | ✓ v0.20.0 — user drags it in once |
 | Android Auto browsable tree (Favourites / Recently played / Most played) | ✓ (untested on real head unit) |
@@ -143,6 +145,7 @@ What's shipped, where to find it. Each row gives the entry point + a one-line de
 - Subsonic library cache (drift): full song-level metadata for autoqueue scoring + Genre/Decade browsers + smart playlists + FTS.
 - **Cache auto-refresh** (v0.22.0) — Settings → Playback → Subsonic library cache → Auto-refresh dropdown (Off / Daily / 3 d / Weekly / 2 wk / Monthly). On boot if older than threshold + already-synced, background rebuild kicks off.
 - Subsonic scrobble at track-start + at Last.fm-style played-threshold.
+- **ListenBrainz scrobble** (v0.24.1) — opt-in via Settings → Playback → ListenBrainz (paste user token). `playing_now` at start + `single` at the same threshold; runs in parallel with Subsonic scrobbling.
 
 ## Theme & UI
 
@@ -153,6 +156,7 @@ What's shipped, where to find it. Each row gives the entry point + a one-line de
 - Custom launcher icon (golden shovel + "DIG" + music notes, v0.12.3).
 - Bottom-nav shell (Home / Search / Library) + persistent mini-player.
 - Offline banner + **Download banner** + Selection bar appear conditionally above the mini-player.
+- **Accessibility** (v0.23.2): tooltips on every IconButton; alpha-scroll letter strip + year heatmap wrapped with `Semantics` for TalkBack.
 
 ## Background download queue (v0.22.2)
 
