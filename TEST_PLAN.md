@@ -163,6 +163,14 @@ Phone-side acceptance checklist. Run through each section; tick the box when ver
 - [ ] **Add the tile once**. Pull down notif shade twice → tap edit (pencil) → find "digaudio" in available tiles → drag into active set
 - [ ] **Tap the tile**. → Toggles play/pause without opening the app
 
+## Wear OS (system mirror, no companion APK)
+
+- [ ] **Pair a Wear OS 3+ watch** (Pixel Watch / TicWatch / Galaxy Watch) with the phone via the Wear OS app
+- [ ] **Start playback** on phone, then raise wrist on watch → Media Controls tile shows title / artist / play-pause / skip (auto-published from our `audio_service` MediaSession)
+- [ ] **Tap play/pause on watch**. → Phone playback toggles
+- [ ] **Tap skip on watch**. → Phone advances to next track
+- [ ] **If tile is absent**: long-press a watch face → Tiles → add "Media Controls"
+
 ## Material You (v0.20.1, Android 12+)
 
 - [ ] **Toggle on**. Settings → Display → "Use system colours". → Material 3 widgets (FilledButtons, chips, indicators) follow the wallpaper palette

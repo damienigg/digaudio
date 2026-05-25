@@ -136,6 +136,7 @@ What's shipped, where to find it. Each row gives the entry point + a one-line de
 | Bluetooth controls | ✓ |
 | **Quick Settings tile** (Android system shade) | ✓ v0.20.0 — user drags it in once |
 | **Homescreen widget** (mini-player, 4×1 cell) | ✓ v0.25.0 — long-press homescreen → Widgets → drag "digaudio" |
+| **Wear OS** (transport on the wrist) | ✓ free — Wear OS 3+ mirrors the active phone MediaSession to the watch's Media Controls tile. No companion APK needed; just enable "Media Controls" tile on the watch |
 | Android Auto browsable tree (Favourites / Recently played / Most played) | ✓ (untested on real head unit) |
 | Headphone-removal auto-pause | ✓ free via `audio_session.music` |
 | Auto-play on BT connect | ✓ v0.20.1 (opt-in toggle) |

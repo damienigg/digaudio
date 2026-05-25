@@ -7,6 +7,20 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Roadmap — Combo 4 (daily driver) closed without code
+- **Wear OS** companion was the last item; investigation showed
+  Wear OS 3+ (Pixel Watch / TicWatch / Galaxy Watch with GMS)
+  auto-mirrors the active phone MediaSession to the Media Controls
+  tile on the watch. Our `audio_service` already publishes that
+  session — so transport (title / artist / play / pause / skip)
+  on the wrist is **free, no APK needed**. A custom Compose-for-Wear
+  companion was scoped (Wearable Data/MessageClient handshake +
+  separate Gradle module) but would only add favourite toggle /
+  queue browse / lyrics — deferred unless a real need emerges
+  (principle: minimum lines for a valid result).
+- No code change — docs only (FEATURES.md / TODO.md / TEST_PLAN.md).
+  Combo 4 → **5/5 ✓**.
+
 ## [0.26.0] — 2026-05-25
 
 ### Added (Voice search in-app)

@@ -1,8 +1,8 @@
-# TODO — digaudio (post-v0.26.0)
+# TODO — digaudio (Combo 4 closed — Wear OS via system mirror)
 
 What's left, organised by category + combo. Effort tags: **S** ≈ 30 min, **M** ≈ 1 h, **L** ≈ several hours (own session).
 
-**TL;DR**: the app is feature-complete vs the Substreamer / Symfonium baseline. What follows is incremental polish + larger standalone chunks (widget, Wear OS, voice search). No remaining killer feature.
+**TL;DR**: the app is feature-complete vs the Substreamer / Symfonium baseline. Every "killer" feature (incl. homescreen widget, voice search, Wear OS mirror) is shipped or proven free. What follows is polish + ambitious standalone L items.
 
 ---
 
@@ -13,7 +13,7 @@ What's left, organised by category + combo. Effort tags: **S** ≈ 30 min, **M**
 - **Category C** — Audio fidelity: 5/5
 - **Category H** — Session-discovered TODOs: 3/3 (smart playlists v2 / radio auto-refill / checkbox UX)
 - **Combo 1** (Recommendation engine): 4/4 ✓
-- **Combo 4** (Daily driver): 3/5 (widget + Wear OS remain, both L)
+- **Combo 4** (Daily driver): 5/5 ✓ (Wear OS validated via Wear OS 3+ system MediaSession mirror — no companion APK needed)
 
 ## Categories with items remaining
 
@@ -21,8 +21,7 @@ What's left, organised by category + combo. Effort tags: **S** ≈ 30 min, **M**
 
 - ~~**Homescreen widget (mini-player)**~~ — **DONE v0.25.0** (4×1 RemoteViews + WidgetChannel push from Dart; v1 has no artwork — RemoteViews need a Bitmap, deferred to v2)
 - ~~**Voice search inside the app**~~ — **DONE v0.26.0** (mic icon → `RecognizerIntent.ACTION_RECOGNIZE_SPEECH` → text into Search field, immediate query)
-- **Wear OS companion** — *(L)*  
-  Independent watch app, syncs playback state with the phone via the standard Wear Data Layer. Own session.
+- ~~**Wear OS companion**~~ — **COVERED (no code)** — Wear OS 3+ mirrors the active phone MediaSession to the watch's Media Controls tile. `audio_service` already publishes that session; user enables the "Media Controls" tile on the watch. A custom companion (Compose-for-Wear + WearableMessageClient) would only add favourite toggle / queue browse / lyrics — deferred unless a real need emerges.
 - **Widget artwork (v2)** — *(M, follow-up to v0.25.0)*  
   Pre-fetch the current track's artwork on the Dart side, write to a tmp file, pass the path through the MethodChannel; Kotlin reads + `setImageViewBitmap` on the widget. Battery + storage cost minor (one Bitmap per track switch, evicted on next change).
 
@@ -77,7 +76,7 @@ What's left, organised by category + combo. Effort tags: **S** ≈ 30 min, **M**
 | 1 · Recommendation engine (Last.fm × FTS × smart playlists × Subsonic radio) | **4/4 ✓** |
 | 2 · Pro-listener (RG × crossfade × EQ presets × per-BT EQ × FLAC × wired-DAC) | 4/6 (verify-only remaining) |
 | 3 · Friend-share (ListenBrainz × Now-Playing share × listening parties × webhook) | 0/4 |
-| 4 · Daily driver (Quick Settings tile × widget × Wear OS × Auto-play BT × Per-track resume) | 4/5 (only Wear OS remains) |
+| 4 · Daily driver (Quick Settings tile × widget × Wear OS × Auto-play BT × Per-track resume) | **5/5 ✓** (Wear OS covered via system MediaSession mirror) |
 
 ---
 
@@ -88,9 +87,9 @@ What's left, organised by category + combo. Effort tags: **S** ≈ 30 min, **M**
 - ~~**v0.24.x** — E batch (partial)~~ DONE (Now-Playing share / ListenBrainz); Last.fm direct (M) + listening parties (L) remain
 - ~~**v0.25.x** — Homescreen widget~~ DONE (v1 without artwork)
 - ~~**v0.26.x** — Voice search in-app~~ DONE (ACTION_RECOGNIZE_SPEECH intent)
-- **v0.27.x** — Wear OS companion (L, own session)
-- **v0.28.x** — Multi-server unified search (L, cross-cutting Track.serverId refactor)
-- **v0.29.x** — i18n / Last.fm direct / Subsonic admin / widget-artwork-v2 (mid-effort polish)
+- ~~**Wear OS**~~ COVERED — no code release, Wear OS 3+ system mirror is sufficient
+- **v0.27.x** — Multi-server unified search (L, cross-cutting `Track.serverId` refactor)
+- **v0.28.x** — i18n / Last.fm direct / Subsonic admin / widget-artwork-v2 (mid-effort polish)
 - **v1.0.0** — first "release" milestone after a real-device validation pass on every section of `TEST_PLAN.md`
 
 ## Items deliberately not on the roadmap
