@@ -7,6 +7,22 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.11.3] — 2026-05-25
+
+### Added
+- **Synced lyrics** via OpenSubsonic `getLyricsBySongId`. The Lyrics
+  tab now highlights the active line in accent and auto-scrolls it to
+  ~1/3 from the top as playback advances. Gracefully falls back to
+  the classic `getLyrics` plain-text endpoint when the server doesn't
+  implement the OpenSubsonic extension or has no synced version.
+- `SyncedLyrics` + `LyricsLine` models in `lib/subsonic/client.dart`.
+
+### Internal
+- `_SyncedLyricsView` subscribes once to `positionStream` and only
+  `setState`s when the active line index actually changes (per line,
+  every few seconds) — the position-tick rate (10–30 Hz) doesn't
+  trigger a full ListView rebuild.
+
 ## [0.11.2] — 2026-05-25
 
 ### Added

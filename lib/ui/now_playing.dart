@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
 
 import '../audio/providers.dart';
 import '../domain.dart';
+import '../subsonic/client.dart';
 import 'widgets/artwork.dart';
 import 'widgets/track_tile.dart';
 
@@ -151,7 +154,7 @@ class _LyricsTab extends ConsumerStatefulWidget {
 }
 
 class _LyricsTabState extends ConsumerState<_LyricsTab> {
-  Future<String?>? _future;
+  Future<SyncedLyrics?>? _future;
 
   @override
   void initState() {
@@ -165,29 +168,137 @@ class _LyricsTabState extends ConsumerState<_LyricsTab> {
     if (old.track.id != widget.track.id) _fetch();
   }
 
+  /// Tries OpenSubsonic `getLyricsBySongId` first (only call that yields
+  /// timestamps); if the server doesn't implement it OR has no synced
+  /// version, falls back to the classic `getLyrics` (plain text, wrapped
+  /// into a synced=false payload so the renderer stays uniform).
   void _fetch() {
     final s = ref.read(subsonicProvider);
-    _future = s?.getLyrics(artist: widget.track.artist, title: widget.track.title) ??
-        Future.value(null);
+    if (s == null) {
+      _future = Future.value(null);
+      return;
+    }
+    _future = () async {
+      final synced = await s.getLyricsBySongId(widget.track.id);
+      if (synced != null) return synced;
+      final plain = await s.getLyrics(
+          artist: widget.track.artist, title: widget.track.title);
+      if (plain == null || plain.isEmpty) return null;
+      return SyncedLyrics(
+        synced: false,
+        lines: plain
+            .split('\n')
+            .map((l) => LyricsLine(start: Duration.zero, text: l))
+            .toList(),
+      );
+    }();
   }
 
   @override
-  Widget build(BuildContext context) => FutureBuilder<String?>(
+  Widget build(BuildContext context) => FutureBuilder<SyncedLyrics?>(
         future: _future,
         builder: (context, snap) {
           if (snap.connectionState != ConnectionState.done) {
             return const Center(child: CircularProgressIndicator());
           }
-          final lyrics = snap.data;
-          if (lyrics == null || lyrics.isEmpty) {
-            return const Center(child: Text('No lyrics available.', style: TextStyle(color: Colors.white54)));
+          final r = snap.data;
+          if (r == null || r.lines.isEmpty) {
+            return const Center(
+                child: Text('No lyrics available.',
+                    style: TextStyle(color: Colors.white54)));
           }
+          if (r.synced) return _SyncedLyricsView(lyrics: r);
+          // Plain — single block of text, nothing to sync against.
           return SingleChildScrollView(
             padding: const EdgeInsets.all(24),
-            child: Text(lyrics, style: const TextStyle(fontSize: 16, height: 1.6)),
+            child: Text(
+              r.lines.map((l) => l.text).join('\n'),
+              style: const TextStyle(fontSize: 16, height: 1.6),
+            ),
           );
         },
       );
+}
+
+/// Renders timestamped lyrics with the active line highlighted in accent
+/// + auto-scrolled to ~1/3 from the top. Subscribes once to the engine's
+/// positionStream so the position-tick rate (10–30 Hz) doesn't trigger a
+/// full ListView rebuild — only [setState] when the active index actually
+/// changes (per line, every few seconds).
+class _SyncedLyricsView extends ConsumerStatefulWidget {
+  final SyncedLyrics lyrics;
+  const _SyncedLyricsView({required this.lyrics});
+  @override
+  ConsumerState<_SyncedLyricsView> createState() => _SyncedLyricsViewState();
+}
+
+class _SyncedLyricsViewState extends ConsumerState<_SyncedLyricsView> {
+  static const _lineHeight = 36.0;
+  final _ctrl = ScrollController();
+  StreamSubscription<Duration>? _posSub;
+  int _active = -1;
+
+  @override
+  void initState() {
+    super.initState();
+    _posSub = ref.read(audioEngineProvider).positionStream.listen(_onPos);
+  }
+
+  void _onPos(Duration pos) {
+    final lines = widget.lyrics.lines;
+    var newActive = -1;
+    for (var i = lines.length - 1; i >= 0; i--) {
+      if (lines[i].start <= pos) {
+        newActive = i;
+        break;
+      }
+    }
+    if (newActive == _active || newActive < 0 || !mounted) return;
+    setState(() => _active = newActive);
+    if (_ctrl.hasClients) {
+      final target = (newActive * _lineHeight) - 120;
+      _ctrl.animateTo(
+        target.clamp(0, _ctrl.position.maxScrollExtent),
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeOut,
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _posSub?.cancel();
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final lines = widget.lyrics.lines;
+    return ListView.builder(
+      controller: _ctrl,
+      padding: const EdgeInsets.symmetric(vertical: 80, horizontal: 24),
+      itemCount: lines.length,
+      itemExtent: _lineHeight,
+      itemBuilder: (_, i) {
+        final active = i == _active;
+        final text = lines[i].text.trim();
+        return Center(
+          child: Text(
+            text.isEmpty ? '·' : text,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: active ? 19 : 15,
+              fontWeight: active ? FontWeight.w800 : FontWeight.w500,
+              color: active ? _accent : Colors.white54,
+            ),
+          ),
+        );
+      },
+    );
+  }
 }
 
 String _fmt(Duration d) {

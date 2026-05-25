@@ -198,6 +198,33 @@ class SubsonicClient {
     }
   }
 
+  /// OpenSubsonic extension. Returns `null` when the server doesn't
+  /// implement the endpoint (typical Subsonic ≤ 1.16) or when no
+  /// lyrics are stored for the track. Callers should fall back to
+  /// [getLyrics] for plain-text on null. Synced lyrics carry per-line
+  /// timestamps in `start` (ms); when `synced=false` the response is
+  /// just per-line plain text without timing info.
+  Future<SyncedLyrics?> getLyricsBySongId(String songId) async {
+    try {
+      final r = await _get('getLyricsBySongId', {'id': songId});
+      final list = (r['lyricsList']?['structuredLyrics'] as List?) ?? const [];
+      if (list.isEmpty) return null;
+      final s = list.first as Map<String, dynamic>;
+      final synced = s['synced'] == true;
+      final lines = ((s['line'] as List?) ?? const [])
+          .map((e) => e as Map<String, dynamic>)
+          .map((e) => LyricsLine(
+                start: Duration(milliseconds: (e['start'] as num?)?.toInt() ?? 0),
+                text: (e['value'] as String?) ?? '',
+              ))
+          .toList();
+      if (lines.isEmpty) return null;
+      return SyncedLyrics(synced: synced, lines: lines);
+    } catch (_) {
+      return null;
+    }
+  }
+
   // --- URL builders (no auth side-effects beyond a fresh salt) -------------
 
   Uri streamUri(String songId, {int? maxBitRate, String? format}) => _url('stream', {
@@ -260,6 +287,22 @@ class SubsonicClient {
         owner: j['owner'] as String?,
         origin: MediaOrigin.subsonic,
       );
+}
+
+/// OpenSubsonic lyrics payload — either timestamped (synced=true) or
+/// plain per-line text (synced=false). Renderer in the Now Playing
+/// Lyrics tab branches on [synced].
+class SyncedLyrics {
+  final bool synced;
+  final List<LyricsLine> lines;
+  SyncedLyrics({required this.synced, required this.lines});
+}
+
+class LyricsLine {
+  /// Offset from track start. Zero for unsynced lines.
+  final Duration start;
+  final String text;
+  LyricsLine({required this.start, required this.text});
 }
 
 class SubsonicException implements Exception {
