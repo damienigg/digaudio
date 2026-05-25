@@ -7,6 +7,46 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.13.0] — 2026-05-25
+
+### Added (release signing — opt-in)
+- `android/app/build.gradle` now picks up a release-signing config from
+  env vars (`KEYSTORE_FILE`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`,
+  optional `KEY_PASSWORD`). When the keystore file is missing, falls
+  back to debug signing — so clean clones / forks still build without
+  any keystore.
+- CI workflow has a new "Decode release keystore (opt-in)" step that
+  base64-decodes a `KEYSTORE_BASE64` secret into `/tmp/digaudio-release.jks`
+  and exports `KEYSTORE_FILE` for the gradle step.
+
+### Activation recipe (do once)
+On your dev machine:
+```bash
+keytool -genkey -v \
+  -keystore digaudio-release.jks \
+  -keyalg RSA -keysize 2048 -validity 10000 \
+  -alias digaudio
+base64 -w 0 digaudio-release.jks       # copy the one-line output
+```
+On GitHub → Settings → Secrets and variables → Actions, add:
+- `KEYSTORE_BASE64` — paste the base64 output
+- `KEYSTORE_PASSWORD` — what you typed at the `keytool` prompt
+- `KEY_ALIAS` — `digaudio` (or whatever you used)
+- `KEY_PASSWORD` — only if you set a different key password than the
+  store password; otherwise omit.
+
+**Keep `digaudio-release.jks` somewhere safe** — losing it means you
+can never ship an in-place update again (users would have to
+uninstall + reinstall).
+
+### Migration note
+The first build with these secrets in place produces an APK signed
+with a **different identity** than the previous debug-signed builds.
+That means the very first install will need to **uninstall** the old
+one first (`adb uninstall com.digaudio.digaudio`) — Android refuses
+to overwrite an APK with a different signing certificate. Every
+update after that is seamless.
+
 ## [0.12.3] — 2026-05-25
 
 ### Changed

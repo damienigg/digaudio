@@ -5,6 +5,19 @@ plugins {
     id "dev.flutter.flutter-gradle-plugin"
 }
 
+// Release signing — opt-in via env vars set by CI (or locally).
+// If KEYSTORE_FILE points at a valid .jks AND the password env vars are
+// set, release builds use it. Otherwise we fall back to debug signing
+// (same as before) so local builds keep working without a keystore.
+//
+// CI flow:
+//   1. Decode KEYSTORE_BASE64 secret → /tmp/digaudio-release.jks
+//   2. Export KEYSTORE_FILE=/tmp/digaudio-release.jks
+//   3. Export KEYSTORE_PASSWORD + KEY_PASSWORD (often equal) + KEY_ALIAS
+//   4. flutter build apk --release
+def keystoreFile = System.getenv('KEYSTORE_FILE')
+def hasReleaseKeystore = keystoreFile != null && !keystoreFile.isEmpty() && file(keystoreFile).exists()
+
 android {
     namespace = "com.digaudio.digaudio"
     compileSdk = flutter.compileSdkVersion
@@ -20,21 +33,31 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.digaudio.digaudio"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = 29
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        if (hasReleaseKeystore) {
+            release {
+                storeFile = file(keystoreFile)
+                storePassword = System.getenv('KEYSTORE_PASSWORD')
+                keyAlias = System.getenv('KEY_ALIAS') ?: 'digaudio'
+                // Many keystores reuse the store password for the key.
+                // We honour KEY_PASSWORD if set, otherwise reuse the store one.
+                keyPassword = System.getenv('KEY_PASSWORD') ?: System.getenv('KEYSTORE_PASSWORD')
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.debug
+            signingConfig = hasReleaseKeystore
+                ? signingConfigs.release
+                : signingConfigs.debug
         }
     }
 }
