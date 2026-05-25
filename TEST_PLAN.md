@@ -128,6 +128,9 @@ Phone-side acceptance checklist. Run through each section; tick the box when ver
 - [ ] **Voice search** (v0.26.0). Tap the mic icon in the Search AppBar. → Google "Listening…" dialog → speak a track / album / artist name → dialog closes → text appears in the field → results appear immediately (no debounce wait)
 - [ ] **Voice search cancel**. Tap mic → tap outside the dialog. → Field unchanged
 - [ ] **Voice search — no recogniser**. On a device with no Google speech app (rare). → Mic tap is silently no-op (graceful fallback)
+- [ ] **Multi-server search** (v0.27.0, ≥2 servers configured). Type a term known to exist on both servers. → Results from both servers appear together; each row's subtitle ends with " · <server label>"; single-server users see no label (clean subtitle)
+- [ ] **Multi-server playback**. Tap a track from the *non*-active server. → Streams from the originating server (not 404); cover art renders
+- [ ] **One server offline**. Disconnect one of two servers (e.g. URL unreachable). → Other server's results still appear; no error banner blocks the page
 
 ## Sleep timer + speed + crossfade
 

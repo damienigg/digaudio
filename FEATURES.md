@@ -1,4 +1,4 @@
-# Features — digaudio (v0.26.0)
+# Features — digaudio (v0.27.0)
 
 What's shipped, where to find it. Each row gives the entry point + a one-line description. **TEST_PLAN.md** covers acceptance tests, **TODO.md** covers what's left.
 
@@ -19,6 +19,7 @@ What's shipped, where to find it. Each row gives the entry point + a one-line de
 - **Local MediaStore** via own Kotlin channel (`digaudio/media_store`).
 - **Subsonic** (Navidrome, Gonic, Airsonic, Ampache, Nextcloud Music — all compatible).
 - **Multi-server** — N Subsonic servers registered, one active (Settings → Servers).
+- **Multi-server unified search** (v0.27.0) — Search fans out across all configured servers + local in parallel, results tagged "· <server>" when ≥2 servers configured; engine streams from the originating server (per-track `serverId` routing).
 
 ## Playback features
 
@@ -54,6 +55,7 @@ What's shipped, where to find it. Each row gives the entry point + a one-line de
 | Home (newest releases + **recently played** + random + brand hero) | Home tab |
 | **Search** — FTS-first (instant, accent-insensitive, prefix-AND) + remote merge | Search tab |
 | **Voice search** — mic icon in Search AppBar → system speech recogniser → injects text + searches | Search tab — v0.26.0 |
+| **Multi-server results** — fan-out across all configured servers + local; per-row " · <server>" label when ≥2 servers | Search tab — v0.27.0 |
 | Tracks / Albums / Artists / Genres / Decades / Playlists | Library tab — 6 sub-tabs |
 | Alphabetical quick-scroll | Library → Artists |
 | Genre / Decade pages with Play all + Shuffle | Library → Genres / Decades → tap |

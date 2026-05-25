@@ -25,7 +25,7 @@ Future<void> main() async {
 
   final handler = await AudioService.init(
     builder: () => AudioEngine(
-      subsonic: () => container.read(subsonicProvider),
+      subsonicResolver: () => container.read(subsonicResolverProvider),
       resolver: () => container.read(trackResolverProvider),
       favorites: container.read(favoritesProvider),
       cache: container.read(downloadsProvider),

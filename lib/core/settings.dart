@@ -30,8 +30,15 @@ class ServerConfig {
   bool get isConfigured => username.isNotEmpty && password.isNotEmpty;
 
   /// Returns a client iff credentials are present, else null. UI guards on this.
+  /// The client stamps every parsed model with [id] so per-track stream / cover
+  /// resolution routes back to the right host (multi-server search, v0.27.0).
   SubsonicClient? client() => isConfigured
-      ? SubsonicClient(baseUrl: url, username: username, password: password)
+      ? SubsonicClient(
+          baseUrl: url,
+          username: username,
+          password: password,
+          serverId: id,
+        )
       : null;
 
   ServerConfig copyWith({String? label, String? url, String? username, String? password}) =>

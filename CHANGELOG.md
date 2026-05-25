@@ -7,6 +7,45 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.27.0] — 2026-05-26
+
+### Added (Multi-server unified search)
+- **`Track.serverId`** (+ `Album` / `Artist` / `Playlist`). Stamped by
+  every `SubsonicClient` on parse so the originating server stays
+  bound to each item even when the user switches the active server.
+- **`SubsonicResolver`** — `forTrack(t)` / `forId(sid)` returns the
+  right client per item, falling back to active when the id is null
+  (legacy data) or stale (server since removed). Engine streaming,
+  cover-art URI, scrobble routing, and the Artwork widget all go
+  through it; the old "active client only" callback is gone.
+- **Search fans out across every configured server** in parallel —
+  per-server FTS5 cache hit + live `search3` call, fail-soft so one
+  unreachable server can't block the others. Dedup is server-aware
+  (`origin:serverId:id`) to avoid mis-merging two distinct songs that
+  happen to share an id across unrelated Subsonic servers.
+- **Server label on results** — when ≥2 servers are configured, each
+  Track / Album / Artist row's subtitle gets a "· <label>" suffix so
+  the user can tell which server a result came from. Single-server
+  setup unchanged (no visual noise).
+
+### v1 scope (deliberately deferred)
+- **"Show more" pagination** still targets the active server only.
+  Other servers contribute their initial 20 per category and plateau.
+  Per-server pagination buttons would clutter the UI for marginal gain.
+- **Ratings / scrobble / cache** still resolve via the active server
+  for non-engine code paths (the engine itself routes per-track via
+  the resolver, so playback always streams from the right host).
+  A track played from server B scrobbles to A → A silently no-ops on
+  the unknown id. Acceptable degradation; full per-server rating UI
+  is a v2 if needed.
+- **`Track.uniqueKey`** intentionally unchanged (`origin:id`, no
+  serverId). Migrating it would invalidate every drift table that
+  keys on it (favourites / cache / smart playlists / playlists /
+  positions / history). The collision risk across two unrelated
+  Subsonic servers is vanishingly low (Navidrome uses MBID-or-hash,
+  Gonic uses sha256 — different namespaces); accepted as a known
+  limitation, will revisit only if a real collision is reported.
+
 ### Roadmap — Combo 4 (daily driver) closed without code
 - **Wear OS** companion was the last item; investigation showed
   Wear OS 3+ (Pixel Watch / TicWatch / Galaxy Watch with GMS)

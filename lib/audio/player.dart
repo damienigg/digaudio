@@ -40,7 +40,12 @@ import '../widget/widget_bridge.dart';
 ///   - Recently played (PlayHistoryManager.recentUnique 20)
 ///   - Most played    (PlayHistoryManager.topTracks 50)
 class AudioEngine extends BaseAudioHandler {
-  final SubsonicClient? Function() _subsonic;
+  /// Resolver that maps a [Track]'s `serverId` to the right [SubsonicClient].
+  /// Per-track routing (vs. an "active client only" callback) is what makes
+  /// multi-server search playback work — tracks from server B keep streaming
+  /// from B even after the user switches the active server to A. Stale ids
+  /// fall back to active; see [SubsonicResolver.forId].
+  final SubsonicResolver Function() _subsonicResolver;
   final TrackResolver Function() _resolver;
   final FavoritesManager _favorites;
   final DownloadsManager _cache;
@@ -109,7 +114,7 @@ class AudioEngine extends BaseAudioHandler {
   List<Track> _originalOrder = const [];
 
   AudioEngine({
-    required SubsonicClient? Function() subsonic,
+    required SubsonicResolver Function() subsonicResolver,
     required TrackResolver Function() resolver,
     required FavoritesManager favorites,
     required DownloadsManager cache,
@@ -117,7 +122,7 @@ class AudioEngine extends BaseAudioHandler {
     required PlayHistoryManager history,
     required TrackPositionsManager positions,
     required ListenBrainzClient Function() listenbrainz,
-  })  : _subsonic = subsonic,
+  })  : _subsonicResolver = subsonicResolver,
         _resolver = resolver,
         _favorites = favorites,
         _cache = cache,
@@ -194,7 +199,7 @@ class AudioEngine extends BaseAudioHandler {
       if (pos.inSeconds >= thresholdSec) {
         _scrobbledCurrent = true;
         if (t.origin == MediaOrigin.subsonic) {
-          _subsonic()?.scrobble(t.id, submission: true);
+          _subsonicResolver().forTrack(t)?.scrobble(t.id, submission: true);
         }
         _listenbrainz().submitListen(
           trackName: t.title,
@@ -369,7 +374,7 @@ class AudioEngine extends BaseAudioHandler {
     _nowPlayingKey = t.uniqueKey;
     _scrobbledCurrent = false;
     if (t.origin == MediaOrigin.subsonic) {
-      _subsonic()?.scrobble(t.id, submission: false);
+      _subsonicResolver().forTrack(t)?.scrobble(t.id, submission: false);
     }
     // ListenBrainz "playing_now" — works for any origin as long as
     // we have artist + title. Token gated inside the client.
@@ -553,7 +558,7 @@ class AudioEngine extends BaseAudioHandler {
       case MediaOrigin.local:
         return AudioSource.uri(Uri.parse(t.localContentUri), tag: tag);
       case MediaOrigin.subsonic:
-        final s = _subsonic();
+        final s = _subsonicResolver().forTrack(t);
         if (s == null) throw StateError('No Subsonic server configured');
         final uri = s.streamUri(t.id);
         if (!_prefs.autoCacheEnabled) {
@@ -586,7 +591,7 @@ class AudioEngine extends BaseAudioHandler {
   Uri? _artworkUri(Track t) {
     if (t.coverArt == null) return null;
     if (t.origin == MediaOrigin.subsonic) {
-      return _subsonic()?.coverUri(t.coverArt!);
+      return _subsonicResolver().forTrack(t)?.coverUri(t.coverArt!);
     }
     return null;
   }

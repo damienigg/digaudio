@@ -52,7 +52,22 @@ final activeServerProvider = FutureProvider<ServerConfig?>((ref) async {
 });
 
 final subsonicProvider = Provider<SubsonicClient?>((ref) =>
-    ref.watch(activeServerProvider).valueOrNull?.client());
+    ref.watch(subsonicResolverProvider).active);
+
+/// Multi-server router (v0.27.0). Built from [serversProvider] +
+/// [activeServerProvider]; used by the engine + Artwork + search fan-out
+/// to route per-track URIs to the originating server. [subsonicProvider]
+/// is now a thin alias for `.active` (back-compat for single-server callers).
+final subsonicResolverProvider = Provider<SubsonicResolver>((ref) {
+  final list = ref.watch(serversProvider).valueOrNull ?? const <ServerConfig>[];
+  final active = ref.watch(activeServerProvider).valueOrNull?.client();
+  final byId = <String, SubsonicClient>{};
+  for (final s in list) {
+    final c = s.client();
+    if (c != null) byId[s.id] = c;
+  }
+  return SubsonicResolver(active: active, byId: byId);
+});
 
 final dbProvider = Provider<AppDb>((ref) {
   final db = AppDb();
@@ -355,13 +370,27 @@ final localArtistsProvider = FutureProvider<List<Artist>>((ref) async =>
 
 final searchQueryProvider = StateProvider<String>((_) => '');
 
+/// Multi-server, multi-origin search (v0.27.0).
+///
+/// Fans out the query in parallel across:
+///   - the local MediaStore (one origin, no FTS — in-memory contains-match);
+///   - for every configured Subsonic server: its FTS5 library cache **and**
+///     a live `search3` call (the cache covers what's been synced, the live
+///     call catches anything added server-side since).
+///
+/// Results dedup by a server-aware key (`origin:serverId:id`) — track ids
+/// can collide across unrelated Subsonic servers, so the bare `uniqueKey`
+/// would mis-merge. Local first, then per-server bundles in `serversProvider`
+/// order. "Show more" pagination in [SearchPage] still targets the active
+/// server only (other servers contribute their initial 20 and plateau);
+/// rich per-server pagination would clutter the UI for a marginal gain.
 final searchResultsProvider = FutureProvider<SearchResults>((ref) async {
   final q = ref.watch(searchQueryProvider).trim();
   if (q.isEmpty) return const SearchResults();
-  final s = ref.watch(subsonicProvider);
   final local = ref.watch(localLibraryProvider);
+  final resolver = ref.watch(subsonicResolverProvider);
+  final cache = ref.read(subsonicCacheProvider);
 
-  // Local-MediaStore filter (in-memory; MediaStore has no FTS).
   final allLocal = await local.getAllSongs();
   final lq = q.toLowerCase();
   final localTracks = allLocal.where((t) =>
@@ -369,38 +398,37 @@ final searchResultsProvider = FutureProvider<SearchResults>((ref) async {
       (t.artist?.toLowerCase().contains(lq) ?? false) ||
       (t.album?.toLowerCase().contains(lq) ?? false)).take(30).toList();
 
-  if (s == null) return SearchResults(tracks: localTracks);
+  final clients = resolver.all.toList();
+  if (clients.isEmpty) return SearchResults(tracks: localTracks);
 
-  // Two parallel queries:
-  //   - FTS5 against the cached Subsonic library → instant, runs even
-  //     when offline, covers everything synced.
-  //   - Subsonic search3 against the live server → catches anything
-  //     added server-side since the last cache sync.
-  // Merged + deduped by uniqueKey, FTS hits first (instant feels
-  // primary), remote-only hits appended.
-  final active = await ref.watch(settingsStoreProvider).active();
-  final ftsFuture = active == null
-      ? Future.value(const <Track>[])
-      : ref.read(subsonicCacheProvider).searchFts(active.id, q, limit: 30);
-  // Remote can fail (offline mode etc.) — fall back to empty results
-  // so FTS still surfaces matches from the cache.
-  final remoteFuture =
-      s.search(q).catchError((_) => const SearchResults());
+  // Two queries per server: cache FTS + live search3, both fail-soft so a
+  // single unreachable server can never block results from the others.
+  final perServerFutures = clients.map((c) async {
+    final sid = c.serverId;
+    final fts = sid == null
+        ? const <Track>[]
+        : await cache.searchFts(sid, q, limit: 30)
+            .catchError((_) => const <Track>[]);
+    final remote = await c.search(q).catchError((_) => const SearchResults());
+    return (sid: sid, fts: fts, remote: remote);
+  });
+  final perServer = await Future.wait(perServerFutures);
 
-  final results = await Future.wait([ftsFuture, remoteFuture]);
-  final ftsTracks = results[0] as List<Track>;
-  final remote = results[1] as SearchResults;
+  String key(Track t) => '${t.origin.name}:${t.serverId ?? ''}:${t.id}';
+  final seen = <String>{...localTracks.map(key)};
+  final tracks = <Track>[...localTracks];
+  final albums = <Album>[];
+  final artists = <Artist>[];
+  for (final r in perServer) {
+    for (final t in r.fts) {
+      if (seen.add(key(t))) tracks.add(t);
+    }
+    for (final t in r.remote.tracks) {
+      if (seen.add(key(t))) tracks.add(t);
+    }
+    albums.addAll(r.remote.albums);
+    artists.addAll(r.remote.artists);
+  }
 
-  final seen = <String>{
-    ...localTracks.map((t) => t.uniqueKey),
-    ...ftsTracks.map((t) => t.uniqueKey),
-  };
-  final remoteOnly =
-      remote.tracks.where((t) => seen.add(t.uniqueKey)).toList();
-
-  return SearchResults(
-    tracks: [...localTracks, ...ftsTracks, ...remoteOnly],
-    albums: remote.albums,
-    artists: remote.artists,
-  );
+  return SearchResults(tracks: tracks, albums: albums, artists: artists);
 });

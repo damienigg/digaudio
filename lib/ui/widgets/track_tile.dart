@@ -15,8 +15,18 @@ class TrackTile extends ConsumerWidget {
   final List<Track> queue;
   final int index;
   final VoidCallback? onMore;
+  /// When set, appended to the artist subtitle (" · <label>"). Used by the
+  /// multi-server search page to surface which server each row came from.
+  /// Null elsewhere = subtitle stays clean.
+  final String? serverLabel;
 
-  const TrackTile({super.key, required this.queue, required this.index, this.onMore});
+  const TrackTile({
+    super.key,
+    required this.queue,
+    required this.index,
+    this.onMore,
+    this.serverLabel,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -66,7 +76,12 @@ class TrackTile extends ConsumerWidget {
                 ),
               )
             else
-              Artwork(coverArt: t.coverArt, origin: t.origin, size: 48),
+              Artwork(
+                coverArt: t.coverArt,
+                origin: t.origin,
+                size: 48,
+                serverId: t.serverId,
+              ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -91,8 +106,14 @@ class TrackTile extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: 2),
-                  Text(t.displayArtist, maxLines: 1, overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: context.textTertiary, fontSize: 12)),
+                  Text(
+                    serverLabel == null
+                        ? t.displayArtist
+                        : '${t.displayArtist} · $serverLabel',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: context.textTertiary, fontSize: 12),
+                  ),
                 ],
               ),
             ),

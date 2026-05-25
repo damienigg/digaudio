@@ -21,6 +21,11 @@ class Artwork extends ConsumerWidget {
   final MediaOrigin origin;
   final double size;
   final BorderRadius? borderRadius;
+  /// Originating server for Subsonic art. Null = use active server
+  /// (covers local artwork + legacy callers that don't know about
+  /// multi-server search). Search results stamp the right id so a
+  /// cover from server B doesn't get fetched from active server A.
+  final String? serverId;
 
   const Artwork({
     super.key,
@@ -28,6 +33,7 @@ class Artwork extends ConsumerWidget {
     required this.coverArt,
     this.size = 56,
     this.borderRadius,
+    this.serverId,
   });
 
   @override
@@ -37,7 +43,7 @@ class Artwork extends ConsumerWidget {
     if (coverArt == null) {
       child = _placeholder(context);
     } else if (origin == MediaOrigin.subsonic) {
-      final s = ref.watch(subsonicProvider);
+      final s = ref.watch(subsonicResolverProvider).forId(serverId);
       child = s == null
           ? _placeholder(context)
           : CachedNetworkImage(

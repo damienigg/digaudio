@@ -16,6 +16,13 @@ class SubsonicClient {
   static const _client = 'digaudio';
   static const _version = '1.16.1';
 
+  /// Identifies the [ServerConfig] this client was minted from. Stamped
+  /// on every parsed [Track] / [Album] / [Artist] / [Playlist] so the
+  /// engine and Artwork widget can route stream / cover URIs to the
+  /// originating server even when the active server has changed (e.g.
+  /// during a multi-server unified search). Null only in tests that
+  /// instantiate the client outside the ServerConfig path.
+  final String? serverId;
   final String baseUrl;
   final String username;
   final String _password;
@@ -25,6 +32,7 @@ class SubsonicClient {
     required this.baseUrl,
     required this.username,
     required String password,
+    this.serverId,
   })  : _password = password,
         _dio = Dio(BaseOptions(
           connectTimeout: const Duration(seconds: 10),
@@ -292,6 +300,7 @@ class SubsonicClient {
         replayGainAlbumDb:
             ((j['replayGain'] as Map?)?['albumGain'] as num?)?.toDouble(),
         origin: MediaOrigin.subsonic,
+        serverId: serverId,
       );
 
   Album _parseAlbum(Map<String, dynamic> j) => Album(
@@ -304,6 +313,7 @@ class SubsonicClient {
         duration: j['duration'] is int ? Duration(seconds: j['duration'] as int) : null,
         coverArt: j['coverArt']?.toString(),
         origin: MediaOrigin.subsonic,
+        serverId: serverId,
       );
 
   Artist _parseArtist(Map<String, dynamic> j) => Artist(
@@ -312,6 +322,7 @@ class SubsonicClient {
         albumCount: j['albumCount'] as int?,
         coverArt: j['coverArt']?.toString(),
         origin: MediaOrigin.subsonic,
+        serverId: serverId,
       );
 
   Playlist _parsePlaylist(Map<String, dynamic> j) => Playlist(
@@ -322,6 +333,7 @@ class SubsonicClient {
         coverArt: j['coverArt']?.toString(),
         owner: j['owner'] as String?,
         origin: MediaOrigin.subsonic,
+        serverId: serverId,
       );
 }
 
@@ -339,6 +351,31 @@ class LyricsLine {
   final Duration start;
   final String text;
   LyricsLine({required this.start, required this.text});
+}
+
+/// Multi-server router. Holds every configured [SubsonicClient] keyed by
+/// the originating [ServerConfig.id], plus a pointer to the currently-active
+/// one. Engine / Artwork / search call [forTrack] / [forId] so a track from
+/// server B keeps streaming from B even when the user has switched the
+/// active server to A. Built fresh from `serversProvider` on every
+/// invalidation — cheap (just a Map<String,SubsonicClient> indexed by id).
+class SubsonicResolver {
+  final SubsonicClient? active;
+  final Map<String, SubsonicClient> _byId;
+  const SubsonicResolver({required this.active, required Map<String, SubsonicClient> byId})
+      : _byId = byId;
+
+  Iterable<SubsonicClient> get all => _byId.values;
+
+  /// Falls back to [active] when [id] is null (legacy data minted before
+  /// v0.27.0) or when the named server is no longer configured (e.g. the
+  /// user removed it). Returning the active client there is best-effort —
+  /// the stream will 404 if the id space differs, but that's strictly
+  /// better than throwing.
+  SubsonicClient? forId(String? id) => id == null ? active : (_byId[id] ?? active);
+
+  SubsonicClient? forTrack(Track t) =>
+      t.origin == MediaOrigin.subsonic ? forId(t.serverId) : null;
 }
 
 class SubsonicException implements Exception {

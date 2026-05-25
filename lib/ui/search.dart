@@ -181,6 +181,17 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                   .where((t) => t.origin == MediaOrigin.subsonic)
                   .length +
               _extraTracks.length;
+          // Per-server labels — only surfaced when >1 configured server,
+          // otherwise the label is redundant noise.
+          final servers = ref.watch(serversProvider).valueOrNull ?? const [];
+          final labelById = {for (final s in servers) s.id: s.label};
+          final multiServer = labelById.length > 1;
+          String? labelFor(String? sid) =>
+              multiServer ? (sid == null ? null : labelById[sid]) : null;
+          String withLabel(String base, String? sid) {
+            final l = labelFor(sid);
+            return l == null ? base : '$base · $l';
+          }
           return ListView(
             children: [
               if (allArtists.isNotEmpty) ...[
@@ -190,12 +201,13 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                     leading: Artwork(
                         coverArt: a.coverArt,
                         origin: a.origin,
+                        serverId: a.serverId,
                         size: 48,
                         borderRadius: BorderRadius.circular(24)),
                     title: Text(a.name),
-                    subtitle: a.albumCount != null
-                        ? Text('${a.albumCount} albums')
-                        : null,
+                    subtitle: Text(withLabel(
+                        a.albumCount != null ? '${a.albumCount} albums' : '',
+                        a.serverId)),
                     onTap: () => context.push('/artist/${a.origin.name}/${a.id}'),
                   ),
                 if (!_artistsExhausted)
@@ -211,9 +223,12 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                 for (final a in allAlbums)
                   ListTile(
                     leading: Artwork(
-                        coverArt: a.coverArt, origin: a.origin, size: 48),
+                        coverArt: a.coverArt,
+                        origin: a.origin,
+                        serverId: a.serverId,
+                        size: 48),
                     title: Text(a.title),
-                    subtitle: a.artist != null ? Text(a.artist!) : null,
+                    subtitle: Text(withLabel(a.artist ?? '', a.serverId)),
                     onTap: () => context.push('/album/${a.origin.name}/${a.id}'),
                   ),
                 if (!_albumsExhausted)
@@ -227,7 +242,11 @@ class _SearchPageState extends ConsumerState<SearchPage> {
               if (allTracks.isNotEmpty) ...[
                 const _Header('Tracks'),
                 for (var i = 0; i < allTracks.length; i++)
-                  TrackTile(queue: allTracks, index: i),
+                  TrackTile(
+                    queue: allTracks,
+                    index: i,
+                    serverLabel: labelFor(allTracks[i].serverId),
+                  ),
                 if (!_tracksExhausted)
                   _ShowMoreButton(
                       loading: _loadingTracks,

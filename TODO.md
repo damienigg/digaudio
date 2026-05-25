@@ -1,4 +1,4 @@
-# TODO — digaudio (Combo 4 closed — Wear OS via system mirror)
+# TODO — digaudio (post-v0.27.0 multi-server search)
 
 What's left, organised by category + combo. Effort tags: **S** ≈ 30 min, **M** ≈ 1 h, **L** ≈ several hours (own session).
 
@@ -34,17 +34,12 @@ What's left, organised by category + combo. Effort tags: **S** ≈ 30 min, **M**
 - **Listening parties / shared queue** — *(L)*  
   Real-time playback-state sync across multiple devices (WebSocket relay or Tailscale-local mesh). Still deferred until there's a real use case.
 
-### F · Library management — 1/5 remaining
+### F · Library management — 0/5 remaining ✓
 
 - ~~**Subsonic library cache auto-refresh**~~ — **DONE v0.22.0**
 - ~~**"Recently played" on Home**~~ — **DONE v0.22.1** (the original "Recently added" wording was wrong — `type=recent` is play-history; "Newest releases" already covers recently-added)
-- ~~**Background download queue**~~ — **DONE v0.22.2** with in-app progress banner (system notification omitted for v1 — would conflict with audio_service's notification + need POST_NOTIFICATIONS permission flow)
-- **Multi-server unified search** — *(L, was M)*  
-  Cross-cutting refactor: needs `Track.serverId` field added across
-  the model + every parser + the source builder (engine currently
-  streams via active-server URI, which would 404 for a track from
-  a different server). Plus a UI affordance to show which server
-  each result came from. Bumped to L; own milestone.
+- ~~**Background download queue**~~ — **DONE v0.22.2** with in-app progress banner
+- ~~**Multi-server unified search**~~ — **DONE v0.27.0** (`Track.serverId` + `SubsonicResolver` per-track routing; fan-out FTS+search3 per server; `· <label>` chip when ≥2 servers). v1 limitations documented in CHANGELOG: "Show more" still active-server only; ratings/scrobble/cache routing still active-server (degrades silently for non-active-server tracks)
 
 ### G · Long-tail polish — 3/7 remaining
 
@@ -88,7 +83,7 @@ What's left, organised by category + combo. Effort tags: **S** ≈ 30 min, **M**
 - ~~**v0.25.x** — Homescreen widget~~ DONE (v1 without artwork)
 - ~~**v0.26.x** — Voice search in-app~~ DONE (ACTION_RECOGNIZE_SPEECH intent)
 - ~~**Wear OS**~~ COVERED — no code release, Wear OS 3+ system mirror is sufficient
-- **v0.27.x** — Multi-server unified search (L, cross-cutting `Track.serverId` refactor)
+- ~~**v0.27.x** — Multi-server unified search~~ DONE (`Track.serverId` + `SubsonicResolver` fan-out)
 - **v0.28.x** — i18n / Last.fm direct / Subsonic admin / widget-artwork-v2 (mid-effort polish)
 - **v1.0.0** — first "release" milestone after a real-device validation pass on every section of `TEST_PLAN.md`
 

@@ -31,6 +31,12 @@ class Track {
   final double? replayGainTrackDb;
   final double? replayGainAlbumDb;
   final MediaOrigin origin;
+  /// Identifies which configured Subsonic server this track lives on.
+  /// Null for local tracks AND for legacy Subsonic data parsed before
+  /// v0.27.0 (back-compat: resolves to the active server). Multi-server
+  /// search fan-out (v0.27.0) stamps every result with the originating
+  /// server's id so the stream/cover paths route to the right host.
+  final String? serverId;
 
   const Track({
     required this.id,
@@ -50,6 +56,7 @@ class Track {
     this.userRating,
     this.replayGainTrackDb,
     this.replayGainAlbumDb,
+    this.serverId,
   });
 
   /// Unique key across all origins (collision-free).
@@ -68,6 +75,7 @@ class Album {
   final Duration? duration;
   final String? coverArt;
   final MediaOrigin origin;
+  final String? serverId;
 
   const Album({
     required this.id,
@@ -79,6 +87,7 @@ class Album {
     this.songCount,
     this.duration,
     this.coverArt,
+    this.serverId,
   });
 
   String get uniqueKey => '${origin.name}:$id';
@@ -90,6 +99,7 @@ class Artist {
   final int? albumCount;
   final String? coverArt;
   final MediaOrigin origin;
+  final String? serverId;
 
   const Artist({
     required this.id,
@@ -97,6 +107,7 @@ class Artist {
     required this.origin,
     this.albumCount,
     this.coverArt,
+    this.serverId,
   });
 
   String get uniqueKey => '${origin.name}:$id';
@@ -110,6 +121,7 @@ class Playlist {
   final String? coverArt;
   final String? owner;
   final MediaOrigin origin;
+  final String? serverId;
 
   const Playlist({
     required this.id,
@@ -119,6 +131,7 @@ class Playlist {
     this.duration,
     this.coverArt,
     this.owner,
+    this.serverId,
   });
 
   String get uniqueKey => '${origin.name}:$id';
