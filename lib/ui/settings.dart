@@ -921,7 +921,8 @@ class _CrossfadePicker extends StatelessWidget {
           Text(
             'Fades the end of one track into the start of the next. '
             'Pseudo-crossfade — no overlap, but the perceived effect is '
-            'the same for typical music.',
+            'the same for typical music. Gapless playback (no silent '
+            'gap between tracks of the same album) is always on.',
             style: TextStyle(color: context.textMuted, fontSize: 12),
           ),
           const SizedBox(height: 8),

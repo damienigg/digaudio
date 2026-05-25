@@ -7,6 +7,14 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.17.1] — 2026-05-25
+
+### Confirmed
+- **Gapless playback** has been on since v0.9.x — `just_audio`'s
+  `ConcatenatingAudioSource` handles same-album track transitions
+  without inserting a silent gap. No code change needed; added a
+  sentence to the Crossfade settings card so the user knows.
+
 ## [0.17.0] — 2026-05-25
 
 ### Added (EQ presets — category C kickoff)
