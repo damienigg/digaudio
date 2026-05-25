@@ -13,6 +13,7 @@ class PlaybackPrefs {
   static const _kAutoCache = 'pb.autocache.enabled';
   static const _kCacheMaxBytes = 'pb.cache.max_bytes';
   static const _kSpeed = 'pb.speed';
+  static const _kCrossfadeMs = 'pb.crossfade.ms';
 
   /// Default cap for the auto-cache pool. Pinned downloads don't count against
   /// it. 2 GB matches what Spotify ships and survives a long road trip without
@@ -42,6 +43,12 @@ class PlaybackPrefs {
   /// podcast listener doesn't have to re-set 1.5x every launch.
   double playbackSpeed = 1.0;
 
+  /// Crossfade duration in ms (0 = off). At track end the volume ramps to 0
+  /// over this window; the next track's volume ramps from 0 to 1 over the
+  /// same window. Pseudo-crossfade — not a true overlap (no second player)
+  /// but the perceived effect is the same for typical music.
+  int crossfadeMs = 0;
+
   Future<void> load() async {
     final p = await SharedPreferences.getInstance();
     eqEnabled = p.getBool(_kEqEnabled) ?? false;
@@ -49,6 +56,7 @@ class PlaybackPrefs {
     autoCacheEnabled = p.getBool(_kAutoCache) ?? true;
     cacheMaxBytes = p.getInt(_kCacheMaxBytes) ?? defaultCacheMaxBytes;
     playbackSpeed = p.getDouble(_kSpeed) ?? 1.0;
+    crossfadeMs = p.getInt(_kCrossfadeMs) ?? 0;
     final raw = p.getString(_kEqGains);
     if (raw != null && raw.isNotEmpty) {
       eqGainsDb = (jsonDecode(raw) as List).map((e) => (e as num).toDouble()).toList();
@@ -62,6 +70,7 @@ class PlaybackPrefs {
     await p.setBool(_kAutoCache, autoCacheEnabled);
     await p.setInt(_kCacheMaxBytes, cacheMaxBytes);
     await p.setDouble(_kSpeed, playbackSpeed);
+    await p.setInt(_kCrossfadeMs, crossfadeMs);
     await p.setString(_kEqGains, jsonEncode(eqGainsDb));
   }
 }

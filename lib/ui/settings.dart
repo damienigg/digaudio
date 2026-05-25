@@ -619,6 +619,16 @@ class _PlaybackPageState extends ConsumerState<PlaybackPage> {
             },
           ),
           Divider(height: 32, color: context.dividerSoft),
+          _CrossfadePicker(
+            currentMs: ref.watch(playbackPrefsProvider).crossfadeMs,
+            onChanged: (v) async {
+              final prefs = ref.read(playbackPrefsProvider);
+              prefs.crossfadeMs = v;
+              await prefs.save();
+              setState(() {});
+            },
+          ),
+          Divider(height: 32, color: context.dividerSoft),
           SwitchListTile.adaptive(
             contentPadding: EdgeInsets.zero,
             title: const Text('Equalizer', style: TextStyle(fontWeight: FontWeight.w700)),
@@ -811,6 +821,56 @@ class _StorageCard extends StatelessWidget {
       ],
     );
   }
+}
+
+/// Crossfade duration picker — off / 2s / 5s / 10s. The values come
+/// straight from PlaybackPrefs; the engine reads `prefs.crossfadeMs`
+/// every position tick + on every track switch, so picker changes take
+/// effect at the next transition.
+class _CrossfadePicker extends StatelessWidget {
+  final int currentMs;
+  final ValueChanged<int> onChanged;
+  const _CrossfadePicker({required this.currentMs, required this.onChanged});
+
+  static const _options = <(int ms, String label)>[
+    (0, 'Off'),
+    (2000, '2 s'),
+    (5000, '5 s'),
+    (10000, '10 s'),
+  ];
+
+  @override
+  Widget build(BuildContext context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Crossfade',
+              style: TextStyle(fontWeight: FontWeight.w700)),
+          const SizedBox(height: 4),
+          Text(
+            'Fades the end of one track into the start of the next. '
+            'Pseudo-crossfade — no overlap, but the perceived effect is '
+            'the same for typical music.',
+            style: TextStyle(color: context.textMuted, fontSize: 12),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            children: [
+              for (final o in _options)
+                ChoiceChip(
+                  label: Text(o.$2),
+                  selected: currentMs == o.$1,
+                  onSelected: (_) => onChanged(o.$1),
+                  selectedColor: _accent,
+                  labelStyle: TextStyle(
+                      color: currentMs == o.$1
+                          ? Colors.black
+                          : context.textSecondary),
+                ),
+            ],
+          ),
+        ],
+      );
 }
 
 class _BandRow extends StatelessWidget {

@@ -46,6 +46,7 @@ class AudioEngine extends BaseAudioHandler {
   StreamSubscription<PlaybackEvent>? _eventSub;
   String? _nowPlayingKey;
   bool _scrobbledCurrent = false;
+  Timer? _fadeInTimer;
 
   AudioEngine({
     required SubsonicClient? Function() subsonic,
@@ -90,21 +91,66 @@ class AudioEngine extends BaseAudioHandler {
       if (t.origin == MediaOrigin.subsonic) {
         _subsonic()?.scrobble(t.id, submission: false);
       }
+      // Crossfade-in: start at volume 0 and ramp to 1 over the fade window
+      // so the user perceives a continuous mix with the previous track's
+      // tail-out.
+      _startFadeIn();
     });
 
     // Definitive scrobble at ≥4 min played OR ≥50% of duration — Last.fm's
     // classic threshold (Subsonic forwards to Last.fm server-side when
     // configured). Position-stream throttling keeps overhead trivial.
     _posSub = _player.positionStream.listen((pos) {
-      if (_scrobbledCurrent) return;
-      final t = currentTrack;
-      if (t == null || t.origin != MediaOrigin.subsonic) return;
-      if (t.uniqueKey != _nowPlayingKey) return;
-      final durSec = _player.duration?.inSeconds ?? 0;
-      final thresholdSec = durSec == 0 ? 240 : min(240, durSec ~/ 2);
-      if (pos.inSeconds >= thresholdSec) {
-        _scrobbledCurrent = true;
-        _subsonic()?.scrobble(t.id, submission: true);
+      // Scrobble at the Last.fm threshold.
+      if (!_scrobbledCurrent) {
+        final t = currentTrack;
+        if (t != null &&
+            t.origin == MediaOrigin.subsonic &&
+            t.uniqueKey == _nowPlayingKey) {
+          final durSec = _player.duration?.inSeconds ?? 0;
+          final thresholdSec = durSec == 0 ? 240 : min(240, durSec ~/ 2);
+          if (pos.inSeconds >= thresholdSec) {
+            _scrobbledCurrent = true;
+            _subsonic()?.scrobble(t.id, submission: true);
+          }
+        }
+      }
+      // Crossfade-out: in the last [crossfadeMs] of the track, ramp
+      // volume from 1 → 0 proportional to remaining time.
+      _applyFadeOut(pos, _player.duration);
+    });
+  }
+
+  /// Volume ramp over the trailing edge of the current track. Idempotent
+  /// — gets called every position tick (10–30 Hz); writing the same
+  /// volume value to just_audio is a no-op so it's cheap.
+  void _applyFadeOut(Duration pos, Duration? duration) {
+    final fadeMs = _prefs.crossfadeMs;
+    if (fadeMs <= 0 || duration == null) return;
+    final remaining = duration.inMilliseconds - pos.inMilliseconds;
+    if (remaining <= 0 || remaining > fadeMs) return;
+    _player.setVolume((remaining / fadeMs).clamp(0.0, 1.0));
+  }
+
+  /// Volume ramp at track start. Cancels any in-flight fade-in. Falls
+  /// through to setVolume(1.0) immediately when crossfade is off.
+  void _startFadeIn() {
+    _fadeInTimer?.cancel();
+    final fadeMs = _prefs.crossfadeMs;
+    if (fadeMs <= 0) {
+      _player.setVolume(1.0);
+      return;
+    }
+    _player.setVolume(0.0);
+    final start = DateTime.now();
+    _fadeInTimer = Timer.periodic(const Duration(milliseconds: 40), (t) {
+      final elapsed = DateTime.now().difference(start).inMilliseconds;
+      if (elapsed >= fadeMs) {
+        _player.setVolume(1.0);
+        t.cancel();
+        _fadeInTimer = null;
+      } else {
+        _player.setVolume(elapsed / fadeMs);
       }
     });
   }
@@ -346,6 +392,7 @@ class AudioEngine extends BaseAudioHandler {
   Future<void> onTaskRemoved() => stop();
 
   Future<void> dispose() async {
+    _fadeInTimer?.cancel();
     await _indexSub?.cancel();
     await _posSub?.cancel();
     await _eventSub?.cancel();

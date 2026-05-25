@@ -7,6 +7,25 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.14.0] — 2026-05-25
+
+### Added
+- **Crossfade between tracks.** Settings → Playback → Crossfade chip
+  row (Off / 2 s / 5 s / 10 s). The engine ramps volume from 1 → 0
+  over the last `crossfadeMs` of each track and from 0 → 1 over the
+  first `crossfadeMs` of the next, so the transition feels continuous.
+  Pseudo-crossfade — no second player / no actual overlap, but the
+  perceived effect is identical for typical music.
+- `PlaybackPrefs.crossfadeMs` persisted in shared_preferences;
+  restored at startup; engine reads it live on every position tick +
+  every track switch so picker changes take effect at the next
+  transition.
+
+### Internal
+- `AudioEngine._applyFadeOut` (position-stream-driven, idempotent)
+  and `_startFadeIn` (40 ms-tick Timer.periodic, auto-cancelled on
+  next track switch) — both no-ops when `crossfadeMs == 0`.
+
 ## [0.13.1] — 2026-05-25
 
 ### Added
