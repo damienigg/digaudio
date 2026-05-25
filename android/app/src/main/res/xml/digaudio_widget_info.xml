@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  digaudio homescreen widget descriptor.
+
+  updatePeriodMillis="0" disables the Android-side periodic update —
+  we push updates from Dart over a MethodChannel whenever track
+  metadata or play state changes, so the widget never goes stale
+  during playback without paying for a periodic AlarmManager wake.
+
+  Min size 250×60 dp ≈ standard 4×1 launcher cell. resizeMode lets
+  the user widen it; the layout flexes via layout_weight on the text
+  column.
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="250dp"
+    android:minHeight="60dp"
+    android:resizeMode="horizontal"
+    android:widgetCategory="home_screen"
+    android:initialLayout="@layout/digaudio_widget"
+    android:previewImage="@mipmap/ic_launcher"
+    android:updatePeriodMillis="0" />

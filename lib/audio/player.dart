@@ -15,6 +15,7 @@ import '../library/local.dart';
 import '../library/play_history.dart';
 import '../library/track_positions.dart';
 import '../subsonic/client.dart';
+import '../widget/widget_bridge.dart';
 
 /// digaudio's audio engine + AA bridge with **true crossfade** between
 /// consecutive tracks.
@@ -154,7 +155,17 @@ class AudioEngine extends BaseAudioHandler {
     _innerBufferedSub = _primary.bufferedPositionStream.listen(_bufferedController.add);
     _innerLoopSub = _primary.loopModeStream.listen(_loopController.add);
     _innerShuffleSub = _primary.shuffleModeEnabledStream.listen(_shuffleController.add);
-    _innerEventSub = _primary.playbackEventStream.listen((_) => _broadcastState());
+    _innerEventSub = _primary.playbackEventStream.listen((_) {
+      _broadcastState();
+      // Mirror play/pause into the homescreen widget so its
+      // play-pause icon stays in sync with reality.
+      final t = currentTrack;
+      WidgetBridge.update(
+        title: t?.title,
+        artist: t?.displayArtist,
+        isPlaying: _primary.playing,
+      );
+    });
 
     _innerPositionSub = _primary.positionStream.listen((pos) {
       _positionController.add(pos);
@@ -366,6 +377,13 @@ class AudioEngine extends BaseAudioHandler {
       trackName: t.title,
       artistName: t.artist,
       releaseName: t.album,
+    );
+    // Homescreen widget refresh — title + artist change. Play-state
+    // updates also happen via the playerState listener below.
+    WidgetBridge.update(
+      title: t.title,
+      artist: t.displayArtist,
+      isPlaying: _primary.playing,
     );
   }
 

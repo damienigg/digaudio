@@ -65,6 +65,33 @@
             </intent-filter>
         </service>
 
+        <!-- Homescreen widget (mini-player). User adds it from the
+             launcher's widget picker. Updates pushed from Dart via
+             the digaudio/widget MethodChannel — see WidgetChannel.kt
+             + the lib/widget/widget_bridge.dart wrapper. -->
+        <receiver
+            android:name=".DigaudioWidgetProvider"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/digaudio_widget_info" />
+        </receiver>
+
+        <!-- Adapter: turns a widget button tap into a DOWN/UP
+             ACTION_MEDIA_BUTTON pair so the AudioService's
+             MediaButtonReceiver (declared by audio_service) picks it
+             up exactly like a wired headset button. -->
+        <receiver
+            android:name=".WidgetClickReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.digaudio.WIDGET_CLICK" />
+            </intent-filter>
+        </receiver>
+
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />

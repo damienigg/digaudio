@@ -7,6 +7,48 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.25.0] — 2026-05-25
+
+### Added (Homescreen widget — mini-player)
+- **`DigaudioWidgetProvider`** (Kotlin AppWidgetProvider) — a
+  4×1-cell homescreen widget showing the launcher icon · the
+  current track's title + artist · play/pause + skip-next
+  buttons. Tap the icon/text area → opens the app.
+- **MethodChannel push updates**. `WidgetChannel.kt` listens on
+  `digaudio/widget` for `update(title, artist, isPlaying)` calls
+  from Dart and pokes every active widget instance via
+  `AppWidgetManager.updateAppWidget`. No periodic AlarmManager
+  wake — widget updates only when state changes (zero battery
+  cost when paused).
+- **`WidgetClickReceiver`** turns each button tap into a paired
+  DOWN/UP `ACTION_MEDIA_BUTTON` broadcast (the audio_service
+  plugin's `MediaButtonReceiver` consumes both). Same pattern as
+  v0.20.0 Quick Settings tile.
+- **`WidgetBridge`** (Dart) wraps the MethodChannel. Engine fires
+  the bridge from two hooks already in place:
+  - `_onTrackChanged` → title + artist + playing state
+  - `playbackEventStream` listener (used for `_broadcastState`)
+    → playing state alone, keeps the play/pause icon truthful
+    across pause / resume / seek
+
+### User onboarding
+- Long-press the homescreen → Widgets → scroll to "digaudio" →
+  drag the 4×1 tile onto a homescreen page. Resizes horizontally
+  to fill larger cells.
+
+### v1 limitations (deliberate)
+- **No artwork**. RemoteViews can't display a network image — it
+  needs an actual `Bitmap`. v2 would pre-fetch the artwork on
+  Dart side, write to a tmp file, then pass the path so Kotlin
+  reads + sets it. Acceptable tradeoff for v1; the launcher
+  icon stands in.
+- **No skip-prev button**. Save horizontal space for title + artist
+  on the standard 4-cell width. Resize the widget wider on a
+  big homescreen if you want one more control.
+- **Single colour scheme**. Background hardcoded `#FF18181B`
+  (matches dark theme) — RemoteViews can't follow Material You
+  / light mode without per-version layout variants.
+
 ## [0.24.1] — 2026-05-25
 
 ### Added (ListenBrainz scrobble — token-based)
