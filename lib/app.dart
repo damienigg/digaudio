@@ -31,6 +31,9 @@ class _DigaudioAppState extends ConsumerState<DigaudioApp> {
       // Periodic Subsonic ping so the offline banner appears / clears
       // without any user action.
       ref.read(serverHealthProvider).start();
+      // Watch BT output device changes — applies per-device EQ
+      // override when a known device becomes active.
+      ref.read(btEqProvider).start();
       // Seed builtin smart playlists once. Once seeded, the flag survives
       // even if the user deletes them all — they stay deleted.
       final sp = await SharedPreferences.getInstance();

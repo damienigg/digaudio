@@ -7,6 +7,28 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.17.3] — 2026-05-25
+
+### Added (Per-Bluetooth-device EQ override)
+- **`BtEqService`** subscribes to `audio_session.devicesChangedEventStream`,
+  detects the active BT output device (A2DP / LE / SCO), and applies
+  a saved per-device EQ profile via `AudioEngine.applyEqGains`. When
+  no override exists for the active BT device (or no BT is active),
+  falls back to the user's default `eqGainsDb`.
+- Storage key per device = `"<name>|<type.name>"` so a wired
+  "speaker" and a BT "speaker" with the same name don't collide.
+  Profiles persist in `SharedPreferences` under `pb.eq.bt.profiles`.
+- **Settings → Playback → Equalizer → Per-Bluetooth-device EQ** card:
+  - Shows the currently-connected BT device (if any)
+  - "Save current EQ" button captures the current sliders as that
+    device's profile
+  - List of every remembered device below, each with a delete button
+
+### Internal
+- The default EQ (sliders + presets) is unchanged — it always writes
+  to `eqGainsDb`. The BT override is a separate layer that kicks in
+  only when the active output matches a saved profile.
+
 ## [0.17.2] — 2026-05-25
 
 ### Added (Replay Gain — volume normalisation)

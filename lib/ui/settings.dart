@@ -734,6 +734,10 @@ class _PlaybackPageState extends ConsumerState<PlaybackPage> {
               enabled: _enabled,
               onChanged: (v) => _setBandGain(i, v),
             ),
+          if (params.bands.isNotEmpty) ...[
+            Divider(height: 32, color: context.dividerSoft),
+            const _BtEqCard(),
+          ],
         ],
       ),
     );
@@ -954,6 +958,108 @@ class _CrossfadePicker extends StatelessWidget {
           ),
         ],
       );
+}
+
+/// Per-Bluetooth-device EQ override. Shows the currently-connected BT
+/// device (if any) + a button to capture the current sliders as that
+/// device's saved profile. Below: list of every remembered device
+/// with a delete button. Auto-applies when a known BT device becomes
+/// the active output (handled by [BtEqService] in app boot).
+class _BtEqCard extends ConsumerStatefulWidget {
+  const _BtEqCard();
+  @override
+  ConsumerState<_BtEqCard> createState() => _BtEqCardState();
+}
+
+class _BtEqCardState extends ConsumerState<_BtEqCard> {
+  Map<String, List<double>> _profiles = const {};
+
+  @override
+  void initState() {
+    super.initState();
+    _refresh();
+  }
+
+  Future<void> _refresh() async {
+    final m = await ref.read(btEqProvider).profiles();
+    if (mounted) setState(() => _profiles = m);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final active = ref.watch(btActiveDeviceProvider).valueOrNull;
+    final prefs = ref.read(playbackPrefsProvider);
+    final entries = _profiles.entries.toList()
+      ..sort((a, b) => a.key.compareTo(b.key));
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Per-Bluetooth-device EQ',
+            style: TextStyle(fontWeight: FontWeight.w700)),
+        const SizedBox(height: 4),
+        Text(
+          'Save a snapshot of the current EQ sliders as the profile for '
+          'a specific BT device. Auto-applied next time that device '
+          'becomes the active output.',
+          style: TextStyle(color: context.textMuted, fontSize: 12),
+        ),
+        const SizedBox(height: 10),
+        if (active != null)
+          Row(
+            children: [
+              const Icon(Icons.bluetooth_audio, size: 16, color: _accent),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(active.split('|').first,
+                    style: const TextStyle(fontWeight: FontWeight.w600)),
+              ),
+              FilledButton.icon(
+                icon: const Icon(Icons.save, size: 16),
+                label: const Text('Save current EQ'),
+                onPressed: () async {
+                  final messenger = ScaffoldMessenger.of(context);
+                  await ref
+                      .read(btEqProvider)
+                      .saveCurrentAs(active, List.of(prefs.eqGainsDb));
+                  await _refresh();
+                  messenger.showSnackBar(SnackBar(
+                      content:
+                          Text('Saved for "${active.split('|').first}"')));
+                },
+              ),
+            ],
+          )
+        else
+          Text('No Bluetooth output active.',
+              style: TextStyle(color: context.textTertiary, fontSize: 12)),
+        if (entries.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Text('Saved profiles',
+              style: TextStyle(
+                  color: context.textTertiary,
+                  fontSize: 11,
+                  letterSpacing: 1.2,
+                  fontWeight: FontWeight.w700)),
+          const SizedBox(height: 4),
+          for (final e in entries)
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+              leading: const Icon(Icons.bluetooth, size: 16),
+              title: Text(e.key.split('|').first,
+                  style: const TextStyle(fontSize: 13)),
+              trailing: IconButton(
+                icon: const Icon(Icons.delete_outline, size: 18),
+                onPressed: () async {
+                  await ref.read(btEqProvider).forget(e.key);
+                  await _refresh();
+                },
+              ),
+            ),
+        ],
+      ],
+    );
+  }
 }
 
 /// Replay Gain mode picker (off / track / album). Server must expose

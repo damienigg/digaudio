@@ -23,6 +23,7 @@ import '../library/track_positions.dart';
 import '../library/wishlist.dart';
 import '../subsonic/client.dart';
 import 'album_mode.dart';
+import 'bt_eq.dart';
 import 'player.dart';
 import 'sleep_timer.dart';
 
@@ -109,6 +110,20 @@ final albumModeProvider = Provider<AlbumModeService>((ref) {
   ref.onDispose(svc.dispose);
   return svc;
 });
+
+final btEqProvider = Provider<BtEqService>((ref) {
+  final svc = BtEqService(
+    ref.watch(audioEngineProvider),
+    () async => ref.read(playbackPrefsProvider).eqGainsDb,
+  );
+  ref.onDispose(svc.stop);
+  return svc;
+});
+
+/// Currently-active BT device key, or null if no BT output. UI uses
+/// this to surface the "save current EQ for this device" button.
+final btActiveDeviceProvider = StreamProvider<String?>((ref) =>
+    ref.watch(btEqProvider).activeKeyStream);
 
 /// True iff "stop after current album" is armed.
 final albumModeArmedProvider = StreamProvider<bool>((ref) =>
