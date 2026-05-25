@@ -13,6 +13,7 @@ import 'ui/playlist_page.dart';
 import 'ui/search.dart';
 import 'ui/settings.dart';
 import 'ui/shell.dart';
+import 'ui/smart_playlist_pages.dart';
 import 'ui/stats_page.dart';
 import 'ui/wishlist_page.dart';
 
@@ -67,6 +68,16 @@ GoRouter buildRouter() => GoRouter(
           path: '/decade/:year',
           builder: (_, s) =>
               DecadePage(decade: int.parse(s.pathParameters['year']!)),
+        ),
+        GoRoute(
+          path: '/playlist/smart/:id',
+          builder: (_, s) => SmartPlaylistViewPage(
+              id: int.parse(s.pathParameters['id']!)),
+        ),
+        GoRoute(
+          path: '/playlist/smart/:id/edit',
+          builder: (_, s) =>
+              SmartPlaylistEditPage(id: s.pathParameters['id']!),
         ),
       ],
     );

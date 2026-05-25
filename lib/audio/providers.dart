@@ -16,6 +16,7 @@ import '../library/local.dart';
 import '../library/play_history.dart';
 import '../library/ratings.dart';
 import '../library/server_health.dart';
+import '../library/smart_playlists.dart';
 import '../library/subsonic_cache.dart';
 import '../library/wishlist.dart';
 import '../subsonic/client.dart';
@@ -166,6 +167,14 @@ final playlistKeysProvider = StreamProvider.family<List<String>, int>((ref, id) 
 
 final wishlistManagerProvider = Provider<WishlistManager>((ref) =>
     WishlistManager(ref.watch(dbProvider)));
+
+final smartPlaylistsProvider = Provider<SmartPlaylistsManager>((ref) =>
+    SmartPlaylistsManager(ref.watch(dbProvider)));
+
+/// Drift-watched list of all smart playlists, sorted by name. Used by
+/// the Library → Playlists tab to render them inline.
+final smartPlaylistsListProvider = StreamProvider<List<SmartPlaylist>>((ref) =>
+    ref.watch(smartPlaylistsProvider).watchAll());
 
 final playHistoryProvider = Provider<PlayHistoryManager>((ref) =>
     PlayHistoryManager(ref.watch(dbProvider)));

@@ -77,6 +77,18 @@ class Wishlist extends Table {
   TextColumn get notes => text().nullable()();
 }
 
+/// Rules-based playlists that materialise on the fly. The user defines
+/// a set of rules (genre = Rock, year between 2000–2010, …); opening
+/// the playlist runs them against `CachedSubsonicSongs` and shows the
+/// matching tracks. Stored as JSON because rule shapes evolve faster
+/// than schemas should.
+class SmartPlaylists extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get name => text()();
+  TextColumn get rulesJson => text()();
+  DateTimeColumn get createdAt => dateTime()();
+}
+
 /// Per-server cache of every song in the Subsonic library — the slim set of
 /// fields the similarity scorer needs, so AutoQueue can pick from the WHOLE
 /// library instead of a 200-song random sample. Built once by syncing the
@@ -108,12 +120,13 @@ class CachedSubsonicSongs extends Table {
   MissingTracks,
   Wishlist,
   CachedSubsonicSongs,
+  SmartPlaylists,
 ])
 class AppDb extends _$AppDb {
   AppDb() : super(_open());
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -137,6 +150,9 @@ class AppDb extends _$AppDb {
             // with the new append-only shape (autoincrement id).
             await customStatement('DROP TABLE IF EXISTS recent_plays');
             await m.createTable(recentPlays);
+          }
+          if (from < 6) {
+            await m.createTable(smartPlaylists);
           }
         },
       );

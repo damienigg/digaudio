@@ -256,6 +256,8 @@ class _PlaylistsTab extends ConsumerWidget {
           onTap: () => context.push('/stats'),
         ),
         Divider(height: 1, color: context.dividerSoft),
+        const _SmartPlaylistsSection(),
+        Divider(height: 1, color: context.dividerSoft),
         _ImportTile(),
         Divider(height: 1, color: context.dividerSoft),
         const _SectionHeader('Local playlists'),
@@ -322,6 +324,48 @@ class _SectionHeader extends StatelessWidget {
         child: Text(text,
             style: TextStyle(color: context.textTertiary, fontSize: 11, letterSpacing: 1.5)),
       );
+}
+
+/// Header row + "New smart playlist" + drift-watched list of existing
+/// smart playlists. Tap a playlist → viewer page. Tap the action chip
+/// → editor in creation mode.
+class _SmartPlaylistsSection extends ConsumerWidget {
+  const _SmartPlaylistsSection();
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final list = ref.watch(smartPlaylistsListProvider);
+    return Column(
+      children: [
+        ListTile(
+          leading: const Icon(Icons.auto_awesome),
+          title: const Text('Smart playlists'),
+          subtitle: const Text('Rules-based — materialise from your library on open'),
+          trailing: TextButton.icon(
+            icon: const Icon(Icons.add, size: 18),
+            label: const Text('New'),
+            onPressed: () => context.push('/playlist/smart/new/edit'),
+          ),
+        ),
+        list.when(
+          loading: () => const SizedBox(height: 8),
+          error: (e, _) => Padding(
+              padding: const EdgeInsets.all(16), child: Text('$e')),
+          data: (items) => items.isEmpty
+              ? const SizedBox()
+              : Column(
+                  children: [
+                    for (final p in items)
+                      ListTile(
+                        leading: const Icon(Icons.filter_alt_outlined),
+                        title: Text(p.name),
+                        onTap: () => context.push('/playlist/smart/${p.id}'),
+                      ),
+                  ],
+                ),
+        ),
+      ],
+    );
+  }
 }
 
 class _ImportTile extends ConsumerWidget {

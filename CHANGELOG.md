@@ -7,6 +7,41 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.15.3] — 2026-05-25
+
+### Added (Smart playlists — combo 1 centerpiece)
+- **Rules-based smart playlists**. Library → Playlists → "Smart
+  playlists" section + "New" button → editor with:
+  - name
+  - match all / any
+  - N rule rows: field (Genre / Artist / Album / Title / Year /
+    Duration) × operator (= ≠ > ≥ < ≤ between contains) × value
+  - order (Random / Year / Title / Artist / Duration) ± direction
+  - limit (1–1000)
+- Opening a smart playlist materialises it on the fly: runs the rules
+  against `CachedSubsonicSongs`, shows the matching tracks with Play
+  all + Shuffle buttons. Refresh + Edit + Delete in AppBar.
+- Rules persisted as JSON in a new drift table (schema v6) so the
+  rule shape can evolve without further migrations.
+
+### Database
+- **Schema v5 → v6** — new `SmartPlaylists` table (id / name /
+  rulesJson / createdAt).
+
+### Internal
+- `SmartPlaylistsManager.executeRules()` builds dynamic SQL with
+  parametrised variables (no string interpolation of user input);
+  bad rules are silently dropped so one malformed entry doesn't tank
+  the whole query.
+- v1 filters Subsonic library cache columns only; joins against
+  favourites / play counts / pinned downloads deferred to v2 to keep
+  the engine small and easy to reason about.
+
+### Notes
+- Requires the Subsonic library cache to be synced (Settings →
+  Playback → Sync library). With an empty cache, all smart playlists
+  return zero tracks.
+
 ## [0.15.2] — 2026-05-25
 
 ### Added (Subsonic radio mode)
