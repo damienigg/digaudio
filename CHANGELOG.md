@@ -7,6 +7,17 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.14.1] — 2026-05-25
+
+### Changed
+- **Auto-queue now maintains a 3-track lookahead** instead of
+  appending a single track at queue-end. Each newly-appended pick is
+  computed off the **last** track in the queue (not the original
+  seed), so the chain stays coherent with the trajectory the user is
+  actually moving through — and the LockCachingAudioSource has time
+  to prefetch + warm the cache before each transition, which matters
+  more now that crossfade exists.
+
 ## [0.14.0] — 2026-05-25
 
 ### Added

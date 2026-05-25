@@ -71,16 +71,34 @@ class AutoQueueService {
     _sub = null;
   }
 
+  /// Lookahead — keep this many tracks queued past the currently-playing
+  /// one. 1 → degrades to the old "append at end" behaviour; 3 gives the
+  /// engine + LockCachingAudioSource time to prefetch + warm the cache
+  /// before each transition, so crossfade has audio ready.
+  static const _lookahead = 3;
+
   Future<void> _onIndexChanged(int? i) async {
     if (!_enabled || i == null) return;
     final queue = _engine.currentQueue;
     if (queue.isEmpty) return;
-    if (i != queue.length - 1) return;
-    final seed = queue[i];
-    final next = await _pickSimilar(seed, queue.map((t) => t.uniqueKey).toSet());
-    if (next == null) return;
-    if (!_autoAppended.add(next.uniqueKey)) return;
-    await _engine.appendToQueue(next);
+    final tail = queue.length - 1 - i; // tracks remaining after current
+    if (tail >= _lookahead) return;
+
+    final needed = _lookahead - tail;
+    final exclude = {...queue.map((t) => t.uniqueKey), ..._autoAppended};
+    // Chain similarity off the LAST track in the queue (most recent
+    // context) so each appended pick stays coherent with the trajectory
+    // the user is actually moving through, not with the seed they
+    // started on N tracks ago.
+    var seed = queue.last;
+    for (var n = 0; n < needed; n++) {
+      final next = await _pickSimilar(seed, exclude);
+      if (next == null) break;
+      exclude.add(next.uniqueKey);
+      _autoAppended.add(next.uniqueKey);
+      await _engine.appendToQueue(next);
+      seed = next;
+    }
   }
 
   /// Public hook for the "suggest next" UI — same logic as auto-queue, just
