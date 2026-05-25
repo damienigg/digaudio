@@ -22,6 +22,11 @@ class SleepTimerService {
   // distinguish "sleep at end of track" from "no timer" since both have a
   // null countdown.
   final _endOfTrackActive = StreamController<bool>.broadcast();
+  // Snapshot of the engine's master volume captured the moment the
+  // fade-out window opens. Restored on pause + on manual cancel so
+  // the next play doesn't start at 0.
+  static const _fadeOutWindowSec = 10;
+  double? _preFadeVolume;
 
   SleepTimerService(this._engine);
 
@@ -41,9 +46,19 @@ class SleepTimerService {
       final r = remaining;
       if (r == null || r.isNegative || r.inSeconds <= 0) {
         _engine.pause();
+        _restoreVolume();
         cancel();
-      } else {
-        _remaining.add(r);
+        return;
+      }
+      _remaining.add(r);
+      // Fade-out window: snapshot the current master volume the
+      // first time we enter the window, then ramp toward 0 each
+      // tick. Restored on pause + on manual cancel so the next
+      // play isn't muted.
+      if (r.inSeconds <= _fadeOutWindowSec) {
+        _preFadeVolume ??= _engine.raw.volume;
+        final ratio = r.inSeconds / _fadeOutWindowSec;
+        _engine.raw.setVolume(ratio * _preFadeVolume!);
       }
     });
     _remaining.add(d);
@@ -66,8 +81,17 @@ class SleepTimerService {
     _timer = null;
     _endOfTrackSub = null;
     _endsAt = null;
+    _restoreVolume();
     _remaining.add(null);
     _endOfTrackActive.add(false);
+  }
+
+  /// If a fade-out was in progress, put the master volume back to its
+  /// pre-fade value. Idempotent — no-op when [_preFadeVolume] is null.
+  void _restoreVolume() {
+    if (_preFadeVolume == null) return;
+    _engine.raw.setVolume(_preFadeVolume!);
+    _preFadeVolume = null;
   }
 
   Future<void> dispose() async {

@@ -7,6 +7,15 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.23.0] — 2026-05-25
+
+### Added (Sleep-timer fade-out)
+- During the last 10 s of a sleep-timer countdown, the engine's
+  master volume ramps from its current value down to 0 (stepped
+  at 1 s — audible but acceptable for a fall-asleep ramp).
+  Snapshot taken when the fade window first opens; restored on
+  pause + on manual cancel so the next play isn't muted.
+
 ## [0.22.2] — 2026-05-25
 
 ### Added (Background download queue + in-app progress)
