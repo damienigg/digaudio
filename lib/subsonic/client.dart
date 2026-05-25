@@ -162,6 +162,13 @@ class SubsonicClient {
     }
   }
 
+  /// 0–5 user rating. `rating: 0` clears any existing rating. Subsonic
+  /// returns standard ok-response — we throw on failure so the UI can
+  /// roll back the optimistic update.
+  Future<void> setRating(String songId, int rating) async {
+    await _get('setRating', {'id': songId, 'rating': '${rating.clamp(0, 5)}'});
+  }
+
   /// Subsonic scrobble. `submission=false` ⇒ "now playing" hint sent at
   /// track start; `submission=true` ⇒ definitive scrobble fired once the
   /// played-duration threshold (Last.fm convention: ≥4 min OR ≥50% of
@@ -220,6 +227,7 @@ class SubsonicClient {
         bitRate: j['bitRate'] as int?,
         contentType: j['contentType'] as String?,
         genre: j['genre'] as String?,
+        userRating: (j['userRating'] as num?)?.toInt(),
         origin: MediaOrigin.subsonic,
       );
 

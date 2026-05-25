@@ -21,6 +21,9 @@ class Track {
   final int? bitRate;
   final String? contentType;
   final String? genre;
+  /// Subsonic user rating (1–5). Null = unrated OR origin doesn't support
+  /// per-track ratings (e.g. local files). UI clears via `setRating(0)`.
+  final int? userRating;
   final MediaOrigin origin;
 
   const Track({
@@ -38,6 +41,7 @@ class Track {
     this.bitRate,
     this.contentType,
     this.genre,
+    this.userRating,
   });
 
   /// Unique key across all origins (collision-free).

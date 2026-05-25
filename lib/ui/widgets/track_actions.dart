@@ -50,6 +50,7 @@ class _TrackActionsSheet extends ConsumerWidget {
                 if (!isFav) await _suggestAfterFav(scaffoldMessenger, ref, track);
               },
             ),
+            if (track.origin == MediaOrigin.subsonic) _RatingRow(track: track),
             ListTile(
               leading: const Icon(Icons.playlist_add),
               title: const Text('Add to playlist'),
@@ -268,6 +269,48 @@ class _DownloadTile extends ConsumerWidget {
           : Text(subtitle, style: const TextStyle(fontSize: 11, color: Colors.white38)),
       enabled: onTap != null,
       onTap: onTap,
+    );
+  }
+}
+
+/// 5-star Subsonic rating. Tapping the current rating clears it (parity
+/// with Substreamer / Symfonium). Optimistic UI — the manager rolls back
+/// on network failure and emits a change so the row redraws to the truth.
+class _RatingRow extends ConsumerWidget {
+  final Track track;
+  const _RatingRow({required this.track});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(ratingsChangesProvider); // rebuild on any rating change
+    final mgr = ref.read(ratingsManagerProvider);
+    final current = mgr.ratingOf(track);
+    return ListTile(
+      leading: Icon(current == 0 ? Icons.star_border : Icons.star,
+          color: current == 0 ? null : const Color(0xFF1ED760)),
+      title: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (var i = 1; i <= 5; i++)
+            IconButton(
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+              icon: Icon(
+                i <= current ? Icons.star : Icons.star_border,
+                color: i <= current ? const Color(0xFF1ED760) : Colors.white60,
+              ),
+              // Tap on the current rating clears it; otherwise sets to i.
+              onPressed: () async {
+                final messenger = ScaffoldMessenger.of(context);
+                try {
+                  await mgr.setRating(track, i == current ? 0 : i);
+                } catch (e) {
+                  messenger.showSnackBar(SnackBar(content: Text('Rating failed: $e')));
+                }
+              },
+            ),
+        ],
+      ),
     );
   }
 }

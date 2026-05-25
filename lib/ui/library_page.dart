@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../audio/providers.dart';
 import 'widgets/album_card.dart';
+import 'widgets/alpha_scroll.dart';
 import 'widgets/artwork.dart';
 import 'widgets/track_tile.dart';
 
@@ -112,24 +113,25 @@ class _ArtistsTab extends ConsumerWidget {
     return state.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(child: Text('$e', style: const TextStyle(color: Colors.redAccent))),
-      data: (artists) => artists.isEmpty
-          ? const _Empty('No artists.')
-          : ListView.separated(
-              itemCount: artists.length,
-              separatorBuilder: (_, __) => const Divider(height: 1, color: Colors.white12),
-              itemBuilder: (_, i) {
-                final a = artists[i];
-                return ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: const Color(0xFF1E1E22),
-                    child: Text(a.name.isNotEmpty ? a.name[0].toUpperCase() : '?'),
-                  ),
-                  title: Text(a.name),
-                  subtitle: a.albumCount != null ? Text('${a.albumCount} albums') : null,
-                  onTap: () => context.push('/artist/${a.origin.name}/${a.id}'),
-                );
-              },
+      data: (artists) {
+        if (artists.isEmpty) return const _Empty('No artists.');
+        // Sort once so the A→Z sidebar lines up; respect locale.
+        final sorted = [...artists]
+          ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+        return AlphaScrollList(
+          items: sorted,
+          labelOf: (a) => a.name,
+          builder: (_, a) => ListTile(
+            leading: CircleAvatar(
+              backgroundColor: const Color(0xFF1E1E22),
+              child: Text(a.name.isNotEmpty ? a.name[0].toUpperCase() : '?'),
             ),
+            title: Text(a.name),
+            subtitle: a.albumCount != null ? Text('${a.albumCount} albums') : null,
+            onTap: () => context.push('/artist/${a.origin.name}/${a.id}'),
+          ),
+        );
+      },
     );
   }
 }

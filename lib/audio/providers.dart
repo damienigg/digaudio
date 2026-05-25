@@ -10,6 +10,7 @@ import '../library/collections.dart';
 import '../library/downloads.dart';
 import '../library/importer.dart';
 import '../library/local.dart';
+import '../library/ratings.dart';
 import '../library/subsonic_cache.dart';
 import '../library/wishlist.dart';
 import '../subsonic/client.dart';
@@ -137,6 +138,17 @@ final playlistKeysProvider = StreamProvider.family<List<String>, int>((ref, id) 
 
 final wishlistManagerProvider = Provider<WishlistManager>((ref) =>
     WishlistManager(ref.watch(dbProvider)));
+
+final ratingsManagerProvider = Provider<RatingsManager>((ref) {
+  final mgr = RatingsManager(() => ref.read(subsonicProvider));
+  ref.onDispose(mgr.dispose);
+  return mgr;
+});
+
+/// Bumps every time a rating changes — UI watches this to redraw stars
+/// without re-fetching the underlying track.
+final ratingsChangesProvider = StreamProvider<void>((ref) =>
+    ref.watch(ratingsManagerProvider).changes);
 
 final wishlistProvider = StreamProvider<List<WishlistData>>((ref) =>
     ref.watch(wishlistManagerProvider).watchAll());

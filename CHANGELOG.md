@@ -7,6 +7,30 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.9.2] — 2026-05-25
+
+### Added (Substreamer parity — batch 2)
+- **5-star ratings.** Track action sheet gains a row of 5 stars for
+  Subsonic-origin tracks. Tap a star to set, tap the current rating to
+  clear. Optimistic UI — the manager rolls the override back on network
+  failure. Ratings sync to the server (`/rest/setRating.view`); local
+  tracks don't show the row (Subsonic-only feature).
+- **Quick-scroll alphabetical sidebar** on the Artists list (Library).
+  Tap or drag the A→Z strip on the right to jump; empty letters
+  gracefully degrade to the next populated one. Items use a fixed
+  `itemExtent: 65` so the jump is O(1).
+
+### Changed
+- `Track` gains a nullable `userRating` (1–5) field; populated by the
+  Subsonic parser. Local tracks always null.
+
+### Internal
+- `lib/library/ratings.dart` — `RatingsManager` with in-memory overrides
+  + change stream (no SQLite mirror; the server response is
+  authoritative on next fetch).
+- `lib/ui/widgets/alpha_scroll.dart` — reusable `AlphaScrollList<T>`.
+  Apply to any list that's long enough to need scanning.
+
 ## [0.9.1] — 2026-05-25
 
 ### Added (Substreamer parity — batch 1)
