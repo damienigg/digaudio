@@ -599,6 +599,25 @@ class _PlaybackPageState extends ConsumerState<PlaybackPage> {
     }
   }
 
+  /// Apply a preset to all bands. Pads/truncates if the preset's length
+  /// doesn't match the device's actual band count (Android usually
+  /// returns 5; some return 10).
+  Future<void> _applyPreset(List<double> presetGains) async {
+    final params = _params!;
+    final gains = List<double>.filled(params.bands.length, 0);
+    for (var i = 0; i < gains.length; i++) {
+      final raw = i < presetGains.length ? presetGains[i] : 0.0;
+      gains[i] = raw.clamp(params.minDecibels, params.maxDecibels).toDouble();
+    }
+    setState(() => _gainsDb = gains);
+    final prefs = ref.read(playbackPrefsProvider);
+    prefs.eqGainsDb = gains;
+    await prefs.save();
+    final engine = ref.read(audioEngineProvider);
+    await engine.applyEqGains(gains);
+    if (!_enabled) await _toggleEnabled(true);
+  }
+
   Future<void> _resetFlat() async {
     final params = _params!;
     final flat = List<double>.filled(params.bands.length, 0);
@@ -687,6 +706,14 @@ class _PlaybackPageState extends ConsumerState<PlaybackPage> {
             value: _enabled,
             onChanged: params.bands.isEmpty ? null : _toggleEnabled,
           ),
+          if (params.bands.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            _EqPresets(
+              enabled: _enabled,
+              bandCount: params.bands.length,
+              onApply: _applyPreset,
+            ),
+          ],
           const SizedBox(height: 8),
           for (var i = 0; i < params.bands.length; i++)
             _BandRow(
@@ -914,6 +941,42 @@ class _CrossfadePicker extends StatelessWidget {
                 ),
             ],
           ),
+        ],
+      );
+}
+
+/// Common 5-band-style presets (centered around 60 / 230 / 910 / 3.6k /
+/// 14k Hz — the typical Android Equalizer layout). On devices with
+/// more or fewer bands, [_applyPreset] pads with 0 or truncates.
+class _EqPresets extends StatelessWidget {
+  final bool enabled;
+  final int bandCount;
+  final ValueChanged<List<double>> onApply;
+  const _EqPresets({
+    required this.enabled,
+    required this.bandCount,
+    required this.onApply,
+  });
+
+  static const _presets = <(String, List<double>)>[
+    ('Flat',        [ 0,  0,  0,  0,  0]),
+    ('Rock',        [ 5,  3, -1,  3,  5]),
+    ('Jazz',        [ 3,  2,  0,  2,  3]),
+    ('Vocal',       [-3, -1,  5,  3,  0]),
+    ('Bass boost',  [ 8,  6,  0,  0,  0]),
+    ('Treble boost',[ 0,  0,  0,  6,  8]),
+  ];
+
+  @override
+  Widget build(BuildContext context) => Wrap(
+        spacing: 8,
+        runSpacing: 4,
+        children: [
+          for (final p in _presets)
+            ActionChip(
+              label: Text(p.$1, style: const TextStyle(fontSize: 12)),
+              onPressed: enabled ? () => onApply(p.$2.map((e) => e.toDouble()).toList()) : null,
+            ),
         ],
       );
 }

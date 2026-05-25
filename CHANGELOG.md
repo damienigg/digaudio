@@ -7,6 +7,19 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.17.0] — 2026-05-25
+
+### Added (EQ presets — category C kickoff)
+- **6 EQ presets** above the band sliders in Settings → Playback →
+  Equalizer: Flat, Rock, Jazz, Vocal, Bass boost, Treble boost.
+  Tap any chip → applies preset gains across all bands + saves to
+  PlaybackPrefs.eqGainsDb + auto-enables the EQ if it was off.
+- Presets target the standard 5-band layout Android Equalizer
+  returns (60 / 230 / 910 / 3.6k / 14k Hz). On devices with more
+  bands the extra ones get 0; on devices with fewer the tail is
+  truncated. Values clamped to `[minDecibels, maxDecibels]` so a
+  device with ±9 dB range doesn't crash on a preset peaking at +8.
+
 ## [0.16.3] — 2026-05-25
 
 ### Added (Bulk select — finishes category A)
