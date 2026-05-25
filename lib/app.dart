@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -35,6 +37,13 @@ class _DigaudioAppState extends ConsumerState<DigaudioApp> {
       // Watch BT output device changes — applies per-device EQ
       // override when a known device becomes active.
       ref.read(btEqProvider).start();
+      // Cache auto-refresh: if the active server's library cache is
+      // older than the user's threshold, kick a re-sync in the
+      // background. Skipped on never-synced caches (initial sync
+      // should be an explicit user choice so they know what they're
+      // getting). Fire-and-forget — no UI block; the existing
+      // sync card in Settings shows progress if the user opens it.
+      _maybeRefreshLibraryCache(prefs.cacheRefreshDays);
       // Seed builtin smart playlists once. Once seeded, the flag survives
       // even if the user deletes them all — they stay deleted.
       final sp = await SharedPreferences.getInstance();
@@ -43,6 +52,26 @@ class _DigaudioAppState extends ConsumerState<DigaudioApp> {
         await sp.setBool('smart.builtins.seeded', true);
       }
     });
+  }
+
+  /// Cache auto-refresh trigger — runs at app boot. No-op when
+  /// [days] ≤ 0 (user disabled), when no active server exists, when
+  /// the cache has never been synced (initial sync should be a
+  /// deliberate user act), or when the cache is fresher than [days].
+  Future<void> _maybeRefreshLibraryCache(int days) async {
+    if (days <= 0) return;
+    final active = await ref.read(settingsStoreProvider).active();
+    if (active == null) return;
+    final cache = ref.read(subsonicCacheProvider);
+    final last = await cache.lastSync(active.id);
+    if (last == null) return;
+    if (DateTime.now().difference(last).inDays < days) return;
+    final client = ref.read(subsonicProvider);
+    if (client == null) return;
+    // Fire-and-forget. The existing _SubsonicCacheCard in Settings
+    // shows progress + cancel if the user opens that page while the
+    // rebuild runs.
+    unawaited(cache.rebuild(client, active.id));
   }
 
   @override

@@ -665,6 +665,13 @@ class _PlaybackPageState extends ConsumerState<PlaybackPage> {
             total: _syncTotal,
             onSync: _syncLibrary,
             onCancel: () => setState(() => _cancelSync = true),
+            refreshDays: ref.watch(playbackPrefsProvider).cacheRefreshDays,
+            onSetRefreshDays: (d) async {
+              final prefs = ref.read(playbackPrefsProvider);
+              prefs.cacheRefreshDays = d;
+              await prefs.save();
+              setState(() {});
+            },
           ),
           Divider(height: 32, color: context.dividerSoft),
           _StorageCard(
@@ -785,6 +792,8 @@ class _SubsonicCacheCard extends StatelessWidget {
   final int total;
   final VoidCallback onSync;
   final VoidCallback onCancel;
+  final int refreshDays;
+  final ValueChanged<int> onSetRefreshDays;
   const _SubsonicCacheCard({
     required this.cachedCount,
     required this.lastSync,
@@ -793,6 +802,8 @@ class _SubsonicCacheCard extends StatelessWidget {
     required this.total,
     required this.onSync,
     required this.onCancel,
+    required this.refreshDays,
+    required this.onSetRefreshDays,
   });
 
   @override
@@ -831,6 +842,28 @@ class _SubsonicCacheCard extends StatelessWidget {
             const SizedBox(width: 12),
             if (syncing)
               TextButton(onPressed: onCancel, child: const Text('Cancel')),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Text('Auto-refresh',
+                style: TextStyle(color: context.textTertiary, fontSize: 12)),
+            const Spacer(),
+            DropdownButton<int>(
+              value: const [0, 1, 3, 7, 14, 30].contains(refreshDays)
+                  ? refreshDays
+                  : 7,
+              items: const [
+                DropdownMenuItem(value: 0, child: Text('Off')),
+                DropdownMenuItem(value: 1, child: Text('Daily')),
+                DropdownMenuItem(value: 3, child: Text('Every 3 days')),
+                DropdownMenuItem(value: 7, child: Text('Weekly')),
+                DropdownMenuItem(value: 14, child: Text('Every 2 weeks')),
+                DropdownMenuItem(value: 30, child: Text('Monthly')),
+              ],
+              onChanged: (v) { if (v != null) onSetRefreshDays(v); },
+            ),
           ],
         ),
       ],

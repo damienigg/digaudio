@@ -16,6 +16,7 @@ class PlaybackPrefs {
   static const _kCrossfadeMs = 'pb.crossfade.ms';
   static const _kRgMode = 'pb.rg.mode';
   static const _kAutoPlayBt = 'pb.autoplay.bt';
+  static const _kCacheRefreshDays = 'pb.cache.refresh_days';
 
   /// Default cap for the auto-cache pool. Pinned downloads don't count against
   /// it. 2 GB matches what Spotify ships and survives a long road trip without
@@ -65,6 +66,12 @@ class PlaybackPrefs {
   /// putting headphones on.
   bool autoPlayOnBtConnect = false;
 
+  /// On app boot, if the active server's library cache is older than
+  /// this many days, kick off a background re-sync. 0 = disabled
+  /// (manual-only). Default 7 d — keeps newly-added albums searchable
+  /// without the user having to remember to tap "Sync".
+  int cacheRefreshDays = 7;
+
   Future<void> load() async {
     final p = await SharedPreferences.getInstance();
     eqEnabled = p.getBool(_kEqEnabled) ?? false;
@@ -75,6 +82,7 @@ class PlaybackPrefs {
     crossfadeMs = p.getInt(_kCrossfadeMs) ?? 0;
     rgMode = p.getString(_kRgMode) ?? 'off';
     autoPlayOnBtConnect = p.getBool(_kAutoPlayBt) ?? false;
+    cacheRefreshDays = p.getInt(_kCacheRefreshDays) ?? 7;
     final raw = p.getString(_kEqGains);
     if (raw != null && raw.isNotEmpty) {
       eqGainsDb = (jsonDecode(raw) as List).map((e) => (e as num).toDouble()).toList();
@@ -91,6 +99,7 @@ class PlaybackPrefs {
     await p.setInt(_kCrossfadeMs, crossfadeMs);
     await p.setString(_kRgMode, rgMode);
     await p.setBool(_kAutoPlayBt, autoPlayOnBtConnect);
+    await p.setInt(_kCacheRefreshDays, cacheRefreshDays);
     await p.setString(_kEqGains, jsonEncode(eqGainsDb));
   }
 }

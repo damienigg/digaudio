@@ -7,6 +7,21 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.22.0] — 2026-05-25
+
+### Added (Subsonic library cache auto-refresh)
+- `PlaybackPrefs.cacheRefreshDays` (default 7). On app boot, if
+  the active server's library cache is older than this many days,
+  the engine kicks a background `rebuild()` — no UI block, no
+  user action required. Skipped on never-synced caches (initial
+  sync should be deliberate so the user knows what they're
+  getting) and when `cacheRefreshDays == 0` (off).
+- **Settings → Playback → Subsonic library cache → Auto-refresh**
+  dropdown: Off / Daily / Every 3 days / Weekly / Every 2 weeks /
+  Monthly. The existing `_SubsonicCacheCard` shows progress + a
+  Cancel button if the user opens that page while the background
+  rebuild is running.
+
 ## [0.21.2] — 2026-05-25
 
 ### Changed (select-mode polish)
