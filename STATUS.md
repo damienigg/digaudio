@@ -1,4 +1,4 @@
-# digaudio — STATUS (v0.18.0, 2026-05-25)
+# digaudio — STATUS (v0.19.0, 2026-05-25)
 
 Three things in one document:
 
@@ -6,12 +6,13 @@ Three things in one document:
 2. **User test plan** — a checklist a human can run through on a real phone to verify each shipped feature.
 3. **Next horizons** — what we could still add to make this the ultimate Android music player. Prioritised by impact × effort.
 
-> Refresh history: v0.14.2 → v0.18.0 (14 releases). Combo-1
-> recommendation engine, smart playlists, smart mixes, Subsonic radio,
-> Genre/Decade browsers, On-this-day, Year-by-year, queue editor, album
-> mode, per-track resume, Up Next strip, Now Playing colour tint, bulk
+> Refresh history: v0.14.2 → v0.19.0 (15 releases). Combo-1
+> recommendation engine **fully complete** (FTS landed in v0.19.0).
+> Plus smart playlists, smart mixes, Subsonic radio, Genre/Decade
+> browsers, On-this-day, Year-by-year, queue editor, album mode,
+> per-track resume, Up Next strip, Now Playing colour tint, bulk
 > select, EQ presets, gapless confirmation, Replay Gain, per-BT EQ,
-> **true crossfade with two-player engine refactor**. Reflected throughout.
+> true crossfade with two-player engine refactor. Reflected throughout.
 
 ---
 
@@ -59,7 +60,7 @@ Three things in one document:
 |---|---|
 | Home — newest releases + random picks | Home tab |
 | Brand hero (icon + tagline) | Top of Home |
-| Search w/ pagination ("Show more" per category) | Search tab |
+| Search w/ pagination ("Show more" per category) — **FTS-first** (instant, accent-insensitive, prefix match) | Search tab |
 | Library tracks / albums / artists / **genres / decades** / playlists | Library tab → 6 sub-tabs |
 | Alphabetical quick-scroll | Library → Artists (right edge) |
 | **Genre / Decade pages** with Play all + Shuffle header | Library → Genres / Decades → tap an entry |
@@ -97,11 +98,15 @@ Three things in one document:
   - X cancels
 - Selection is **global** — long-press in Library, navigate to Search, add more, act on the union.
 
-### Recommendation engine — **combo 1 complete**
+### Recommendation engine — **combo 1 complete (4/4)**
 - **Metadata score** (artist +10, album +5, genre +6, year ±5 +3, duration ±60 s +1).
 - **Last.fm `track.getSimilar` ranker** (+12 max if key baked at build time).
 - **Subsonic radio mode** — server-side `getSimilarSongs2`; "Start radio" action in track sheet seeds the queue with 30 similar.
 - **Smart playlists** — rules-based materialisation (filters on cached Subsonic library: genre / year / artist / album / title / duration; ops eq / neq / gt / gte / lt / lte / between / contains; match all/any; order random / year / title / artist / duration; limit 1–1000).
+- **Library FTS** (v0.19.0) — drift FTS5 virtual table shadowing the
+  Subsonic library cache, accent-insensitive, prefix-AND matching;
+  Search page is FTS-first (instant) + Subsonic search3 in parallel
+  for newly-added server tracks, merged & deduped.
 - Auto-queue lookahead 3 tracks ahead of current, chains off the **last** track in the queue.
 - "Suggested next" hint after favoriting.
 
@@ -360,16 +365,15 @@ All 7 items shipped. Smart playlists is the centerpiece; 4 builtins seeded.
 - **Now-Playing share sheet** *(S)*  
   Share what you're listening to as a rich card (artwork + title + artist + deep-link to Subsonic if any).
 
-### F · Library management (0/5 shipped)
+### F · Library management (1/5 shipped — FTS done)
 
+- ~~**Library FTS (full-text search)**~~ — **DONE v0.19.0** (drift fts5 virtual table, accent-insensitive, prefix-AND, search-page is FTS-first + remote-merge)
 - **Subsonic library cache auto-refresh** *(S)*  
   Today you have to tap "Sync" manually. Add a "refresh every N days" or "refresh on app start if >7d old".
 - **Multi-server unified search** *(M)*  
   Today Search hits the active server only. Could fan-out across all configured servers + dedupe.
 - **Background download queue** *(M)*  
   Today a download is foreground — if you back out of the app it continues but no visible progress. Add a system notification with progress + cancel.
-- **Library FTS (full-text search)** *(M)*  
-  Drift's `Fts5` virtual table on cached song titles + artists + albums. Search becomes instant, with diacritic folding (already half-built for the playlist importer).
 - **"Recently added" on Home** *(S)*  
   Newest-N albums added to the server (Subsonic supports `type=recent` on `getAlbumList2`).
 
@@ -404,7 +408,7 @@ All 7 items shipped. Smart playlists is the centerpiece; 4 builtins seeded.
 ### I · Strategic combos — the "ultimate" leverage points
 
 1. **Recommendation engine** = Last.fm × library FTS × smart playlists × Subsonic radio.  
-   **3/4 done** (Last.fm, smart playlists, Subsonic radio). Adding **library FTS** would let the user write smart-playlist rules with free-text search (e.g. "title contains 'remix' AND year > 2020"). Highest-value remaining single addition.
+   **4/4 done ✓** (FTS landed v0.19.0). Combo finished. A follow-up to extend Smart Playlists v2 with FTS-backed text filters would let rules say "title contains 'remix' AND year > 2020" — listed in section H.
 2. **Pro-listener** = Replay Gain × true crossfade × EQ presets × per-BT-device EQ × FLAC-confirmed × wired-DAC fidelity.  
    **4/6 done** — Replay Gain, true crossfade (overlap, v0.18.0), EQ presets, per-BT EQ all shipped. Remaining: FLAC end-to-end verification (codec + sample-rate display, probably free), wired-DAC fidelity confirmation (probably free via Android system audio).
 3. **Friend-share** = ListenBrainz × listening parties × Now-Playing share × wishlist webhook.  
@@ -412,26 +416,43 @@ All 7 items shipped. Smart playlists is the centerpiece; 4 builtins seeded.
 4. **Daily driver** = Quick Settings tile × homescreen widget × Wear OS × Auto-play on BT × Per-track resume.  
    **1/5 done** (per-track resume). Quick Settings tile + auto-play on BT is the quickest win.
 
-**Next single 10× leap from here**: combo 1 finalisation = **library FTS** (M). Unlocks free-text smart-playlist rules ("title contains 'remix'") + instant search. Smaller than combo 4 (platform integration) and combo 3 (social), bigger impact than the long-tail polish in section G.
+**Next single 10× leap from here** (now that combo 1 is done):
+**Daily-driver batch** (combo 4) — Quick Settings tile + Auto-play
+on BT + headphone-removal verify + Material You. Most of these are
+small individually but together they make the app feel like a
+first-class Android citizen instead of a "music app". Quick
+Settings tile alone is the most-used Android control surface most
+people barely realise exists.
 
 ---
 
 ## Versioning
 
-Latest released: **v0.18.0** (TRUE crossfade — two-player engine refactor).
+Latest released: **v0.19.0** (Library FTS — combo 1 finalised).
 
-Categories A, B, C are **DONE**. Combo 1 + 2 are essentially complete (3/4 and 4/6 — remaining items are minor or "verify only"). What's left, in roughly increasing order of effort × decreasing certainty of impact:
+Categories A, B, C are **DONE**. Combo 1 is **complete (4/4)**.
+Combo 2 (Pro-listener) is 4/6 — remaining items are "verify only"
+on real devices. What's left, in roughly increasing order of effort
+× decreasing certainty of impact:
 
-- **v0.19.x — Library management** (combo 1 finalisation + browse polish)  
-  FTS + cache auto-refresh + multi-server search + "Recently added" + background download queue.
+- **v0.19.x — Library management cleanup** (3 small items remaining)  
+  Cache auto-refresh, multi-server unified search, "Recently added"
+  on Home, background download queue with system notification.
 - **v0.20.x — Daily-driver batch** (combo 4)  
-  Quick Settings tile + Auto-play on BT + headphone-removal verify + Material You dynamic colour.
+  Quick Settings tile + Auto-play on BT + headphone-removal verify +
+  Material You dynamic colour.
 - **v0.21.x — Smart playlists v2** (joins for the rules engine)  
-  Add `favourite`, `playCount30d`, `lastPlayedDaysAgo`, `pinned`, `cached`, `rating` to the rule fields. Unlocks "real" Discover / Throwback / etc. smart mixes.
-- **v0.22.x — Long-tail polish** (i18n, accessibility, sleep-timer fade-out, notification rich actions)
-- **v0.23.x — Friend-share batch** (combo 3 — ListenBrainz + Now-Playing share)  
-  Listening parties / wishlist webhook deferred until a real use case emerges.
+  Add `favourite`, `playCount30d`, `lastPlayedDaysAgo`, `pinned`,
+  `cached`, `rating` to the rule fields. Unlocks "real" Discover /
+  Throwback / etc. smart mixes.
+- **v0.22.x — Long-tail polish** (i18n, accessibility, sleep-timer
+  fade-out, notification rich actions, Subsonic radio auto-refill)
+- **v0.23.x — Friend-share batch** (combo 3 — ListenBrainz +
+  Now-Playing share)  
+  Listening parties / wishlist webhook deferred until a real use
+  case emerges.
 - **v0.24.x — Wear OS + homescreen widget** (combo 4 finishers)
-- **v1.0.0** — first "release" milestone after a real-device validation pass on all features
+- **v1.0.0** — first "release" milestone after a real-device
+  validation pass on all features
 
 `flutter_launcher_icons` regeneration + build_runner stay required after schema bumps — same workflow as today.
