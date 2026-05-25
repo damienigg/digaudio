@@ -10,6 +10,13 @@ class PlaybackPrefs {
   static const _kEqEnabled = 'pb.eq.enabled';
   static const _kEqGains = 'pb.eq.gains.json';
   static const _kAutoQueue = 'pb.autoqueue.enabled';
+  static const _kAutoCache = 'pb.autocache.enabled';
+  static const _kCacheMaxBytes = 'pb.cache.max_bytes';
+
+  /// Default cap for the auto-cache pool. Pinned downloads don't count against
+  /// it. 2 GB matches what Spotify ships and survives a long road trip without
+  /// thrashing the LRU. Adjustable from Settings → Playback.
+  static const defaultCacheMaxBytes = 2 * 1024 * 1024 * 1024;
 
   bool eqEnabled = false;
 
@@ -22,10 +29,20 @@ class PlaybackPrefs {
   /// the library (same algorithm as the "Suggested next" hint).
   bool autoQueueEnabled = true;
 
+  /// Stream each played Subsonic track straight into the local cache so the
+  /// next listen is offline-instant. LRU-evicted by [cacheMaxBytes]; pinned
+  /// downloads are never touched.
+  bool autoCacheEnabled = true;
+
+  /// Hard cap on the auto-cache pool (bytes). Pinned downloads excluded.
+  int cacheMaxBytes = defaultCacheMaxBytes;
+
   Future<void> load() async {
     final p = await SharedPreferences.getInstance();
     eqEnabled = p.getBool(_kEqEnabled) ?? false;
     autoQueueEnabled = p.getBool(_kAutoQueue) ?? true;
+    autoCacheEnabled = p.getBool(_kAutoCache) ?? true;
+    cacheMaxBytes = p.getInt(_kCacheMaxBytes) ?? defaultCacheMaxBytes;
     final raw = p.getString(_kEqGains);
     if (raw != null && raw.isNotEmpty) {
       eqGainsDb = (jsonDecode(raw) as List).map((e) => (e as num).toDouble()).toList();
@@ -36,6 +53,8 @@ class PlaybackPrefs {
     final p = await SharedPreferences.getInstance();
     await p.setBool(_kEqEnabled, eqEnabled);
     await p.setBool(_kAutoQueue, autoQueueEnabled);
+    await p.setBool(_kAutoCache, autoCacheEnabled);
+    await p.setInt(_kCacheMaxBytes, cacheMaxBytes);
     await p.setString(_kEqGains, jsonEncode(eqGainsDb));
   }
 }

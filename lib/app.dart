@@ -22,11 +22,14 @@ class _DigaudioAppState extends ConsumerState<DigaudioApp> {
     // attaches the effect to the active audio session), but we restore the
     // saved enabled-state + gains here so the first track honours them.
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final engine = ref.read(audioEngineProvider);
-      await engine.init();
+      // Order matters: the engine resolves cache paths + reads
+      // autoCacheEnabled at source-build time, so DownloadsManager.hydrate()
+      // and PlaybackPrefs.load() must complete before any track plays.
       await ref.read(downloadsProvider).hydrate();
       final prefs = ref.read(playbackPrefsProvider);
       await prefs.load();
+      final engine = ref.read(audioEngineProvider);
+      await engine.init();
       await engine.setEqEnabled(prefs.eqEnabled);
       if (prefs.eqGainsDb.isNotEmpty) {
         await engine.applyEqGains(prefs.eqGainsDb);

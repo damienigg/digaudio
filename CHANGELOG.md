@@ -7,6 +7,44 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.9.0] — 2026-05-25
+
+### Added
+- **Auto-cache on play.** Every Subsonic stream is teed straight into the
+  on-disk pool as it plays (via just_audio's `LockCachingAudioSource`), so
+  the next listen is offline-instant — no separate download step, no
+  doubled bandwidth (one network roundtrip serves both playback and the
+  cache write). The pool is LRU-evicted under a user-configurable
+  budget; pinned downloads are immune.
+- **Unified storage model.** Explicit downloads and auto-cache live in the
+  same on-disk pool: `pinned` distinguishes the two. Pinned rows are
+  never evicted; everything else competes for space by `lastAccessedAt`.
+- **Storage settings** (Settings → Playback → Storage). Toggle auto-cache,
+  pick the budget (512 MB → 20 GB), watch current usage, clear the
+  auto-cache without losing pinned downloads.
+- **Cache badge on track tiles.** Green check = pinned. Grey check =
+  auto-cached. None = not on disk yet.
+- **Three-state download action** in the track sheet:
+  uncached → "Download for offline" (fetch + pin);
+  auto-cached → "Keep download" (pin existing file, no network);
+  pinned → "Remove download".
+
+### Changed
+- **AudioEngine** constructor now takes `DownloadsManager` + `PlaybackPrefs`
+  directly (was: two narrow callbacks). The wider surface is justified
+  by source-build needing both the cache target path and the live
+  auto-cache toggle; the narrower call sites went away with the cleanup.
+- **App init order.** `DownloadsManager.hydrate()` and `PlaybackPrefs.load()`
+  now complete *before* `AudioEngine.init()` — the engine reads cache
+  paths and `autoCacheEnabled` at source-build time, so the earlier
+  ordering was racy under fast first-play.
+
+### Database
+- **Schema v3 → v4.** `Downloads` gets `pinned BOOL` (default false) and
+  `lastAccessedAt DATETIME`. Existing rows are migrated as
+  `pinned = TRUE` to preserve user intent (every pre-v4 row came from an
+  explicit user download).
+
 ## [0.8.3] — 2026-05-24
 
 ### Removed

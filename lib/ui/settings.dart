@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:just_audio/just_audio.dart';
 
 import '../audio/providers.dart';
+import '../core/playback_prefs.dart';
 import '../core/settings.dart';
 
 /// Top-level Settings hub. Subpages handle the actual configuration.
@@ -26,7 +27,7 @@ class SettingsPage extends StatelessWidget {
             ListTile(
               leading: const Icon(Icons.equalizer),
               title: const Text('Playback'),
-              subtitle: const Text('Equalizer'),
+              subtitle: const Text('Storage · auto-queue · equalizer'),
               trailing: const Icon(Icons.chevron_right, color: Colors.white38),
               onTap: () => context.push('/settings/playback'),
             ),
@@ -347,6 +348,10 @@ class _PlaybackPageState extends ConsumerState<PlaybackPage> {
   int _syncDone = 0;
   int _syncTotal = 0;
   bool _cancelSync = false;
+  int _autoBytes = 0;
+  int _pinnedBytes = 0;
+  bool _autoCacheEnabled = true;
+  int _cacheMaxBytes = PlaybackPrefs.defaultCacheMaxBytes;
 
   @override
   void initState() {
@@ -364,12 +369,57 @@ class _PlaybackPageState extends ConsumerState<PlaybackPage> {
       stored.add(0);
     }
     await _refreshCacheStatus();
+    await _refreshStorage();
     setState(() {
       _params = params;
       _enabled = prefs.eqEnabled;
       _gainsDb = stored;
       _ready = true;
     });
+  }
+
+  Future<void> _refreshStorage() async {
+    final cache = ref.read(downloadsProvider);
+    _autoBytes = await cache.autoCacheBytes();
+    _pinnedBytes = await cache.pinnedBytes();
+    final prefs = ref.read(playbackPrefsProvider);
+    _autoCacheEnabled = prefs.autoCacheEnabled;
+    _cacheMaxBytes = prefs.cacheMaxBytes;
+  }
+
+  Future<void> _toggleAutoCache(bool v) async {
+    final prefs = ref.read(playbackPrefsProvider);
+    prefs.autoCacheEnabled = v;
+    await prefs.save();
+    setState(() => _autoCacheEnabled = v);
+  }
+
+  Future<void> _setCacheMax(int bytes) async {
+    final prefs = ref.read(playbackPrefsProvider);
+    prefs.cacheMaxBytes = bytes;
+    await prefs.save();
+    // Shrinking the budget evicts immediately so the user sees the impact.
+    await ref.read(downloadsProvider).evictTo(bytes);
+    await _refreshStorage();
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _clearAutoCache() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Clear auto-cache?'),
+        content: const Text('Removes every auto-cached track. Pinned downloads stay.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Clear')),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    await ref.read(downloadsProvider).clearAuto();
+    await _refreshStorage();
+    if (mounted) setState(() {});
   }
 
   Future<void> _refreshCacheStatus() async {
@@ -476,6 +526,16 @@ class _PlaybackPageState extends ConsumerState<PlaybackPage> {
             total: _syncTotal,
             onSync: _syncLibrary,
             onCancel: () => setState(() => _cancelSync = true),
+          ),
+          const Divider(height: 32, color: Colors.white12),
+          _StorageCard(
+            enabled: _autoCacheEnabled,
+            autoBytes: _autoBytes,
+            pinnedBytes: _pinnedBytes,
+            maxBytes: _cacheMaxBytes,
+            onToggleAuto: _toggleAutoCache,
+            onSetMax: _setCacheMax,
+            onClear: _clearAutoCache,
           ),
           const Divider(height: 32, color: Colors.white12),
           SwitchListTile.adaptive(
@@ -592,6 +652,102 @@ class _SubsonicCacheCard extends StatelessWidget {
     if (d.inMinutes < 60) return '${d.inMinutes} min ago';
     if (d.inHours < 24) return '${d.inHours} h ago';
     return '${d.inDays} d ago';
+  }
+}
+
+/// Storage / auto-cache controls. Reads usage from [DownloadsManager],
+/// writes the toggle + budget to [PlaybackPrefs]. The progress bar
+/// visualises auto-cache pool occupancy; pinned downloads are reported
+/// separately because they don't count against the budget.
+class _StorageCard extends StatelessWidget {
+  final bool enabled;
+  final int autoBytes;
+  final int pinnedBytes;
+  final int maxBytes;
+  final ValueChanged<bool> onToggleAuto;
+  final ValueChanged<int> onSetMax;
+  final VoidCallback onClear;
+  const _StorageCard({
+    required this.enabled,
+    required this.autoBytes,
+    required this.pinnedBytes,
+    required this.maxBytes,
+    required this.onToggleAuto,
+    required this.onSetMax,
+    required this.onClear,
+  });
+
+  // Round, human-meaningful stops. Linear-in-GB beyond 1 GB.
+  static const _maxOptions = <int>[
+    536870912,   // 512 MB
+    1073741824,  // 1 GB
+    2147483648,  // 2 GB
+    5368709120,  // 5 GB
+    10737418240, // 10 GB
+    21474836480, // 20 GB
+  ];
+
+  static String _fmt(int b) {
+    if (b >= 1024 * 1024 * 1024) {
+      final gb = b / 1024 / 1024 / 1024;
+      return gb >= 10 ? '${gb.toStringAsFixed(0)} GB' : '${gb.toStringAsFixed(gb == gb.truncateToDouble() ? 0 : 1)} GB';
+    }
+    return '${(b / 1024 / 1024).round()} MB';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final filled = maxBytes <= 0 ? 0.0 : (autoBytes / maxBytes).clamp(0.0, 1.0);
+    final dropdownValue = _maxOptions.contains(maxBytes)
+        ? maxBytes
+        : _maxOptions.firstWhere((o) => o >= maxBytes, orElse: () => _maxOptions.last);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Storage', style: TextStyle(fontWeight: FontWeight.w700)),
+        const SizedBox(height: 4),
+        const Text(
+          'Anything you play is written to the on-disk pool so the next '
+          'listen is offline-instant. The pool is LRU-evicted — pinned '
+          'downloads are never touched.',
+          style: TextStyle(color: Colors.white54, fontSize: 12),
+        ),
+        SwitchListTile.adaptive(
+          contentPadding: EdgeInsets.zero,
+          title: const Text('Auto-cache on play'),
+          value: enabled,
+          onChanged: onToggleAuto,
+        ),
+        Row(
+          children: [
+            const Text('Max cache size',
+                style: TextStyle(color: Colors.white70, fontSize: 12)),
+            const Spacer(),
+            DropdownButton<int>(
+              value: dropdownValue,
+              items: _maxOptions
+                  .map((b) => DropdownMenuItem(value: b, child: Text(_fmt(b))))
+                  .toList(),
+              onChanged: (v) { if (v != null) onSetMax(v); },
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        LinearProgressIndicator(value: filled),
+        const SizedBox(height: 6),
+        Text(
+          '${_fmt(autoBytes)} cached / ${_fmt(maxBytes)} max'
+          '${pinnedBytes > 0 ? '   ·   ${_fmt(pinnedBytes)} pinned' : ''}',
+          style: const TextStyle(color: Colors.white60, fontSize: 11),
+        ),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          onPressed: autoBytes > 0 ? onClear : null,
+          icon: const Icon(Icons.delete_sweep_outlined),
+          label: const Text('Clear auto-cache'),
+        ),
+      ],
+    );
   }
 }
 

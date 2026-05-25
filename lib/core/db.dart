@@ -7,11 +7,17 @@ import 'package:path_provider/path_provider.dart';
 
 part 'db.g.dart';
 
+/// Unified on-disk media pool: explicit user downloads AND play-through
+/// auto-cache live in the same table. `pinned` distinguishes them — pinned
+/// rows are kept forever, non-pinned rows are LRU-evicted by
+/// `lastAccessedAt` once total size exceeds the user's cache budget.
 class Downloads extends Table {
   TextColumn get trackKey => text()(); // origin:id
   TextColumn get filePath => text()();
   IntColumn get sizeBytes => integer().withDefault(const Constant(0))();
   DateTimeColumn get completedAt => dateTime().nullable()();
+  BoolColumn get pinned => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get lastAccessedAt => dateTime().nullable()();
   @override
   Set<Column> get primaryKey => {trackKey};
 }
@@ -104,7 +110,7 @@ class AppDb extends _$AppDb {
   AppDb() : super(_open());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -116,6 +122,12 @@ class AppDb extends _$AppDb {
           }
           if (from < 3) {
             await m.createTable(cachedSubsonicSongs);
+          }
+          if (from < 4) {
+            await m.addColumn(downloads, downloads.pinned);
+            await m.addColumn(downloads, downloads.lastAccessedAt);
+            // Pre-v4 rows were all user-initiated downloads → preserve intent.
+            await customStatement('UPDATE downloads SET pinned = 1');
           }
         },
       );

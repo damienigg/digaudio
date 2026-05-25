@@ -3,8 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../audio/providers.dart';
 import '../../domain.dart';
-import '../../library/downloads.dart';
-import '../../subsonic/client.dart';
 import 'artwork.dart';
 
 /// Bottom sheet with the per-track actions: favorites, playlists, queue ops.
@@ -76,12 +74,7 @@ class _TrackActionsSheet extends ConsumerWidget {
                 engine.appendToQueue(track);
               },
             ),
-            if (track.origin == MediaOrigin.subsonic)
-              _DownloadTile(
-                track: track,
-                downloads: ref.read(downloadsProvider),
-                subsonic: ref.read(subsonicProvider),
-              ),
+            if (track.origin == MediaOrigin.subsonic) _DownloadTile(track: track),
           ],
         ),
       ),
@@ -203,44 +196,78 @@ Future<String?> _askName(BuildContext context) async {
   return (ok == true) ? c.text.trim() : null;
 }
 
-class _DownloadTile extends StatelessWidget {
+/// Three states, three actions:
+///   - uncached            → "Download for offline" (fetch + pin)
+///   - auto-cached (false) → "Keep download" (pin existing file, no network)
+///   - pinned    (true)    → "Remove download" (delete file + row)
+class _DownloadTile extends ConsumerWidget {
   final Track track;
-  final DownloadsManager downloads;
-  final SubsonicClient? subsonic;
-  const _DownloadTile({required this.track, required this.downloads, required this.subsonic});
+  const _DownloadTile({required this.track});
 
   @override
-  Widget build(BuildContext context) {
-    final cached = downloads.cachedPathFor(track) != null;
-    return ListTile(
-      leading: Icon(cached ? Icons.download_done : Icons.download_for_offline),
-      title: Text(cached ? 'Remove download' : 'Download for offline'),
-      subtitle: subsonic == null && !cached
-          ? const Text('No active server', style: TextStyle(fontSize: 11, color: Colors.white38))
-          : null,
-      enabled: cached || subsonic != null,
-      onTap: () async {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final downloads = ref.read(downloadsProvider);
+    final subsonic = ref.watch(subsonicProvider);
+    final state = ref.watch(cacheStateProvider).valueOrNull ?? const {};
+    final pinned = state[track.uniqueKey]; // null | false | true
+
+    late final IconData icon;
+    late final String label;
+    String? subtitle;
+    VoidCallback? onTap;
+
+    if (pinned == true) {
+      icon = Icons.download_done;
+      label = 'Remove download';
+      onTap = () async {
         final messenger = ScaffoldMessenger.of(context);
         Navigator.pop(context);
-        if (cached) {
-          await downloads.remove(track);
-          messenger.showSnackBar(const SnackBar(content: Text('Download removed')));
-          return;
-        }
-        if (subsonic == null) return;
-        messenger.showSnackBar(SnackBar(
-          content: Text('Downloading "${track.title}"…'),
-          duration: const Duration(minutes: 5),
-        ));
-        try {
-          await downloads.download(track, subsonic!);
-          messenger.hideCurrentSnackBar();
-          messenger.showSnackBar(SnackBar(content: Text('Downloaded "${track.title}"')));
-        } catch (e) {
-          messenger.hideCurrentSnackBar();
-          messenger.showSnackBar(SnackBar(content: Text('Download failed: $e')));
-        }
-      },
+        await downloads.remove(track);
+        messenger.showSnackBar(const SnackBar(content: Text('Download removed')));
+      };
+    } else if (pinned == false) {
+      icon = Icons.push_pin_outlined;
+      label = 'Keep download';
+      subtitle = 'Already cached — pin to protect from auto-eviction.';
+      onTap = () async {
+        final messenger = ScaffoldMessenger.of(context);
+        Navigator.pop(context);
+        await downloads.pin(track);
+        messenger.showSnackBar(const SnackBar(content: Text('Pinned')));
+      };
+    } else {
+      icon = Icons.download_for_offline;
+      label = 'Download for offline';
+      if (subsonic == null) {
+        subtitle = 'No active server';
+      } else {
+        onTap = () async {
+          final messenger = ScaffoldMessenger.of(context);
+          Navigator.pop(context);
+          messenger.showSnackBar(SnackBar(
+            content: Text('Downloading "${track.title}"…'),
+            duration: const Duration(minutes: 5),
+          ));
+          try {
+            await downloads.download(track, subsonic);
+            messenger.hideCurrentSnackBar();
+            messenger.showSnackBar(SnackBar(content: Text('Downloaded "${track.title}"')));
+          } catch (e) {
+            messenger.hideCurrentSnackBar();
+            messenger.showSnackBar(SnackBar(content: Text('Download failed: $e')));
+          }
+        };
+      }
+    }
+
+    return ListTile(
+      leading: Icon(icon),
+      title: Text(label),
+      subtitle: subtitle == null
+          ? null
+          : Text(subtitle, style: const TextStyle(fontSize: 11, color: Colors.white38)),
+      enabled: onTap != null,
+      onTap: onTap,
     );
   }
 }

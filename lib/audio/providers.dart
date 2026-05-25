@@ -53,16 +53,17 @@ final downloadsProvider = Provider<DownloadsManager>((ref) {
 
 final localLibraryProvider = Provider<LocalLibrary>((_) => LocalLibrary());
 
+final playbackPrefsProvider = Provider<PlaybackPrefs>((_) => PlaybackPrefs());
+
 final audioEngineProvider = Provider<AudioEngine>((ref) {
   final engine = AudioEngine(
     subsonic: () => ref.read(subsonicProvider),
-    downloadPathFor: (t) => ref.read(downloadsProvider).cachedPathFor(t),
+    cache: ref.watch(downloadsProvider),
+    prefs: ref.watch(playbackPrefsProvider),
   );
   ref.onDispose(engine.dispose);
   return engine;
 });
-
-final playbackPrefsProvider = Provider<PlaybackPrefs>((_) => PlaybackPrefs());
 
 final favoritesProvider = Provider<FavoritesManager>((ref) =>
     FavoritesManager(ref.watch(dbProvider)));
@@ -95,6 +96,11 @@ final autoQueueProvider = Provider<AutoQueueService>((ref) {
 /// the heart toggle reactively.
 final favoriteKeysProvider = StreamProvider<List<String>>((ref) =>
     ref.watch(favoritesProvider).watchKeys());
+
+/// Drift-watched map `trackKey → pinned?`. Absent key = not cached. Powers
+/// the badge on track tiles and the dynamic label in the actions sheet.
+final cacheStateProvider = StreamProvider<Map<String, bool>>((ref) =>
+    ref.watch(downloadsProvider).cacheStateStream());
 
 /// Stream of all local playlists.
 final localPlaylistsProvider = StreamProvider<List<LocalPlaylist>>((ref) =>

@@ -35,9 +35,24 @@ class $DownloadsTable extends Downloads
   late final GeneratedColumn<DateTime> completedAt = GeneratedColumn<DateTime>(
       'completed_at', aliasedName, true,
       type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _pinnedMeta = const VerificationMeta('pinned');
+  @override
+  late final GeneratedColumn<bool> pinned = GeneratedColumn<bool>(
+      'pinned', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("pinned" IN (0, 1))'),
+      defaultValue: const Constant(false));
+  static const VerificationMeta _lastAccessedAtMeta =
+      const VerificationMeta('lastAccessedAt');
+  @override
+  late final GeneratedColumn<DateTime> lastAccessedAt =
+      GeneratedColumn<DateTime>('last_accessed_at', aliasedName, true,
+          type: DriftSqlType.dateTime, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns =>
-      [trackKey, filePath, sizeBytes, completedAt];
+      [trackKey, filePath, sizeBytes, completedAt, pinned, lastAccessedAt];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -70,6 +85,16 @@ class $DownloadsTable extends Downloads
           completedAt.isAcceptableOrUnknown(
               data['completed_at']!, _completedAtMeta));
     }
+    if (data.containsKey('pinned')) {
+      context.handle(_pinnedMeta,
+          pinned.isAcceptableOrUnknown(data['pinned']!, _pinnedMeta));
+    }
+    if (data.containsKey('last_accessed_at')) {
+      context.handle(
+          _lastAccessedAtMeta,
+          lastAccessedAt.isAcceptableOrUnknown(
+              data['last_accessed_at']!, _lastAccessedAtMeta));
+    }
     return context;
   }
 
@@ -87,6 +112,10 @@ class $DownloadsTable extends Downloads
           .read(DriftSqlType.int, data['${effectivePrefix}size_bytes'])!,
       completedAt: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}completed_at']),
+      pinned: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}pinned'])!,
+      lastAccessedAt: attachedDatabase.typeMapping.read(
+          DriftSqlType.dateTime, data['${effectivePrefix}last_accessed_at']),
     );
   }
 
@@ -101,11 +130,15 @@ class Download extends DataClass implements Insertable<Download> {
   final String filePath;
   final int sizeBytes;
   final DateTime? completedAt;
+  final bool pinned;
+  final DateTime? lastAccessedAt;
   const Download(
       {required this.trackKey,
       required this.filePath,
       required this.sizeBytes,
-      this.completedAt});
+      this.completedAt,
+      required this.pinned,
+      this.lastAccessedAt});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -114,6 +147,10 @@ class Download extends DataClass implements Insertable<Download> {
     map['size_bytes'] = Variable<int>(sizeBytes);
     if (!nullToAbsent || completedAt != null) {
       map['completed_at'] = Variable<DateTime>(completedAt);
+    }
+    map['pinned'] = Variable<bool>(pinned);
+    if (!nullToAbsent || lastAccessedAt != null) {
+      map['last_accessed_at'] = Variable<DateTime>(lastAccessedAt);
     }
     return map;
   }
@@ -126,6 +163,10 @@ class Download extends DataClass implements Insertable<Download> {
       completedAt: completedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(completedAt),
+      pinned: Value(pinned),
+      lastAccessedAt: lastAccessedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastAccessedAt),
     );
   }
 
@@ -137,6 +178,8 @@ class Download extends DataClass implements Insertable<Download> {
       filePath: serializer.fromJson<String>(json['filePath']),
       sizeBytes: serializer.fromJson<int>(json['sizeBytes']),
       completedAt: serializer.fromJson<DateTime?>(json['completedAt']),
+      pinned: serializer.fromJson<bool>(json['pinned']),
+      lastAccessedAt: serializer.fromJson<DateTime?>(json['lastAccessedAt']),
     );
   }
   @override
@@ -147,6 +190,8 @@ class Download extends DataClass implements Insertable<Download> {
       'filePath': serializer.toJson<String>(filePath),
       'sizeBytes': serializer.toJson<int>(sizeBytes),
       'completedAt': serializer.toJson<DateTime?>(completedAt),
+      'pinned': serializer.toJson<bool>(pinned),
+      'lastAccessedAt': serializer.toJson<DateTime?>(lastAccessedAt),
     };
   }
 
@@ -154,12 +199,17 @@ class Download extends DataClass implements Insertable<Download> {
           {String? trackKey,
           String? filePath,
           int? sizeBytes,
-          Value<DateTime?> completedAt = const Value.absent()}) =>
+          Value<DateTime?> completedAt = const Value.absent(),
+          bool? pinned,
+          Value<DateTime?> lastAccessedAt = const Value.absent()}) =>
       Download(
         trackKey: trackKey ?? this.trackKey,
         filePath: filePath ?? this.filePath,
         sizeBytes: sizeBytes ?? this.sizeBytes,
         completedAt: completedAt.present ? completedAt.value : this.completedAt,
+        pinned: pinned ?? this.pinned,
+        lastAccessedAt:
+            lastAccessedAt.present ? lastAccessedAt.value : this.lastAccessedAt,
       );
   Download copyWithCompanion(DownloadsCompanion data) {
     return Download(
@@ -168,6 +218,10 @@ class Download extends DataClass implements Insertable<Download> {
       sizeBytes: data.sizeBytes.present ? data.sizeBytes.value : this.sizeBytes,
       completedAt:
           data.completedAt.present ? data.completedAt.value : this.completedAt,
+      pinned: data.pinned.present ? data.pinned.value : this.pinned,
+      lastAccessedAt: data.lastAccessedAt.present
+          ? data.lastAccessedAt.value
+          : this.lastAccessedAt,
     );
   }
 
@@ -177,13 +231,16 @@ class Download extends DataClass implements Insertable<Download> {
           ..write('trackKey: $trackKey, ')
           ..write('filePath: $filePath, ')
           ..write('sizeBytes: $sizeBytes, ')
-          ..write('completedAt: $completedAt')
+          ..write('completedAt: $completedAt, ')
+          ..write('pinned: $pinned, ')
+          ..write('lastAccessedAt: $lastAccessedAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(trackKey, filePath, sizeBytes, completedAt);
+  int get hashCode => Object.hash(
+      trackKey, filePath, sizeBytes, completedAt, pinned, lastAccessedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -191,7 +248,9 @@ class Download extends DataClass implements Insertable<Download> {
           other.trackKey == this.trackKey &&
           other.filePath == this.filePath &&
           other.sizeBytes == this.sizeBytes &&
-          other.completedAt == this.completedAt);
+          other.completedAt == this.completedAt &&
+          other.pinned == this.pinned &&
+          other.lastAccessedAt == this.lastAccessedAt);
 }
 
 class DownloadsCompanion extends UpdateCompanion<Download> {
@@ -199,12 +258,16 @@ class DownloadsCompanion extends UpdateCompanion<Download> {
   final Value<String> filePath;
   final Value<int> sizeBytes;
   final Value<DateTime?> completedAt;
+  final Value<bool> pinned;
+  final Value<DateTime?> lastAccessedAt;
   final Value<int> rowid;
   const DownloadsCompanion({
     this.trackKey = const Value.absent(),
     this.filePath = const Value.absent(),
     this.sizeBytes = const Value.absent(),
     this.completedAt = const Value.absent(),
+    this.pinned = const Value.absent(),
+    this.lastAccessedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   DownloadsCompanion.insert({
@@ -212,6 +275,8 @@ class DownloadsCompanion extends UpdateCompanion<Download> {
     required String filePath,
     this.sizeBytes = const Value.absent(),
     this.completedAt = const Value.absent(),
+    this.pinned = const Value.absent(),
+    this.lastAccessedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : trackKey = Value(trackKey),
         filePath = Value(filePath);
@@ -220,6 +285,8 @@ class DownloadsCompanion extends UpdateCompanion<Download> {
     Expression<String>? filePath,
     Expression<int>? sizeBytes,
     Expression<DateTime>? completedAt,
+    Expression<bool>? pinned,
+    Expression<DateTime>? lastAccessedAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -227,6 +294,8 @@ class DownloadsCompanion extends UpdateCompanion<Download> {
       if (filePath != null) 'file_path': filePath,
       if (sizeBytes != null) 'size_bytes': sizeBytes,
       if (completedAt != null) 'completed_at': completedAt,
+      if (pinned != null) 'pinned': pinned,
+      if (lastAccessedAt != null) 'last_accessed_at': lastAccessedAt,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -236,12 +305,16 @@ class DownloadsCompanion extends UpdateCompanion<Download> {
       Value<String>? filePath,
       Value<int>? sizeBytes,
       Value<DateTime?>? completedAt,
+      Value<bool>? pinned,
+      Value<DateTime?>? lastAccessedAt,
       Value<int>? rowid}) {
     return DownloadsCompanion(
       trackKey: trackKey ?? this.trackKey,
       filePath: filePath ?? this.filePath,
       sizeBytes: sizeBytes ?? this.sizeBytes,
       completedAt: completedAt ?? this.completedAt,
+      pinned: pinned ?? this.pinned,
+      lastAccessedAt: lastAccessedAt ?? this.lastAccessedAt,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -261,6 +334,12 @@ class DownloadsCompanion extends UpdateCompanion<Download> {
     if (completedAt.present) {
       map['completed_at'] = Variable<DateTime>(completedAt.value);
     }
+    if (pinned.present) {
+      map['pinned'] = Variable<bool>(pinned.value);
+    }
+    if (lastAccessedAt.present) {
+      map['last_accessed_at'] = Variable<DateTime>(lastAccessedAt.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -274,6 +353,8 @@ class DownloadsCompanion extends UpdateCompanion<Download> {
           ..write('filePath: $filePath, ')
           ..write('sizeBytes: $sizeBytes, ')
           ..write('completedAt: $completedAt, ')
+          ..write('pinned: $pinned, ')
+          ..write('lastAccessedAt: $lastAccessedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -2315,6 +2396,8 @@ typedef $$DownloadsTableCreateCompanionBuilder = DownloadsCompanion Function({
   required String filePath,
   Value<int> sizeBytes,
   Value<DateTime?> completedAt,
+  Value<bool> pinned,
+  Value<DateTime?> lastAccessedAt,
   Value<int> rowid,
 });
 typedef $$DownloadsTableUpdateCompanionBuilder = DownloadsCompanion Function({
@@ -2322,6 +2405,8 @@ typedef $$DownloadsTableUpdateCompanionBuilder = DownloadsCompanion Function({
   Value<String> filePath,
   Value<int> sizeBytes,
   Value<DateTime?> completedAt,
+  Value<bool> pinned,
+  Value<DateTime?> lastAccessedAt,
   Value<int> rowid,
 });
 
@@ -2345,6 +2430,13 @@ class $$DownloadsTableFilterComposer
 
   ColumnFilters<DateTime> get completedAt => $composableBuilder(
       column: $table.completedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get pinned => $composableBuilder(
+      column: $table.pinned, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get lastAccessedAt => $composableBuilder(
+      column: $table.lastAccessedAt,
+      builder: (column) => ColumnFilters(column));
 }
 
 class $$DownloadsTableOrderingComposer
@@ -2367,6 +2459,13 @@ class $$DownloadsTableOrderingComposer
 
   ColumnOrderings<DateTime> get completedAt => $composableBuilder(
       column: $table.completedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get pinned => $composableBuilder(
+      column: $table.pinned, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get lastAccessedAt => $composableBuilder(
+      column: $table.lastAccessedAt,
+      builder: (column) => ColumnOrderings(column));
 }
 
 class $$DownloadsTableAnnotationComposer
@@ -2389,6 +2488,12 @@ class $$DownloadsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get completedAt => $composableBuilder(
       column: $table.completedAt, builder: (column) => column);
+
+  GeneratedColumn<bool> get pinned =>
+      $composableBuilder(column: $table.pinned, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get lastAccessedAt => $composableBuilder(
+      column: $table.lastAccessedAt, builder: (column) => column);
 }
 
 class $$DownloadsTableTableManager extends RootTableManager<
@@ -2418,6 +2523,8 @@ class $$DownloadsTableTableManager extends RootTableManager<
             Value<String> filePath = const Value.absent(),
             Value<int> sizeBytes = const Value.absent(),
             Value<DateTime?> completedAt = const Value.absent(),
+            Value<bool> pinned = const Value.absent(),
+            Value<DateTime?> lastAccessedAt = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               DownloadsCompanion(
@@ -2425,6 +2532,8 @@ class $$DownloadsTableTableManager extends RootTableManager<
             filePath: filePath,
             sizeBytes: sizeBytes,
             completedAt: completedAt,
+            pinned: pinned,
+            lastAccessedAt: lastAccessedAt,
             rowid: rowid,
           ),
           createCompanionCallback: ({
@@ -2432,6 +2541,8 @@ class $$DownloadsTableTableManager extends RootTableManager<
             required String filePath,
             Value<int> sizeBytes = const Value.absent(),
             Value<DateTime?> completedAt = const Value.absent(),
+            Value<bool> pinned = const Value.absent(),
+            Value<DateTime?> lastAccessedAt = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               DownloadsCompanion.insert(
@@ -2439,6 +2550,8 @@ class $$DownloadsTableTableManager extends RootTableManager<
             filePath: filePath,
             sizeBytes: sizeBytes,
             completedAt: completedAt,
+            pinned: pinned,
+            lastAccessedAt: lastAccessedAt,
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0

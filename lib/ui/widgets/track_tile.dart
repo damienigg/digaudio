@@ -23,6 +23,9 @@ class TrackTile extends ConsumerWidget {
     final engine = ref.watch(audioEngineProvider);
     final favKeys = ref.watch(favoriteKeysProvider).valueOrNull ?? const [];
     final isFav = favKeys.contains(t.uniqueKey);
+    final cacheState = ref.watch(cacheStateProvider).valueOrNull ?? const {};
+    // null = uncached, false = auto-cached (LRU-evictable), true = pinned
+    final cachePinned = cacheState[t.uniqueKey];
     final openActions = onMore ?? () => showTrackActions(context, ref, t);
     return InkWell(
       onTap: () => engine.setQueue(queue, initialIndex: index),
@@ -41,6 +44,12 @@ class TrackTile extends ConsumerWidget {
                     children: [
                       if (isFav) ...[
                         const Icon(Icons.favorite, size: 12, color: Color(0xFF1ED760)),
+                        const SizedBox(width: 4),
+                      ],
+                      if (cachePinned != null) ...[
+                        Icon(Icons.download_done_rounded,
+                            size: 12,
+                            color: cachePinned ? const Color(0xFF1ED760) : Colors.white38),
                         const SizedBox(width: 4),
                       ],
                       Expanded(

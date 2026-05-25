@@ -1,34 +1,43 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:audio_session/audio_session.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 
+import '../core/playback_prefs.dart';
 import '../domain.dart';
+import '../library/downloads.dart';
 import '../library/local.dart';
 import '../subsonic/client.dart';
 
 /// digaudio's single audio engine.
 ///
-/// Wraps [just_audio] with a Subsonic-aware URI resolver and a
+/// Wraps [just_audio] with a Subsonic-aware source builder and a
 /// [just_audio_background] tag mapping so the lockscreen / Android Auto /
-/// CarPlay UI get title, artist and artwork for free. The engine never
-/// branches on origin at the player level — only when building the URI.
+/// CarPlay UI get title, artist and artwork for free. Subsonic streams are
+/// piped through [LockCachingAudioSource] so the bytes played are written
+/// straight into the on-disk pool ([DownloadsManager]) — one network
+/// roundtrip serves both playback and offline re-listen.
 class AudioEngine {
   final SubsonicClient? Function() _subsonic;
-  final String? Function(Track) _downloadPathFor;
+  final DownloadsManager _cache;
+  final PlaybackPrefs _prefs;
   final AndroidEqualizer _equalizer = AndroidEqualizer();
   late final AudioPlayer _player = AudioPlayer(
     audioPipeline: AudioPipeline(androidAudioEffects: [_equalizer]),
   );
   ConcatenatingAudioSource? _queue;
   List<Track> _tracks = const [];
+  StreamSubscription<int?>? _indexSub;
 
   AudioEngine({
     required SubsonicClient? Function() subsonic,
-    required String? Function(Track) downloadPathFor,
+    required DownloadsManager cache,
+    required PlaybackPrefs prefs,
   })  : _subsonic = subsonic,
-        _downloadPathFor = downloadPathFor;
+        _cache = cache,
+        _prefs = prefs;
 
   AudioPlayer get raw => _player;
   AndroidEqualizer get equalizer => _equalizer;
@@ -37,6 +46,12 @@ class AudioEngine {
   Future<void> init() async {
     final session = await AudioSession.instance;
     await session.configure(const AudioSessionConfiguration.music());
+    // LRU bookkeeping: every track switch refreshes lastAccessedAt so
+    // freshly-played items survive the next eviction sweep.
+    _indexSub = _player.currentIndexStream.listen((i) {
+      if (i == null || i < 0 || i >= _tracks.length) return;
+      _cache.touch(_tracks[i].uniqueKey);
+    });
   }
 
   // --- Equalizer ------------------------------------------------------------
@@ -87,7 +102,6 @@ class AudioEngine {
   }
 
   AudioSource _sourceFor(Track t) {
-    final uri = _uriFor(t);
     final tag = MediaItem(
       id: t.uniqueKey,
       title: t.title,
@@ -96,22 +110,35 @@ class AudioEngine {
       duration: t.duration,
       artUri: _artworkUri(t),
     );
-    return AudioSource.uri(uri, tag: tag);
-  }
-
-  Uri _uriFor(Track t) {
-    // Offline cache always wins over remote streaming.
-    final cached = _downloadPathFor(t);
+    // Offline file always wins — regardless of origin.
+    final cached = _cache.cachedPathFor(t);
     if (cached != null && File(cached).existsSync()) {
-      return Uri.file(cached);
+      return AudioSource.uri(Uri.file(cached), tag: tag);
     }
     switch (t.origin) {
       case MediaOrigin.local:
-        return Uri.parse(t.localContentUri);
+        return AudioSource.uri(Uri.parse(t.localContentUri), tag: tag);
       case MediaOrigin.subsonic:
         final s = _subsonic();
         if (s == null) throw StateError('No Subsonic server configured');
-        return s.streamUri(t.id);
+        final uri = s.streamUri(t.id);
+        if (!_prefs.autoCacheEnabled) {
+          return AudioSource.uri(uri, tag: tag);
+        }
+        // LockCachingAudioSource tees the stream into [target] as it plays.
+        // On completion (progress = 1.0) we register the row and run an
+        // LRU sweep so the pool stays under the user's budget.
+        final target = _cache.targetFileFor(t);
+        final src = LockCachingAudioSource(uri, cacheFile: target, tag: tag);
+        var registered = false;
+        src.downloadProgressStream.listen((p) async {
+          if (p >= 1.0 && !registered) {
+            registered = true;
+            await _cache.registerAutoCached(t, target);
+            await _cache.evictTo(_prefs.cacheMaxBytes);
+          }
+        });
+        return src;
     }
   }
 
@@ -144,7 +171,10 @@ class AudioEngine {
   Future<void> setVolume(double v) => _player.setVolume(v);
   Future<void> setSpeed(double s) => _player.setSpeed(s);
 
-  Future<void> dispose() => _player.dispose();
+  Future<void> dispose() async {
+    await _indexSub?.cancel();
+    await _player.dispose();
+  }
 
   // --- Streams (re-exported for providers) ---------------------------------
 
