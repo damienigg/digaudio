@@ -316,18 +316,35 @@ All 7 items shipped. Bulk select was the last, in v0.16.3.
 ### B · Discovery & smart mixes — **DONE**
 All 7 items shipped. Smart playlists is the centerpiece; 4 builtins seeded.
 
-### C · Audio fidelity (1/5 shipped — crossfade pseudo)
+### C · Audio fidelity — 4/5 shipped (true crossfade deferred)
 
-- **Replay Gain / volume normalisation** *(M)*  
-  Avoids the "this song is much louder than the previous" problem. Use track-level or album-level RG tags if present.
-- **True crossfade with overlap** *(L)*  
-  Second AudioPlayer + parallel pipeline. The current pseudo-crossfade is good enough for most music but cuts through transients (e.g. an orchestral hit at track end).
-- **EQ presets** *(S)*  
-  Rock / Jazz / Vocal Boost / Bass Boost / Custom. Saves the user from dialling sliders.
-- **Per-Bluetooth-device EQ profile** *(M)*  
-  Different profile when JBL Charge 4 connects vs Sony WH-1000XM5.
-- **Gapless playback verification** *(S)*  
-  We get it for free from `ConcatenatingAudioSource` but should add a test track-pair (a DJ mix split into 2) to verify.
+- ~~Replay Gain via OpenSubsonic~~ — **DONE v0.17.2** (off / track / album)
+- ~~EQ presets~~ — **DONE v0.17.0** (Flat / Rock / Jazz / Vocal / Bass boost / Treble boost)
+- ~~Per-Bluetooth-device EQ profile~~ — **DONE v0.17.3** (save current EQ per BT device, auto-apply on connect)
+- ~~Gapless playback verification~~ — **DONE v0.17.1** (was always on via `ConcatenatingAudioSource`; settings note added)
+- **True crossfade with overlap** *(L, deferred)*  
+  `ConcatenatingAudioSource` produces one audio stream — true
+  overlap needs **two `AudioPlayer` instances** + manual queue
+  orchestration:
+  - Auto-advance suppression on the primary player (otherwise it
+    re-emits the new track from 0 while the secondary is mid-fade
+    on the same track → audible echo)
+  - Primary / secondary role swap on each transition
+  - `positionStream` source-of-truth switch during the overlap
+    window (UI must follow the audible player, not the muted one)
+  - Pause / play / seek logic that always targets the audible player
+  - Per-source preloading + disposal lifecycle
+  
+  Risk: the existing single-player + ConcatenatingAudioSource
+  flow is what every existing feature (queue editor, album mode,
+  per-track resume, scrobble, autoqueue, etc.) builds on. A
+  rewrite without a careful test plan would break several of
+  those.
+  
+  Pseudo-crossfade (v0.14.0) covers the common case — most
+  popular music has fade-out tails or extended outros that mask
+  the missing overlap. True overlap matters mostly for classical /
+  orchestral with abrupt endings.
 
 ### D · Platform integration (0/7 shipped)
 

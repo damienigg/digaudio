@@ -7,6 +7,17 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Deferred to its own session (originally planned as v0.18.0)
+- **True crossfade with overlap** — needs a real refactor of the
+  engine: `ConcatenatingAudioSource` produces one stream, so true
+  overlap requires two `AudioPlayer` instances + manual queue
+  orchestration (auto-advance suppression, primary/secondary swap,
+  position-stream source-of-truth switch). The pseudo-crossfade in
+  v0.14.0 covers the common case; true overlap mostly matters for
+  classical / orchestral with abrupt endings. Deferred with a
+  dedicated test plan in `STATUS.md` so it can be picked up
+  cleanly in a focused session.
+
 ## [0.17.3] — 2026-05-25
 
 ### Added (Per-Bluetooth-device EQ override)
