@@ -7,6 +7,30 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.10.0] — 2026-05-25
+
+### Added (Phase 2 — listening stats + smart mixes)
+- **Listening stats page** at `/stats` (Library → Playlists → "Stats").
+  Three time windows (30 d / 90 d / All-time); for each: total plays,
+  unique tracks, listening days; top 10 tracks; top 10 artists derived
+  from the same 50-track aggregation.
+- **"Most played" smart mix.** One-tap queue of the top 50 tracks in
+  the current window — same payload the page already had loaded, no
+  second round-trip.
+- **`PlayHistoryManager`** in `lib/library/play_history.dart`. Append-only
+  log with totals / top-tracks / listening-days queries (typed-drift
+  expressions for the windowed counts, raw SQL only for the date
+  truncation that drift can't express).
+- **Engine now records every play** in its existing track-change
+  listener (same listener that already does LRU touch + scrobble), so
+  no extra subscription overhead.
+
+### Database
+- **Schema v4 → v5.** `RecentPlays` migrated from `(trackKey)` PK to
+  autoincrement `id`. The old shape silently overwrote replays — now
+  every playback is preserved (true play counts). Old table was empty
+  in practice, so the migration drops + recreates.
+
 ## [0.9.2] — 2026-05-25
 
 ### Added (Substreamer parity — batch 2)

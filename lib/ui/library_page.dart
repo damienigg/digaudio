@@ -162,6 +162,13 @@ class _PlaylistsTab extends ConsumerWidget {
           onTap: () => context.push('/wishlist'),
         ),
         const Divider(height: 1, color: Colors.white12),
+        ListTile(
+          leading: const Icon(Icons.bar_chart),
+          title: const Text('Stats'),
+          subtitle: const Text('Top tracks, top artists, and the "Most played" smart mix'),
+          onTap: () => context.push('/stats'),
+        ),
+        const Divider(height: 1, color: Colors.white12),
         _ImportTile(),
         const Divider(height: 1, color: Colors.white12),
         const _SectionHeader('Local playlists'),

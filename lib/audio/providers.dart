@@ -10,6 +10,7 @@ import '../library/collections.dart';
 import '../library/downloads.dart';
 import '../library/importer.dart';
 import '../library/local.dart';
+import '../library/play_history.dart';
 import '../library/ratings.dart';
 import '../library/subsonic_cache.dart';
 import '../library/wishlist.dart';
@@ -68,6 +69,7 @@ final audioEngineProvider = Provider<AudioEngine>((ref) {
     subsonic: () => ref.read(subsonicProvider),
     cache: ref.watch(downloadsProvider),
     prefs: ref.watch(playbackPrefsProvider),
+    history: ref.watch(playHistoryProvider),
   );
   ref.onDispose(engine.dispose);
   return engine;
@@ -138,6 +140,9 @@ final playlistKeysProvider = StreamProvider.family<List<String>, int>((ref, id) 
 
 final wishlistManagerProvider = Provider<WishlistManager>((ref) =>
     WishlistManager(ref.watch(dbProvider)));
+
+final playHistoryProvider = Provider<PlayHistoryManager>((ref) =>
+    PlayHistoryManager(ref.watch(dbProvider)));
 
 final ratingsManagerProvider = Provider<RatingsManager>((ref) {
   final mgr = RatingsManager(() => ref.read(subsonicProvider));

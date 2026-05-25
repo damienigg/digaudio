@@ -1016,6 +1016,15 @@ class $RecentPlaysTable extends RecentPlays
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   $RecentPlaysTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+      'id', aliasedName, false,
+      hasAutoIncrement: true,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
   static const VerificationMeta _trackKeyMeta =
       const VerificationMeta('trackKey');
   @override
@@ -1029,7 +1038,7 @@ class $RecentPlaysTable extends RecentPlays
       'played_at', aliasedName, false,
       type: DriftSqlType.dateTime, requiredDuringInsert: true);
   @override
-  List<GeneratedColumn> get $columns => [trackKey, playedAt];
+  List<GeneratedColumn> get $columns => [id, trackKey, playedAt];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -1040,6 +1049,9 @@ class $RecentPlaysTable extends RecentPlays
       {bool isInserting = false}) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
     if (data.containsKey('track_key')) {
       context.handle(_trackKeyMeta,
           trackKey.isAcceptableOrUnknown(data['track_key']!, _trackKeyMeta));
@@ -1056,11 +1068,13 @@ class $RecentPlaysTable extends RecentPlays
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => {trackKey};
+  Set<GeneratedColumn> get $primaryKey => {id};
   @override
   RecentPlay map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return RecentPlay(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
       trackKey: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}track_key'])!,
       playedAt: attachedDatabase.typeMapping
@@ -1075,12 +1089,15 @@ class $RecentPlaysTable extends RecentPlays
 }
 
 class RecentPlay extends DataClass implements Insertable<RecentPlay> {
+  final int id;
   final String trackKey;
   final DateTime playedAt;
-  const RecentPlay({required this.trackKey, required this.playedAt});
+  const RecentPlay(
+      {required this.id, required this.trackKey, required this.playedAt});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
     map['track_key'] = Variable<String>(trackKey);
     map['played_at'] = Variable<DateTime>(playedAt);
     return map;
@@ -1088,6 +1105,7 @@ class RecentPlay extends DataClass implements Insertable<RecentPlay> {
 
   RecentPlaysCompanion toCompanion(bool nullToAbsent) {
     return RecentPlaysCompanion(
+      id: Value(id),
       trackKey: Value(trackKey),
       playedAt: Value(playedAt),
     );
@@ -1097,6 +1115,7 @@ class RecentPlay extends DataClass implements Insertable<RecentPlay> {
       {ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return RecentPlay(
+      id: serializer.fromJson<int>(json['id']),
       trackKey: serializer.fromJson<String>(json['trackKey']),
       playedAt: serializer.fromJson<DateTime>(json['playedAt']),
     );
@@ -1105,17 +1124,21 @@ class RecentPlay extends DataClass implements Insertable<RecentPlay> {
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
       'trackKey': serializer.toJson<String>(trackKey),
       'playedAt': serializer.toJson<DateTime>(playedAt),
     };
   }
 
-  RecentPlay copyWith({String? trackKey, DateTime? playedAt}) => RecentPlay(
+  RecentPlay copyWith({int? id, String? trackKey, DateTime? playedAt}) =>
+      RecentPlay(
+        id: id ?? this.id,
         trackKey: trackKey ?? this.trackKey,
         playedAt: playedAt ?? this.playedAt,
       );
   RecentPlay copyWithCompanion(RecentPlaysCompanion data) {
     return RecentPlay(
+      id: data.id.present ? data.id.value : this.id,
       trackKey: data.trackKey.present ? data.trackKey.value : this.trackKey,
       playedAt: data.playedAt.present ? data.playedAt.value : this.playedAt,
     );
@@ -1124,6 +1147,7 @@ class RecentPlay extends DataClass implements Insertable<RecentPlay> {
   @override
   String toString() {
     return (StringBuffer('RecentPlay(')
+          ..write('id: $id, ')
           ..write('trackKey: $trackKey, ')
           ..write('playedAt: $playedAt')
           ..write(')'))
@@ -1131,62 +1155,63 @@ class RecentPlay extends DataClass implements Insertable<RecentPlay> {
   }
 
   @override
-  int get hashCode => Object.hash(trackKey, playedAt);
+  int get hashCode => Object.hash(id, trackKey, playedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is RecentPlay &&
+          other.id == this.id &&
           other.trackKey == this.trackKey &&
           other.playedAt == this.playedAt);
 }
 
 class RecentPlaysCompanion extends UpdateCompanion<RecentPlay> {
+  final Value<int> id;
   final Value<String> trackKey;
   final Value<DateTime> playedAt;
-  final Value<int> rowid;
   const RecentPlaysCompanion({
+    this.id = const Value.absent(),
     this.trackKey = const Value.absent(),
     this.playedAt = const Value.absent(),
-    this.rowid = const Value.absent(),
   });
   RecentPlaysCompanion.insert({
+    this.id = const Value.absent(),
     required String trackKey,
     required DateTime playedAt,
-    this.rowid = const Value.absent(),
   })  : trackKey = Value(trackKey),
         playedAt = Value(playedAt);
   static Insertable<RecentPlay> custom({
+    Expression<int>? id,
     Expression<String>? trackKey,
     Expression<DateTime>? playedAt,
-    Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
+      if (id != null) 'id': id,
       if (trackKey != null) 'track_key': trackKey,
       if (playedAt != null) 'played_at': playedAt,
-      if (rowid != null) 'rowid': rowid,
     });
   }
 
   RecentPlaysCompanion copyWith(
-      {Value<String>? trackKey, Value<DateTime>? playedAt, Value<int>? rowid}) {
+      {Value<int>? id, Value<String>? trackKey, Value<DateTime>? playedAt}) {
     return RecentPlaysCompanion(
+      id: id ?? this.id,
       trackKey: trackKey ?? this.trackKey,
       playedAt: playedAt ?? this.playedAt,
-      rowid: rowid ?? this.rowid,
     );
   }
 
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
     if (trackKey.present) {
       map['track_key'] = Variable<String>(trackKey.value);
     }
     if (playedAt.present) {
       map['played_at'] = Variable<DateTime>(playedAt.value);
-    }
-    if (rowid.present) {
-      map['rowid'] = Variable<int>(rowid.value);
     }
     return map;
   }
@@ -1194,9 +1219,9 @@ class RecentPlaysCompanion extends UpdateCompanion<RecentPlay> {
   @override
   String toString() {
     return (StringBuffer('RecentPlaysCompanion(')
+          ..write('id: $id, ')
           ..write('trackKey: $trackKey, ')
-          ..write('playedAt: $playedAt, ')
-          ..write('rowid: $rowid')
+          ..write('playedAt: $playedAt')
           ..write(')'))
         .toString();
   }
@@ -3169,15 +3194,15 @@ typedef $$LocalPlaylistTracksTableProcessedTableManager = ProcessedTableManager<
     PrefetchHooks Function({bool playlistId})>;
 typedef $$RecentPlaysTableCreateCompanionBuilder = RecentPlaysCompanion
     Function({
+  Value<int> id,
   required String trackKey,
   required DateTime playedAt,
-  Value<int> rowid,
 });
 typedef $$RecentPlaysTableUpdateCompanionBuilder = RecentPlaysCompanion
     Function({
+  Value<int> id,
   Value<String> trackKey,
   Value<DateTime> playedAt,
-  Value<int> rowid,
 });
 
 class $$RecentPlaysTableFilterComposer
@@ -3189,6 +3214,9 @@ class $$RecentPlaysTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnFilters<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
   ColumnFilters<String> get trackKey => $composableBuilder(
       column: $table.trackKey, builder: (column) => ColumnFilters(column));
 
@@ -3205,6 +3233,9 @@ class $$RecentPlaysTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnOrderings<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<String> get trackKey => $composableBuilder(
       column: $table.trackKey, builder: (column) => ColumnOrderings(column));
 
@@ -3221,6 +3252,9 @@ class $$RecentPlaysTableAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
   GeneratedColumn<String> get trackKey =>
       $composableBuilder(column: $table.trackKey, builder: (column) => column);
 
@@ -3251,24 +3285,24 @@ class $$RecentPlaysTableTableManager extends RootTableManager<
           createComputedFieldComposer: () =>
               $$RecentPlaysTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback: ({
+            Value<int> id = const Value.absent(),
             Value<String> trackKey = const Value.absent(),
             Value<DateTime> playedAt = const Value.absent(),
-            Value<int> rowid = const Value.absent(),
           }) =>
               RecentPlaysCompanion(
+            id: id,
             trackKey: trackKey,
             playedAt: playedAt,
-            rowid: rowid,
           ),
           createCompanionCallback: ({
+            Value<int> id = const Value.absent(),
             required String trackKey,
             required DateTime playedAt,
-            Value<int> rowid = const Value.absent(),
           }) =>
               RecentPlaysCompanion.insert(
+            id: id,
             trackKey: trackKey,
             playedAt: playedAt,
-            rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

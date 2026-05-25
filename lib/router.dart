@@ -12,6 +12,7 @@ import 'ui/playlist_page.dart';
 import 'ui/search.dart';
 import 'ui/settings.dart';
 import 'ui/shell.dart';
+import 'ui/stats_page.dart';
 import 'ui/wishlist_page.dart';
 
 GoRouter buildRouter() => GoRouter(
@@ -54,5 +55,6 @@ GoRouter buildRouter() => GoRouter(
         ),
         GoRoute(path: '/favorites', builder: (_, __) => const FavoritesPage()),
         GoRoute(path: '/wishlist', builder: (_, __) => const WishlistPage()),
+        GoRoute(path: '/stats', builder: (_, __) => const StatsPage()),
       ],
     );

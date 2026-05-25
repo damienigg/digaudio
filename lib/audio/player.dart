@@ -10,6 +10,7 @@ import '../core/playback_prefs.dart';
 import '../domain.dart';
 import '../library/downloads.dart';
 import '../library/local.dart';
+import '../library/play_history.dart';
 import '../subsonic/client.dart';
 
 /// digaudio's single audio engine.
@@ -24,6 +25,7 @@ class AudioEngine {
   final SubsonicClient? Function() _subsonic;
   final DownloadsManager _cache;
   final PlaybackPrefs _prefs;
+  final PlayHistoryManager _history;
   final AndroidEqualizer _equalizer = AndroidEqualizer();
   late final AudioPlayer _player = AudioPlayer(
     audioPipeline: AudioPipeline(androidAudioEffects: [_equalizer]),
@@ -42,9 +44,11 @@ class AudioEngine {
     required SubsonicClient? Function() subsonic,
     required DownloadsManager cache,
     required PlaybackPrefs prefs,
+    required PlayHistoryManager history,
   })  : _subsonic = subsonic,
         _cache = cache,
-        _prefs = prefs;
+        _prefs = prefs,
+        _history = history;
 
   AudioPlayer get raw => _player;
   AndroidEqualizer get equalizer => _equalizer;
@@ -60,6 +64,7 @@ class AudioEngine {
       if (i == null || i < 0 || i >= _tracks.length) return;
       final t = _tracks[i];
       _cache.touch(t.uniqueKey);
+      _history.recordPlay(t.uniqueKey);
       _nowPlayingKey = t.uniqueKey;
       _scrobbledCurrent = false;
       if (t.origin == MediaOrigin.subsonic) {

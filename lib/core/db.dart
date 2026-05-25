@@ -43,11 +43,14 @@ class LocalPlaylistTracks extends Table {
   Set<Column> get primaryKey => {playlistId, position};
 }
 
+/// Append-only play log — one row per playback, never overwritten. Powers
+/// totals, top-tracks/artists queries, and "Tuned In"-style smart mixes.
+/// Pre-v5 used `trackKey` as PK (which silently overwrote replays); v5
+/// switched to an autoincrement `id` so every play is preserved.
 class RecentPlays extends Table {
+  IntColumn get id => integer().autoIncrement()();
   TextColumn get trackKey => text()();
   DateTimeColumn get playedAt => dateTime()();
-  @override
-  Set<Column> get primaryKey => {trackKey};
 }
 
 /// Imported playlist entries whose source track couldn't be matched against
@@ -110,7 +113,7 @@ class AppDb extends _$AppDb {
   AppDb() : super(_open());
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -128,6 +131,12 @@ class AppDb extends _$AppDb {
             await m.addColumn(downloads, downloads.lastAccessedAt);
             // Pre-v4 rows were all user-initiated downloads → preserve intent.
             await customStatement('UPDATE downloads SET pinned = 1');
+          }
+          if (from < 5) {
+            // RecentPlays was unused before v5 — safe to drop + recreate
+            // with the new append-only shape (autoincrement id).
+            await customStatement('DROP TABLE IF EXISTS recent_plays');
+            await m.createTable(recentPlays);
           }
         },
       );
