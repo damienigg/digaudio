@@ -14,12 +14,14 @@ class WidgetBridge {
     String? title,
     String? artist,
     required bool isPlaying,
+    String? artworkPath,
   }) async {
     try {
       await _channel.invokeMethod<void>('update', {
         'title': title,
         'artist': artist,
         'isPlaying': isPlaying,
+        'artworkPath': artworkPath,
       });
     } catch (_) {
       // Best-effort — failing to update the widget never breaks playback.

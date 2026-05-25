@@ -166,6 +166,19 @@ Phone-side acceptance checklist. Run through each section; tick the box when ver
 - [ ] **Add the tile once**. Pull down notif shade twice → tap edit (pencil) → find "digaudio" in available tiles → drag into active set
 - [ ] **Tap the tile**. → Toggles play/pause without opening the app
 
+## Homescreen widget — artwork (v0.28.0)
+
+- [ ] **Cover appears on widget**. Long-press homescreen → Widgets → drag "digaudio". Play a Subsonic track. → Within ~1 s of the track switch the launcher icon is replaced by the album cover (256 px JPEG prefetched by `WidgetArtFetcher` → `setImageViewBitmap`)
+- [ ] **Pause/resume preserves art**. → Art stays during pause; no re-download / no flicker on resume
+- [ ] **Local track fallback**. Play a track from local MediaStore. → Widget falls back to launcher icon (local artwork prefetch is deliberately deferred; same as MediaItem.artUri)
+- [ ] **Cross-track flicker is brief**. Skip rapidly between Subsonic tracks. → Each fetch takes ~200-500 ms; previous track's art may persist briefly until new one lands. Acceptable v2 behaviour.
+
+## Admin library scan (v0.28.0)
+
+- [ ] **Admin user**. Settings → Servers → Edit (admin server) → "Library scan (admin)" section → "Check status". → Shows "Idle — N songs in the library" or "Scanning…"
+- [ ] **Trigger scan**. → "Scanning… N songs indexed so far" updates; "Check status" again later shows idle + final count
+- [ ] **Non-admin user**. → "Trigger scan" tap surfaces "Admin role required on this server." inline (red text); no exception
+
 ## Wear OS (system mirror, no companion APK)
 
 - [ ] **Pair a Wear OS 3+ watch** (Pixel Watch / TicWatch / Galaxy Watch) with the phone via the Wear OS app

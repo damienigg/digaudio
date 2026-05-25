@@ -6,6 +6,7 @@ import 'package:just_audio/just_audio.dart';
 import '../audio/providers.dart';
 import '../core/playback_prefs.dart';
 import '../core/settings.dart';
+import '../subsonic/client.dart';
 import 'widgets/theme_ext.dart';
 
 const _accent = Color(0xFF1ED760);
@@ -185,6 +186,12 @@ class _ServerEditPageState extends ConsumerState<ServerEditPage> {
   String? _status;
   bool _busy = false;
   bool _loaded = false;
+  // Admin scan state — null = not yet queried; populated on demand and
+  // after each trigger. _scanError surfaces "not authorized" for non-
+  // admin users without an exception bubbling up.
+  ScanStatus? _scan;
+  String? _scanError;
+  bool _scanBusy = false;
 
   bool get _isNew => widget.id == 'new';
 
@@ -261,6 +268,30 @@ class _ServerEditPageState extends ConsumerState<ServerEditPage> {
     }
   }
 
+  /// Either kicks off a scan (when [trigger] true) or just queries
+  /// the current status. Both paths share error handling — the
+  /// startScan endpoint is admin-only and returns Subsonic error 50
+  /// for non-admins, surfaced inline as `_scanError`.
+  Future<void> _scanRequest({required bool trigger}) async {
+    final client = _existing?.client();
+    if (client == null) return;
+    setState(() {
+      _scanBusy = true;
+      _scanError = null;
+    });
+    try {
+      _scan = trigger ? await client.startScan() : await client.getScanStatus();
+    } on SubsonicException catch (e) {
+      _scanError = e.code == 50
+          ? 'Admin role required on this server.'
+          : 'Scan error: ${e.message}';
+    } catch (e) {
+      _scanError = 'Network error: $e';
+    } finally {
+      if (mounted) setState(() => _scanBusy = false);
+    }
+  }
+
   Future<void> _delete() async {
     if (_existing == null) return;
     final confirmed = await showDialog<bool>(
@@ -334,6 +365,57 @@ class _ServerEditPageState extends ConsumerState<ServerEditPage> {
                 if (_status != null) ...[
                   const SizedBox(height: 16),
                   Text(_status!, style: TextStyle(color: context.textSecondary)),
+                ],
+                if (!_isNew && (_existing?.isConfigured ?? false)) ...[
+                  const SizedBox(height: 32),
+                  Divider(color: context.dividerSoft),
+                  const SizedBox(height: 16),
+                  Text('Library scan (admin)',
+                      style: TextStyle(
+                          color: context.textSecondary,
+                          fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 6),
+                  Text(
+                    _scan == null
+                        ? 'Not queried yet.'
+                        : _scan!.scanning
+                            ? 'Scanning… ${_scan!.count} songs indexed so far'
+                            : 'Idle — ${_scan!.count} songs in the library',
+                    style: TextStyle(color: context.textMuted, fontSize: 12),
+                  ),
+                  if (_scanError != null) ...[
+                    const SizedBox(height: 4),
+                    Text(_scanError!,
+                        style: const TextStyle(
+                            color: Colors.redAccent, fontSize: 12)),
+                  ],
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      OutlinedButton.icon(
+                        icon: const Icon(Icons.refresh, size: 18),
+                        label: const Text('Check status'),
+                        onPressed: _scanBusy
+                            ? null
+                            : () => _scanRequest(trigger: false),
+                      ),
+                      const SizedBox(width: 12),
+                      FilledButton.icon(
+                        icon: const Icon(Icons.cloud_sync, size: 18),
+                        label: const Text('Trigger scan'),
+                        onPressed: _scanBusy
+                            ? null
+                            : () => _scanRequest(trigger: true),
+                      ),
+                      if (_scanBusy) ...[
+                        const SizedBox(width: 12),
+                        const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2)),
+                      ],
+                    ],
+                  ),
                 ],
               ],
             ),

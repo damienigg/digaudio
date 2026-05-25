@@ -262,6 +262,25 @@ class SubsonicClient {
     }
   }
 
+  // --- Admin ---------------------------------------------------------------
+
+  /// Triggers a server-side library rescan. Admin-only endpoint:
+  /// non-admin users get a Subsonic error code 50 ("not authorized")
+  /// which surfaces as a [SubsonicException]. Returns the same shape
+  /// as [getScanStatus] (the kick-off response is the live status).
+  Future<ScanStatus> startScan() async {
+    final r = await _get('startScan');
+    return ScanStatus._parse(r);
+  }
+
+  /// Polls the current scan state. Safe for any role (Navidrome / Gonic
+  /// both let unauthenticated users see this, though we authenticate
+  /// regardless).
+  Future<ScanStatus> getScanStatus() async {
+    final r = await _get('getScanStatus');
+    return ScanStatus._parse(r);
+  }
+
   // --- URL builders (no auth side-effects beyond a fresh salt) -------------
 
   Uri streamUri(String songId, {int? maxBitRate, String? format}) => _url('stream', {
@@ -376,6 +395,24 @@ class SubsonicResolver {
 
   SubsonicClient? forTrack(Track t) =>
       t.origin == MediaOrigin.subsonic ? forId(t.serverId) : null;
+}
+
+/// Subsonic `scanStatus` payload — returned by both `startScan` and
+/// `getScanStatus`. [scanning] is true while a scan is in flight;
+/// [count] grows during the scan, then stays as the final indexed
+/// song count once it settles.
+class ScanStatus {
+  final bool scanning;
+  final int count;
+  const ScanStatus({required this.scanning, required this.count});
+
+  static ScanStatus _parse(Map<String, dynamic> r) {
+    final s = r['scanStatus'] as Map<String, dynamic>? ?? const {};
+    return ScanStatus(
+      scanning: (s['scanning'] as bool?) ?? false,
+      count: (s['count'] as num?)?.toInt() ?? 0,
+    );
+  }
 }
 
 class SubsonicException implements Exception {

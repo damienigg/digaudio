@@ -1,4 +1,4 @@
-# TODO — digaudio (post-v0.27.0 multi-server search)
+# TODO — digaudio (post-v0.28.0 widget art + admin scan)
 
 What's left, organised by category + combo. Effort tags: **S** ≈ 30 min, **M** ≈ 1 h, **L** ≈ several hours (own session).
 
@@ -17,20 +17,19 @@ What's left, organised by category + combo. Effort tags: **S** ≈ 30 min, **M**
 
 ## Categories with items remaining
 
-### D · Platform integration — 1/7 remaining
+### D · Platform integration — 0/7 remaining ✓
 
-- ~~**Homescreen widget (mini-player)**~~ — **DONE v0.25.0** (4×1 RemoteViews + WidgetChannel push from Dart; v1 has no artwork — RemoteViews need a Bitmap, deferred to v2)
-- ~~**Voice search inside the app**~~ — **DONE v0.26.0** (mic icon → `RecognizerIntent.ACTION_RECOGNIZE_SPEECH` → text into Search field, immediate query)
-- ~~**Wear OS companion**~~ — **COVERED (no code)** — Wear OS 3+ mirrors the active phone MediaSession to the watch's Media Controls tile. `audio_service` already publishes that session; user enables the "Media Controls" tile on the watch. A custom companion (Compose-for-Wear + WearableMessageClient) would only add favourite toggle / queue browse / lyrics — deferred unless a real need emerges.
-- **Widget artwork (v2)** — *(M, follow-up to v0.25.0)*  
-  Pre-fetch the current track's artwork on the Dart side, write to a tmp file, pass the path through the MethodChannel; Kotlin reads + `setImageViewBitmap` on the widget. Battery + storage cost minor (one Bitmap per track switch, evicted on next change).
+- ~~**Homescreen widget (mini-player)**~~ — **DONE v0.25.0** (4×1 RemoteViews + WidgetChannel push from Dart)
+- ~~**Voice search inside the app**~~ — **DONE v0.26.0** (mic icon → `RecognizerIntent.ACTION_RECOGNIZE_SPEECH`)
+- ~~**Wear OS companion**~~ — **COVERED (no code)** — Wear OS 3+ system mirror handles transport
+- ~~**Widget artwork (v2)**~~ — **DONE v0.28.0** (Dart `WidgetArtFetcher` writes 256 px JPEG to tmp; Kotlin `BitmapFactory.decodeFile` + `setImageViewBitmap`; falls back to launcher icon on null). Local-origin tracks still have no artwork (same hidden cost as MediaItem.artUri; deferred to a v3 only if a use case appears).
 
 ### E · Social & external — 2/4 remaining
 
 - ~~**ListenBrainz scrobble direct**~~ — **DONE v0.24.1** (token-based, parallel to Subsonic scrobble)
 - ~~**Now-Playing share**~~ — **DONE v0.24.0** (text card via share_plus)
-- **Last.fm scrobble direct** — *(M, was S)*  
-  Bumped to M: needs the Last.fm OAuth-style auth flow (different from the read-only API key we use for the ranker — `track.scrobble` requires per-user session). Today's Subsonic-mediated scrobble already forwards to Last.fm when the server is configured, so this is only useful when the Subsonic server itself lacks LFM integration.
+- **Last.fm scrobble direct** — *(M, deferred from v0.28 bundle)*  
+  Needs: (1) `LASTFM_SHARED_SECRET` secret added to GH repo + CI; (2) `url_launcher` dep added; (3) OAuth-style flow — get request token → open browser to `last.fm/api/auth/?api_key=X&token=Y` → user approves → app calls `auth.getSession` → stores session key. All future scrobbles use that key. Not a huge piece of code but the UX flow (browser handoff + "I've approved" confirmation) wants careful walk-through. Realistic session item, not a bundle drop-in.
 - **Listening parties / shared queue** — *(L)*  
   Real-time playback-state sync across multiple devices (WebSocket relay or Tailscale-local mesh). Still deferred until there's a real use case.
 
@@ -46,14 +45,13 @@ What's left, organised by category + combo. Effort tags: **S** ≈ 30 min, **M**
 - ~~**Accessibility audit**~~ — **DONE v0.23.2** (12 tooltips + alpha-scroll Semantics + heatmap Semantics wrapper)
 - ~~**Sleep-timer fade-out**~~ — **DONE v0.23.0** (10 s 1-second-stepped ramp; snapshot+restore on cancel)
 - ~~**Notification rich actions**~~ — **DONE v0.23.1** (skip 10 s back / forward via MediaAction.fastForward / .rewind)
-- **Internationalisation** — *(M)*  
+- ~~**Subsonic admin actions**~~ — **DONE v0.28.0** (`startScan` + `getScanStatus` + "Library scan (admin)" section on the server edit page; non-admin users see "Admin role required" inline). User mgmt deferred — admin scan covers the realistic "I just added music server-side" workflow; user CRUD is admin-console territory.
+- **Internationalisation** — *(M scaffold, hours of FR translation pass)*  
   Everything is English today. Externalise strings via Flutter's `intl` package; ship a French translation first. Bootstrap is mechanical (l10n.yaml + ARB scaffold), translation pass itself is several hours of focus — own session.
 - **Album-art waveform scrubber** — *(L)*  
   Replace the linear slider with a precomputed waveform (decode FLAC/MP3 header → PCM peaks → cached image alongside the cached audio file). Visual + faster scrubbing reference.
 - **BPM-matched crossfade** — *(L)*  
   Detect BPM (either via Subsonic metadata or in-app FFT estimate), skip the crossfade if next track has a wildly different tempo. Niche but unique.
-- **Subsonic admin actions** — *(M)*  
-  If the user's role is admin: trigger server library scan from the app, see scan status, manage users.
 
 ### Combo 2 — Pro-listener — 4/6 remaining (verify-only)
 
@@ -84,8 +82,10 @@ What's left, organised by category + combo. Effort tags: **S** ≈ 30 min, **M**
 - ~~**v0.26.x** — Voice search in-app~~ DONE (ACTION_RECOGNIZE_SPEECH intent)
 - ~~**Wear OS**~~ COVERED — no code release, Wear OS 3+ system mirror is sufficient
 - ~~**v0.27.x** — Multi-server unified search~~ DONE (`Track.serverId` + `SubsonicResolver` fan-out)
-- **v0.28.x** — i18n / Last.fm direct / Subsonic admin / widget-artwork-v2 (mid-effort polish)
-- **v1.0.0** — first "release" milestone after a real-device validation pass on every section of `TEST_PLAN.md`
+- ~~**v0.27.1** — Kotlin compile fix~~ DONE (voice search regression — v0.26/v0.27 CI both failed; v0.27.1 is first APK past it)
+- ~~**v0.28.0** — Widget artwork v2 + Subsonic admin scan~~ DONE; **i18n + Last.fm direct deferred** (each warrants its own session — see NEXT.md)
+- **v0.29.x** (optional) — Last.fm direct scrobble OR i18n; pick whichever you actually need next
+- **v1.0.0** — first "release" milestone after a real-device validation pass on every section of `TEST_PLAN.md`. All required-for-1.0 features ship; what's left is genuinely optional
 
 ## Items deliberately not on the roadmap
 

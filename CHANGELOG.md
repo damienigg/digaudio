@@ -7,6 +7,37 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.28.0] — 2026-05-26
+
+### Added (Widget artwork v2)
+- **`WidgetArtFetcher`** (Dart) downloads the current Subsonic
+  track's 256 px cover into `${tempDir}/widget_art.jpg` (single-slot,
+  overwritten each track change — RemoteViews only shows one image
+  at a time, no eviction needed). Engine kicks the fetch on
+  `_onTrackChanged` then re-pushes the widget with the new path
+  once it lands; pause/resume ticks re-use `_widgetArtPath` without
+  re-downloading.
+- **`WidgetBridge.update`** gains `artworkPath`; the Kotlin
+  `WidgetChannel` forwards it to `DigaudioWidgetProvider.refresh`,
+  which `BitmapFactory.decodeFile`s + `setImageViewBitmap`s the
+  result (silently falls back to the launcher icon on null / decode
+  failure / corrupt file). Layout's `widget_icon` → `widget_art`
+  (semantic rename — only one ImageView slot).
+- **`_pushWidget()` helper** in the engine — single source of truth
+  for widget updates (was duplicated between `_onTrackChanged` and
+  the playbackEventStream listener).
+- **Local-only tracks**: still no widget artwork (same hidden cost
+  as MediaItem `artUri` skipping local origin — deferred).
+
+### Added (Subsonic admin — library scan)
+- **`SubsonicClient.startScan` / `getScanStatus`** + a small
+  `ScanStatus(scanning, count)` record. `startScan` is admin-only
+  on Navidrome / Gonic; non-admin users get Subsonic error 50.
+- **Server edit page section** "Library scan (admin)" with "Check
+  status" + "Trigger scan" buttons. Surfaces "Admin role required"
+  inline for non-admin users; surfaces live `scanning…` /
+  `idle — N songs` for admins.
+
 ## [0.27.1] — 2026-05-26
 
 ### Fixed

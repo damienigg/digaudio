@@ -15,6 +15,7 @@ import '../library/local.dart';
 import '../library/play_history.dart';
 import '../library/track_positions.dart';
 import '../subsonic/client.dart';
+import '../widget/widget_art.dart';
 import '../widget/widget_bridge.dart';
 
 /// digaudio's audio engine + AA bridge with **true crossfade** between
@@ -100,6 +101,11 @@ class AudioEngine extends BaseAudioHandler {
   // ----- bookkeeping ---------------------------------------------------------
   String? _nowPlayingKey;
   bool _scrobbledCurrent = false;
+  /// Last successfully-prefetched artwork path for the homescreen widget.
+  /// Persists across pause/resume so the playbackEventStream listener can
+  /// re-push it on every state tick without re-downloading. Cleared
+  /// implicitly on track change (overwritten by the prefetch result).
+  String? _widgetArtPath;
   DateTime _lastPositionSave = DateTime(0);
   /// Replay-Gain-adjusted ceiling for the current track. Transition
   /// ramps tween toward this value instead of 1.0 so RG doesn't get
@@ -164,12 +170,7 @@ class AudioEngine extends BaseAudioHandler {
       _broadcastState();
       // Mirror play/pause into the homescreen widget so its
       // play-pause icon stays in sync with reality.
-      final t = currentTrack;
-      WidgetBridge.update(
-        title: t?.title,
-        artist: t?.displayArtist,
-        isPlaying: _primary.playing,
-      );
+      _pushWidget();
     });
 
     _innerPositionSub = _primary.positionStream.listen((pos) {
@@ -383,12 +384,31 @@ class AudioEngine extends BaseAudioHandler {
       artistName: t.artist,
       releaseName: t.album,
     );
-    // Homescreen widget refresh — title + artist change. Play-state
-    // updates also happen via the playerState listener below.
+    // Homescreen widget refresh. Carries over the previous track's
+    // art for the brief window until the prefetch lands — slight
+    // cross-track flicker but no blank slot. The playerState listener
+    // re-pushes on every event so updates stay current.
+    _pushWidget();
+    unawaited(WidgetArtFetcher
+        .fetch(t, _subsonicResolver().forTrack(t))
+        .then((path) {
+      _widgetArtPath = path;
+      _pushWidget();
+    }));
+  }
+
+  /// Single point of truth for widget pushes — title / artist / play
+  /// state from the current track, plus the latest prefetched art path.
+  /// Called from [_onTrackChanged] (kicks off a fresh prefetch) and on
+  /// every playbackEvent tick (preserves the existing art across
+  /// pause/resume/seek without re-downloading).
+  void _pushWidget() {
+    final t = currentTrack;
     WidgetBridge.update(
-      title: t.title,
-      artist: t.displayArtist,
+      title: t?.title,
+      artist: t?.displayArtist,
       isPlaying: _primary.playing,
+      artworkPath: _widgetArtPath,
     );
   }
 

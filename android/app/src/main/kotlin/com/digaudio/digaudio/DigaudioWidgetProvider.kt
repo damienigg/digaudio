@@ -6,6 +6,7 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.graphics.BitmapFactory
 import android.view.KeyEvent
 import android.widget.RemoteViews
 
@@ -39,7 +40,8 @@ class DigaudioWidgetProvider : AppWidgetProvider() {
         // Dart calls pushUpdate.
         for (id in ids) {
             refresh(context, manager, id,
-                title = "digaudio", artist = "Open the app", isPlaying = false)
+                title = "digaudio", artist = "Open the app",
+                isPlaying = false, artworkPath = null)
         }
     }
 
@@ -54,7 +56,8 @@ class DigaudioWidgetProvider : AppWidgetProvider() {
             context: Context,
             title: String?,
             artist: String?,
-            isPlaying: Boolean
+            isPlaying: Boolean,
+            artworkPath: String?
         ) {
             val manager = AppWidgetManager.getInstance(context)
             val ids = manager.getAppWidgetIds(
@@ -64,7 +67,8 @@ class DigaudioWidgetProvider : AppWidgetProvider() {
                 refresh(context, manager, id,
                     title = title ?: "digaudio",
                     artist = artist ?: "Open the app",
-                    isPlaying = isPlaying)
+                    isPlaying = isPlaying,
+                    artworkPath = artworkPath)
             }
         }
 
@@ -74,7 +78,8 @@ class DigaudioWidgetProvider : AppWidgetProvider() {
             id: Int,
             title: String,
             artist: String,
-            isPlaying: Boolean
+            isPlaying: Boolean,
+            artworkPath: String?
         ) {
             val views = RemoteViews(context.packageName, R.layout.digaudio_widget)
             views.setTextViewText(R.id.widget_title, title)
@@ -86,6 +91,15 @@ class DigaudioWidgetProvider : AppWidgetProvider() {
                 else
                     android.R.drawable.ic_media_play
             )
+            // Artwork: prefer the Dart-prefetched JPEG when present, fall
+            // back to the launcher icon. BitmapFactory returns null on a
+            // missing / corrupt file → silent fallback (same path).
+            val bmp = artworkPath?.let { BitmapFactory.decodeFile(it) }
+            if (bmp != null) {
+                views.setImageViewBitmap(R.id.widget_art, bmp)
+            } else {
+                views.setImageViewResource(R.id.widget_art, R.mipmap.ic_launcher)
+            }
             views.setOnClickPendingIntent(R.id.widget_root, launchAppIntent(context))
             views.setOnClickPendingIntent(R.id.widget_play,
                 clickIntent(context, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE))

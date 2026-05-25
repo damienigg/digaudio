@@ -26,8 +26,9 @@ class WidgetChannel(private val context: Context) {
                         val title = call.argument<String?>("title")
                         val artist = call.argument<String?>("artist")
                         val isPlaying = call.argument<Boolean?>("isPlaying") ?: false
+                        val artworkPath = call.argument<String?>("artworkPath")
                         DigaudioWidgetProvider.pushUpdate(
-                            context, title, artist, isPlaying
+                            context, title, artist, isPlaying, artworkPath
                         )
                         result.success(null)
                     }
