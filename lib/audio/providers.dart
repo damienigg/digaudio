@@ -288,6 +288,16 @@ final newestAlbumsProvider = FutureProvider<List<Album>>((ref) async {
   return s.getAlbumList(type: 'newest', size: 30);
 });
 
+/// Albums the user (or anyone on this Subsonic server) played most
+/// recently. Different from the local stats — this comes from the
+/// server's own play history and stays useful across devices. Empty
+/// for fresh installs / fresh servers with no play data yet.
+final recentlyPlayedAlbumsProvider = FutureProvider<List<Album>>((ref) async {
+  final s = ref.watch(subsonicProvider);
+  if (s == null) return const [];
+  return s.getAlbumList(type: 'recent', size: 20);
+});
+
 final randomSongsProvider = FutureProvider<List<Track>>((ref) async {
   final s = ref.watch(subsonicProvider);
   if (s == null) return const [];

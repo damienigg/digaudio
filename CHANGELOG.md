@@ -7,6 +7,18 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.22.1] — 2026-05-25
+
+### Added
+- **Home gets a "Recently played" section**, between "Newest
+  releases" and "Random picks". Uses Subsonic's
+  `getAlbumList2(type='recent', size=20)` — comes from the
+  server's own play history, not the local stats, so it stays
+  useful across devices that share the same Subsonic account.
+- Section hides itself when the server returns nothing (fresh
+  install / fresh server / new account) — avoids an empty row.
+- Pull-to-refresh now also invalidates the new provider.
+
 ## [0.22.0] — 2026-05-25
 
 ### Added (Subsonic library cache auto-refresh)

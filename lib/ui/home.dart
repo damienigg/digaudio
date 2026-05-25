@@ -14,6 +14,7 @@ class HomePage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final newestAlbums = ref.watch(newestAlbumsProvider);
+    final recentAlbums = ref.watch(recentlyPlayedAlbumsProvider);
     final random = ref.watch(randomSongsProvider);
     final subsonicConfigured = ref.watch(subsonicProvider) != null;
 
@@ -32,6 +33,7 @@ class HomePage extends ConsumerWidget {
           : RefreshIndicator(
               onRefresh: () async {
                 ref.invalidate(newestAlbumsProvider);
+                ref.invalidate(recentlyPlayedAlbumsProvider);
                 ref.invalidate(randomSongsProvider);
               },
               child: ListView(
@@ -39,6 +41,19 @@ class HomePage extends ConsumerWidget {
                 children: [
                   const _HomeHero(),
                   _Section(title: 'Newest releases', child: _AlbumRow(state: newestAlbums)),
+                  // Section hides itself when there's no recent-play data
+                  // (fresh install / fresh server) — avoids an empty row.
+                  recentAlbums.when(
+                    loading: () => _Section(
+                        title: 'Recently played',
+                        child: _AlbumRow(state: recentAlbums)),
+                    error: (_, __) => const SizedBox.shrink(),
+                    data: (list) => list.isEmpty
+                        ? const SizedBox.shrink()
+                        : _Section(
+                            title: 'Recently played',
+                            child: _AlbumRow(state: recentAlbums)),
+                  ),
                   _Section(title: 'Random picks', child: _TracksColumn(state: random)),
                 ],
               ),
