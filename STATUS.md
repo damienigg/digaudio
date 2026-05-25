@@ -1,4 +1,4 @@
-# digaudio — STATUS (v0.19.0, 2026-05-25)
+# digaudio — STATUS (v0.20.1, 2026-05-25)
 
 Three things in one document:
 
@@ -6,13 +6,16 @@ Three things in one document:
 2. **User test plan** — a checklist a human can run through on a real phone to verify each shipped feature.
 3. **Next horizons** — what we could still add to make this the ultimate Android music player. Prioritised by impact × effort.
 
-> Refresh history: v0.14.2 → v0.19.0 (15 releases). Combo-1
+> Refresh history: v0.14.2 → v0.20.1 (17 releases). Combo-1
 > recommendation engine **fully complete** (FTS landed in v0.19.0).
-> Plus smart playlists, smart mixes, Subsonic radio, Genre/Decade
-> browsers, On-this-day, Year-by-year, queue editor, album mode,
-> per-track resume, Up Next strip, Now Playing colour tint, bulk
-> select, EQ presets, gapless confirmation, Replay Gain, per-BT EQ,
-> true crossfade with two-player engine refactor. Reflected throughout.
+> Combo 4 (daily driver) jumped from 1/5 → 3/5 with v0.20.0 Quick
+> Settings tile + v0.20.1 Material You / auto-play BT / headphone-
+> removal verify. Plus prior session work: smart playlists, smart
+> mixes, Subsonic radio, Genre/Decade browsers, On-this-day,
+> Year-by-year, queue editor, album mode, per-track resume,
+> Up Next strip, Now Playing colour tint, bulk select, EQ presets,
+> gapless confirmation, Replay Gain, per-BT EQ, true crossfade
+> with two-player engine refactor. Reflected throughout.
 
 ---
 
@@ -144,7 +147,10 @@ Three things in one document:
 | Lockscreen artwork + transport | ✓ via audio_service |
 | Notification + transport | ✓ via audio_service |
 | Bluetooth controls | ✓ |
+| **Quick Settings tile** (Android system shade) | ✓ v0.20.0 — user drags it in once |
 | Android Auto browsable tree (Favourites / Recently played / Most played) | ✓ (untested on real head unit) |
+| Headphone-removal auto-pause | ✓ free via `audio_session.music` |
+| Auto-play on BT connect | ✓ v0.20.1 (opt-in toggle) |
 
 ### Server features
 - Subsonic salt+token auth (no plain-text passwords on wire).
@@ -155,6 +161,7 @@ Three things in one document:
 ### Theme & UI
 - Dark theme (default, Spotify-inspired).
 - Light theme (system / dark / light picker in Settings → Display); 87 `Colors.white*` literals migrated to theme-aware aliases (v0.12.0).
+- **Material You (Android 12+)** — Settings → Display → "Use system colours". When on AND the OS exposes a palette, `ColorScheme` follows the wallpaper. Brand accent (`#1ED760`) stays as fallback + as deliberate splash colour on heart icons / EQ active / transport (v0.20.1).
 - Brand accent `#1ED760` everywhere.
 - Custom launcher icon (golden shovel + "DIG" + music notes, v2 in v0.12.3).
 - Bottom-nav shell (Home / Search / Library) + persistent mini-player.
@@ -337,18 +344,14 @@ All 7 items shipped. Smart playlists is the centerpiece; 4 builtins seeded.
   - Engine-level loop (`all` wraps, `one` delegates to source loop) + engine-level shuffle (pins current track at 0, shuffles rest, restores via `_originalOrder`)
   - `_silenceSecondary()` called by all skip paths so a mid-fade secondary never plays in the background after a user jump
 
-### D · Platform integration (0/7 shipped)
+### D · Platform integration (4/7 shipped)
 
-- **Quick Settings tile** *(M)*  
-  Pull down the notification shade — a "digaudio" tile shows play/pause + current track. One tap from anywhere.
+- ~~**Quick Settings tile**~~ — **DONE v0.20.0** (Kotlin `TileService`, broadcasts media-button play/pause; user drags into Quick Settings panel once)
+- ~~**Material You dynamic colour**~~ — **DONE v0.20.1** (Settings → Display toggle; `DynamicColorBuilder` wraps MaterialApp; Android 12+ pulls the wallpaper palette)
+- ~~**Headphone-removal auto-pause**~~ — **DONE** (free since v0.9.x via `AudioSessionConfiguration.music`; verified in v0.20.1 CHANGELOG)
+- ~~**Auto-play on BT connect**~~ — **DONE v0.20.1** (opt-in toggle in Settings → Playback; reuses BtEqService's `devicesChangedEventStream` subscription)
 - **Homescreen widget (mini-player)** *(L)*  
-  Same controls + artwork on the user's homescreen. Glance value.
-- **Material You dynamic colour** *(S)*  
-  On Android 12+, the accent could mirror the system wallpaper (alternative to the fixed `#1ED760` brand colour).
-- **Headphone-removal auto-pause** *(S)*  
-  Already free via `audio_session` config — verify it works.
-- **Auto-play on BT connect** option *(S)*  
-  Resume last queue when wired/wireless headphones connect.
+  Same controls + artwork on the user's homescreen. Glance value. Significant Android AppWidget work — own session.
 - **Voice search inside the app** *(M)*  
   Today AA does it; in-app could use Android's `SpeechRecognizer`.
 - **Wear OS companion** *(L)*  
@@ -414,44 +417,50 @@ All 7 items shipped. Smart playlists is the centerpiece; 4 builtins seeded.
 3. **Friend-share** = ListenBrainz × listening parties × Now-Playing share × wishlist webhook.  
    **0/4 done**. Big lift for the smallest user base.
 4. **Daily driver** = Quick Settings tile × homescreen widget × Wear OS × Auto-play on BT × Per-track resume.  
-   **1/5 done** (per-track resume). Quick Settings tile + auto-play on BT is the quickest win.
+   **3/5 done** — Quick Settings tile (v0.20.0), Auto-play on BT (v0.20.1), Per-track resume (v0.16.1). Remaining: homescreen widget (L), Wear OS (L) — both large standalone chunks.
 
-**Next single 10× leap from here** (now that combo 1 is done):
-**Daily-driver batch** (combo 4) — Quick Settings tile + Auto-play
-on BT + headphone-removal verify + Material You. Most of these are
-small individually but together they make the app feel like a
-first-class Android citizen instead of a "music app". Quick
-Settings tile alone is the most-used Android control surface most
-people barely realise exists.
+**Next single 10× leap from here** (now that combos 1 + 4-light are done):
+The remaining items are mostly polish (G), one-off integrations
+(E social, F library mgmt cleanup), or large standalone chunks
+(widget + Wear OS). No single "killer feature" left — the app is
+feature-complete vs Substreamer / Symfonium baseline.
+
+If you want incremental value, the next mid-sized win is **Smart
+Playlists v2 (joins on favourites / playCount / lastPlayed /
+pinned / rating)** — extends the rule engine without new UI, but
+unlocks "real" Discover / Throwback mixes that today's v1 rule
+set can't express.
 
 ---
 
 ## Versioning
 
-Latest released: **v0.19.0** (Library FTS — combo 1 finalised).
+Latest released: **v0.20.1** (Material You + auto-play BT — combo 4 partial).
 
 Categories A, B, C are **DONE**. Combo 1 is **complete (4/4)**.
+Combo 4 is **3/5 done** — only widget + Wear OS remain (both L).
 Combo 2 (Pro-listener) is 4/6 — remaining items are "verify only"
 on real devices. What's left, in roughly increasing order of effort
 × decreasing certainty of impact:
 
-- **v0.19.x — Library management cleanup** (3 small items remaining)  
-  Cache auto-refresh, multi-server unified search, "Recently added"
-  on Home, background download queue with system notification.
-- **v0.20.x — Daily-driver batch** (combo 4)  
-  Quick Settings tile + Auto-play on BT + headphone-removal verify +
-  Material You dynamic colour.
 - **v0.21.x — Smart playlists v2** (joins for the rules engine)  
   Add `favourite`, `playCount30d`, `lastPlayedDaysAgo`, `pinned`,
   `cached`, `rating` to the rule fields. Unlocks "real" Discover /
-  Throwback / etc. smart mixes.
-- **v0.22.x — Long-tail polish** (i18n, accessibility, sleep-timer
-  fade-out, notification rich actions, Subsonic radio auto-refill)
-- **v0.23.x — Friend-share batch** (combo 3 — ListenBrainz +
+  Throwback / etc. smart mixes. **Mid-effort, big payoff.**
+- **v0.22.x — Library management cleanup** (4 small items)  
+  Cache auto-refresh, multi-server unified search, "Recently added"
+  on Home, background download queue with system notification.
+- **v0.23.x — Long-tail polish** (i18n, accessibility, sleep-timer
+  fade-out, notification rich actions, Subsonic radio auto-refill,
+  voice search in-app)
+- **v0.24.x — Friend-share batch** (combo 3 — ListenBrainz +
   Now-Playing share)  
   Listening parties / wishlist webhook deferred until a real use
   case emerges.
-- **v0.24.x — Wear OS + homescreen widget** (combo 4 finishers)
+- **v0.25.x — Homescreen widget** (combo 4 finisher, L — standalone
+  Android AppWidget code, own session)
+- **v0.26.x — Wear OS companion** (combo 4 finisher, L — independent
+  watch app)
 - **v1.0.0** — first "release" milestone after a real-device
   validation pass on all features
 
