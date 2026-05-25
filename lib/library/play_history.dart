@@ -150,6 +150,44 @@ class PlayHistoryManager {
     return out;
   }
 
+  /// Distinct trackKeys played on the same `MM-DD` as today, excluding
+  /// plays from today itself. Powers the "On this day" stats section —
+  /// nice for users with >1 year of history; empty for fresh installs.
+  Future<List<String>> onThisDay({int limit = 20}) async {
+    final rows = await _db.customSelect(
+      "SELECT DISTINCT track_key FROM recent_plays "
+      "WHERE strftime('%m-%d', played_at, 'unixepoch') = strftime('%m-%d', 'now') "
+      "AND date(played_at, 'unixepoch') != date('now') "
+      "ORDER BY played_at DESC LIMIT ?",
+      variables: [Variable<int>(limit)],
+      readsFrom: {_db.recentPlays},
+    ).get();
+    return rows.map((r) => r.read<String>('track_key')).toList();
+  }
+
+  /// `YYYY` → top trackKeys (count desc) per year present in history.
+  /// Stats page renders one section per year (newest first). Same shape
+  /// as `topPerMonth` but coarser, for retrospective top-N-of-the-year
+  /// rituals.
+  Future<Map<String, List<({String trackKey, int count})>>> topPerYear({
+    int perYear = 5,
+  }) async {
+    final rows = await _db.customSelect(
+      "SELECT track_key, strftime('%Y', played_at, 'unixepoch') AS y, COUNT(*) AS c "
+      "FROM recent_plays GROUP BY track_key, y ORDER BY y DESC, c DESC",
+      readsFrom: {_db.recentPlays},
+    ).get();
+    final grouped = <String, List<({String trackKey, int count})>>{};
+    for (final r in rows) {
+      final y = r.read<String>('y');
+      final list = grouped.putIfAbsent(y, () => []);
+      if (list.length < perYear) {
+        list.add((trackKey: r.read<String>('track_key'), count: r.read<int>('c')));
+      }
+    }
+    return grouped;
+  }
+
   /// Most-recent N distinct trackKeys, most-recent first. Powers the
   /// Android Auto "Recently played" browsable node.
   Future<List<String>> recentUnique(int n) async {

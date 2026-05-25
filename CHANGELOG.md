@@ -7,6 +7,25 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.15.0] — 2026-05-25
+
+### Added (Stats — combo 1 / category B starter)
+- **"On this day" section** — distinct tracks you played on the same
+  calendar day in prior years, newest first. One-tap to play a track,
+  or "Play all" to queue the whole nostalgic batch as a retrospective
+  mix. Empty for installs < 1 year old (with a hint explaining why).
+- **"Year by year" section** — one block per year present in history
+  (newest first), top 5 tracks each, tap a row to play. Reuses the
+  monthly-tops renderer with a label-format tweak.
+
+### Internal
+- `PlayHistoryManager.onThisDay(limit)` — `strftime('%m-%d', ...)`
+  match excluding today.
+- `PlayHistoryManager.topPerYear(perYear)` — single SQL pass grouped
+  by `(track_key, year)`, then limited per-year in Dart for clarity.
+- `_MonthBlock` label parser now accepts year-only strings so the
+  yearly section reuses the same widget.
+
 ## [0.14.2] — 2026-05-25
 
 ### Added

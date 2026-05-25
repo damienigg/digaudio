@@ -76,6 +76,31 @@ class _StatsState extends ConsumerState<StatsPage> {
       if (resolved.isNotEmpty) monthly.add((m, resolved));
     }
 
+    // "On this day" — distinct tracks played on the same MM-DD in prior
+    // years. Empty for fresh installs (< 1 year of history) — UI shows
+    // a hint in that case.
+    final onThisDayKeys = await h.onThisDay(limit: 10);
+    final onThisDay = <Track>[];
+    for (final k in onThisDayKeys) {
+      final t = await r.resolve(k);
+      if (t != null) onThisDay.add(t);
+    }
+
+    // Year-by-year tops — one block per year present in history, top 5
+    // tracks each. Same resolve-once-then-render pattern as monthly.
+    final rawYearly = await h.topPerYear(perYear: 5);
+    final yearly = <(String year, List<(Track, int)>)>[];
+    final yearKeys = rawYearly.keys.toList()..sort((a, b) => b.compareTo(a));
+    for (final y in yearKeys) {
+      final entries = rawYearly[y]!;
+      final resolved = <(Track, int)>[];
+      for (final e in entries) {
+        final t = await r.resolve(e.trackKey);
+        if (t != null) resolved.add((t, e.count));
+      }
+      if (resolved.isNotEmpty) yearly.add((y, resolved));
+    }
+
     return _StatsData(
       totalPlays: total,
       uniqueTracks: unique,
@@ -87,6 +112,8 @@ class _StatsState extends ConsumerState<StatsPage> {
       topArtists: topArtists.take(10).map((e) => (e.key, e.value)).toList(),
       mixSeed: tracks.map((e) => e.$1).toList(),
       monthlyTops: monthly,
+      onThisDay: onThisDay,
+      yearlyTops: yearly,
     );
   }
 
@@ -145,6 +172,21 @@ class _StatsState extends ConsumerState<StatsPage> {
               else
                 ...data.topArtists.map((e) => _TopArtistRow(name: e.$1, count: e.$2)),
               const SizedBox(height: 16),
+              const _SectionHeader('On this day'),
+              if (data.onThisDay.isEmpty)
+                const _EmptyHint(
+                    'Nothing yet — build a year of history and this section '
+                    'will surface tracks you played the same day in prior years.')
+              else
+                _OnThisDay(tracks: data.onThisDay),
+              const SizedBox(height: 16),
+              const _SectionHeader('Year by year'),
+              if (data.yearlyTops.isEmpty)
+                const _EmptyHint('No yearly history yet.')
+              else
+                ...data.yearlyTops
+                    .map((y) => _MonthBlock(yyyymm: y.$1, tracks: y.$2)),
+              const SizedBox(height: 16),
               const _SectionHeader('Monthly tops'),
               if (data.monthlyTops.isEmpty)
                 const _EmptyHint('No monthly history yet.')
@@ -175,6 +217,10 @@ class _StatsData {
   /// `YYYY-MM → top 3 tracks` for the last 12 months, newest first.
   /// Already-resolved Tracks so the renderer is sync.
   final List<(String month, List<(Track, int)>)> monthlyTops;
+  /// Tracks played on the same MM-DD as today in past years (excl. today).
+  final List<Track> onThisDay;
+  /// `YYYY → top 5 tracks` for every year present in history, newest first.
+  final List<(String year, List<(Track, int)>)> yearlyTops;
   _StatsData({
     required this.totalPlays,
     required this.uniqueTracks,
@@ -186,6 +232,8 @@ class _StatsData {
     required this.topArtists,
     required this.mixSeed,
     required this.monthlyTops,
+    required this.onThisDay,
+    required this.yearlyTops,
   });
 }
 
@@ -368,6 +416,61 @@ class _YearHeatmap extends StatelessWidget {
   }
 }
 
+/// Tracks played on this calendar day in past years (distinct, most-
+/// recent first). One-tap row to play, plus a "Play all" button that
+/// queues the whole nostalgic batch as a single retrospective mix.
+class _OnThisDay extends ConsumerWidget {
+  final List<Track> tracks;
+  const _OnThisDay({required this.tracks});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          FilledButton.icon(
+            onPressed: () => ref.read(audioEngineProvider).setQueue(tracks),
+            icon: const Icon(Icons.play_arrow),
+            label: Text('Play all (${tracks.length} tracks)'),
+            style: FilledButton.styleFrom(
+              backgroundColor: _accent,
+              foregroundColor: Colors.black,
+              minimumSize: const Size.fromHeight(40),
+            ),
+          ),
+          const SizedBox(height: 8),
+          for (final t in tracks)
+            InkWell(
+              onTap: () => ref.read(audioEngineProvider).playSingle(t),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  children: [
+                    Artwork(coverArt: t.coverArt, origin: t.origin, size: 40),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(t.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontSize: 13)),
+                          Text(t.displayArtist,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                  color: context.textTertiary, fontSize: 11)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      );
+}
+
 /// One month's leaderboard: title row (Mar 2026) + the 3 most-played
 /// tracks of the month with play counts. Tap row → engine.playSingle.
 class _MonthBlock extends ConsumerWidget {
@@ -380,8 +483,11 @@ class _MonthBlock extends ConsumerWidget {
     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
   ];
 
+  /// Accepts `YYYY-MM` (renders "Mar 2026") or just `YYYY` (renders
+  /// "2026") — the year-by-year section reuses this block.
   String _label() {
     final parts = yyyymm.split('-');
+    if (parts.length < 2) return yyyymm; // year-only
     final y = int.tryParse(parts.first) ?? 0;
     final m = int.tryParse(parts.last) ?? 1;
     return '${_months[(m - 1).clamp(0, 11)]} $y';
