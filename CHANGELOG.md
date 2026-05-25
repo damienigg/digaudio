@@ -7,6 +7,16 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.20.2] — 2026-05-25
+
+### Fixed
+- **CI build failure on v0.20.1.** `dynamic_color 1.8.1` (resolved
+  by the `^1.7.0` constraint) calls `Color.toARGB32()`, which only
+  exists in Flutter ≥ 3.27. The project is pinned to Flutter
+  3.24.5 via the GH workflow, so the kernel snapshot failed with
+  `Error: The method 'toARGB32' isn't defined for the class 'Color'`.
+  Constraint tightened to `>=1.7.0 <1.8.0`. Locked at 1.7.0.
+
 ## [0.20.1] — 2026-05-25
 
 ### Added (Material You + auto-play BT)

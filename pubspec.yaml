@@ -1,7 +1,7 @@
 name: digaudio
 description: "digaudio — a lightweight, modern, high-quality audio player (local + Subsonic)."
 publish_to: 'none'
-version: 0.20.1+47
+version: 0.20.2+48
 
 environment:
   sdk: ^3.5.4
@@ -46,7 +46,9 @@ dependencies:
   # When the user toggles "Use system colours" in Settings → Display,
   # the colorScheme follows the wallpaper; brand accent (#1ED760)
   # remains the fallback when the OS doesn't expose a palette.
-  dynamic_color: ^1.7.0
+  # Pinned to <1.8 because 1.8.0+ calls Color.toARGB32() which only
+  # exists in Flutter ≥ 3.27; our project is on 3.24.5.
+  dynamic_color: '>=1.7.0 <1.8.0'
 
   # Sharing (playlist export) + picking (playlist import)
   share_plus: ^10.1.2
