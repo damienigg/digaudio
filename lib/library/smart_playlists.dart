@@ -54,6 +54,44 @@ class SmartPlaylistsManager {
   Future<void> delete(int id) =>
       (_db.delete(_db.smartPlaylists)..where((p) => p.id.equals(id))).go();
 
+  /// Seeds the table with starter smart playlists on first launch only.
+  /// Caller is responsible for the "ever-seeded" flag (typically in
+  /// SharedPreferences) — that way a user who deletes them all keeps
+  /// them deleted instead of fighting the seeder forever.
+  Future<void> seedBuiltins() async {
+    final year = DateTime.now().year;
+    await create(name: 'All time random', rules: const {
+      'match': 'all',
+      'rules': [],
+      'orderBy': 'random',
+      'limit': 50,
+    });
+    await create(name: '80s revival', rules: const {
+      'match': 'all',
+      'rules': [
+        {'field': 'year', 'op': 'between', 'value': [1980, 1989]}
+      ],
+      'orderBy': 'random',
+      'limit': 50,
+    });
+    await create(name: '90s revival', rules: const {
+      'match': 'all',
+      'rules': [
+        {'field': 'year', 'op': 'between', 'value': [1990, 1999]}
+      ],
+      'orderBy': 'random',
+      'limit': 50,
+    });
+    await create(name: 'Recent (${year - 4}–$year)', rules: {
+      'match': 'all',
+      'rules': [
+        {'field': 'year', 'op': 'gte', 'value': year - 4}
+      ],
+      'orderBy': 'random',
+      'limit': 50,
+    });
+  }
+
   /// Materialises the playlist for the active [serverId]. Returns the
   /// matching tracks in the order specified by the rules.
   Future<List<Track>> execute(SmartPlaylist p, String serverId) =>

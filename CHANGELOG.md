@@ -7,6 +7,26 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.15.4] — 2026-05-25
+
+### Added (Smart mixes builtins seeded at first launch)
+- 4 builtin smart playlists materialise on first launch into a
+  freshly-installed app, so the user has something to play with
+  before writing their own rules:
+  - **All time random** — no filters, random order, 50 tracks
+  - **80s revival** — year 1980–1989, random
+  - **90s revival** — year 1990–1999, random
+  - **Recent** — year ≥ current_year − 4, random
+- `smart.builtins.seeded` flag persists in SharedPreferences after
+  the first seed pass, so users who delete the builtins won't see
+  them respawn.
+
+### Internal
+- `SmartPlaylistsManager.seedBuiltins()` — single call, idempotent
+  via the caller's flag. v1 builtins all fit inside the v1 rule set
+  (year-only filters); richer builtins can be added once v2 lands
+  with play-count / favourite / rating joins.
+
 ## [0.15.3] — 2026-05-25
 
 ### Added (Smart playlists — combo 1 centerpiece)
