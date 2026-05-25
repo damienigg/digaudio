@@ -1,4 +1,4 @@
-# digaudio — STATUS (v0.16.3, 2026-05-25)
+# digaudio — STATUS (v0.18.0, 2026-05-25)
 
 Three things in one document:
 
@@ -6,11 +6,12 @@ Three things in one document:
 2. **User test plan** — a checklist a human can run through on a real phone to verify each shipped feature.
 3. **Next horizons** — what we could still add to make this the ultimate Android music player. Prioritised by impact × effort.
 
-> Refresh history: v0.14.2 → v0.16.3 (9 releases added a lot: combo-1
+> Refresh history: v0.14.2 → v0.18.0 (14 releases). Combo-1
 > recommendation engine, smart playlists, smart mixes, Subsonic radio,
 > Genre/Decade browsers, On-this-day, Year-by-year, queue editor, album
 > mode, per-track resume, Up Next strip, Now Playing colour tint, bulk
-> select). Reflected throughout.
+> select, EQ presets, gapless confirmation, Replay Gain, per-BT EQ,
+> **true crossfade with two-player engine refactor**. Reflected throughout.
 
 ---
 
@@ -405,26 +406,32 @@ All 7 items shipped. Smart playlists is the centerpiece; 4 builtins seeded.
 1. **Recommendation engine** = Last.fm × library FTS × smart playlists × Subsonic radio.  
    **3/4 done** (Last.fm, smart playlists, Subsonic radio). Adding **library FTS** would let the user write smart-playlist rules with free-text search (e.g. "title contains 'remix' AND year > 2020"). Highest-value remaining single addition.
 2. **Pro-listener** = Replay Gain × true crossfade × EQ presets × per-BT-device EQ × FLAC-confirmed × wired-DAC fidelity.  
-   **1/6 done** (crossfade-pseudo). Replay Gain + EQ presets is a small batch that pushes hard on audiophile UX.
+   **4/6 done** — Replay Gain, true crossfade (overlap, v0.18.0), EQ presets, per-BT EQ all shipped. Remaining: FLAC end-to-end verification (codec + sample-rate display, probably free), wired-DAC fidelity confirmation (probably free via Android system audio).
 3. **Friend-share** = ListenBrainz × listening parties × Now-Playing share × wishlist webhook.  
    **0/4 done**. Big lift for the smallest user base.
 4. **Daily driver** = Quick Settings tile × homescreen widget × Wear OS × Auto-play on BT × Per-track resume.  
    **1/5 done** (per-track resume). Quick Settings tile + auto-play on BT is the quickest win.
 
-If you want a single 10× leap from here, **combo 2 (Pro-listener)** — specifically **Replay Gain + EQ presets** — is the cleanest next move. Smaller code, big perceived improvement, no platform-integration plumbing.
+**Next single 10× leap from here**: combo 1 finalisation = **library FTS** (M). Unlocks free-text smart-playlist rules ("title contains 'remix'") + instant search. Smaller than combo 4 (platform integration) and combo 3 (social), bigger impact than the long-tail polish in section G.
 
 ---
 
 ## Versioning
 
-Latest released: **v0.16.3** (bulk select).
+Latest released: **v0.18.0** (TRUE crossfade — two-player engine refactor).
 
-Suggested sequencing if you tackle more:
-- v0.17.x — Pro-listener batch (Replay Gain + EQ presets + true crossfade overlap)
-- v0.18.x — Daily-driver batch (Quick Settings tile + auto-play on BT + headphone-removal verify)
-- v0.19.x — Library management (FTS + Recently added + cache auto-refresh + multi-server search)
-- v0.20.x — Smart playlists v2 (joins on favourites / play counts / etc.)
-- v0.21.x — Long-tail polish (i18n, accessibility, sleep-timer fade)
-- v1.0.0 — first "release" version after a real-device validation pass
+Categories A, B, C are **DONE**. Combo 1 + 2 are essentially complete (3/4 and 4/6 — remaining items are minor or "verify only"). What's left, in roughly increasing order of effort × decreasing certainty of impact:
+
+- **v0.19.x — Library management** (combo 1 finalisation + browse polish)  
+  FTS + cache auto-refresh + multi-server search + "Recently added" + background download queue.
+- **v0.20.x — Daily-driver batch** (combo 4)  
+  Quick Settings tile + Auto-play on BT + headphone-removal verify + Material You dynamic colour.
+- **v0.21.x — Smart playlists v2** (joins for the rules engine)  
+  Add `favourite`, `playCount30d`, `lastPlayedDaysAgo`, `pinned`, `cached`, `rating` to the rule fields. Unlocks "real" Discover / Throwback / etc. smart mixes.
+- **v0.22.x — Long-tail polish** (i18n, accessibility, sleep-timer fade-out, notification rich actions)
+- **v0.23.x — Friend-share batch** (combo 3 — ListenBrainz + Now-Playing share)  
+  Listening parties / wishlist webhook deferred until a real use case emerges.
+- **v0.24.x — Wear OS + homescreen widget** (combo 4 finishers)
+- **v1.0.0** — first "release" milestone after a real-device validation pass on all features
 
 `flutter_launcher_icons` regeneration + build_runner stay required after schema bumps — same workflow as today.
