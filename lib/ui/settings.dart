@@ -533,7 +533,6 @@ class DisplayPage extends ConsumerWidget {
               final p = ref.read(displayPrefsProvider);
               p.nowPlayingTint = v;
               await p.save();
-              ref.invalidate(displayPrefsProvider);
             },
           ),
           _DisplayToggle(
@@ -546,7 +545,6 @@ class DisplayPage extends ConsumerWidget {
               final p = ref.read(displayPrefsProvider);
               p.materialYouEnabled = v;
               await p.save();
-              ref.invalidate(displayPrefsProvider);
             },
           ),
           _DisplayToggle(
@@ -561,7 +559,6 @@ class DisplayPage extends ConsumerWidget {
               final p = ref.read(displayPrefsProvider);
               p.audioGeekInfoEnabled = v;
               await p.save();
-              ref.invalidate(displayPrefsProvider);
             },
           ),
           _DisplayToggle(
@@ -576,7 +573,6 @@ class DisplayPage extends ConsumerWidget {
               final p = ref.read(displayPrefsProvider);
               p.appBackgroundEnabled = v;
               await p.save();
-              ref.invalidate(displayPrefsProvider);
             },
           ),
           _DisplayToggle(
@@ -591,7 +587,6 @@ class DisplayPage extends ConsumerWidget {
               final p = ref.read(displayPrefsProvider);
               p.debugLogsEnabled = v;
               await p.save();
-              ref.invalidate(displayPrefsProvider);
             },
           ),
         ],

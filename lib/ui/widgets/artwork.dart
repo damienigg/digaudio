@@ -44,10 +44,19 @@ class Artwork extends ConsumerWidget {
       child = _placeholder(context);
     } else if (origin == MediaOrigin.subsonic) {
       final s = ref.watch(subsonicResolverProvider).forId(serverId);
+      // Subsonic auth uses a salt+token that's regenerated on every
+      // call to `coverUri()`, so the URL changes per build. Without
+      // `cacheKey`, CachedNetworkImage thinks each rebuild is a NEW
+      // image and re-fetches — which manifested as artwork loading
+      // late then flickering / disappearing on every parent rebuild.
+      // Pin the cache key to (serverId, coverArt, target size) so the
+      // disk + memory caches identify the image by its stable shape.
+      final pxSize = size.toInt() * 2;
       child = s == null
           ? _placeholder(context)
           : CachedNetworkImage(
-              imageUrl: s.coverUri(coverArt!, size: size.toInt() * 2).toString(),
+              imageUrl: s.coverUri(coverArt!, size: pxSize).toString(),
+              cacheKey: 'subsonic:${serverId ?? "active"}:$coverArt:$pxSize',
               width: size,
               height: size,
               fit: BoxFit.cover,

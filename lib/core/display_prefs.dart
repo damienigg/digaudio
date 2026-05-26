@@ -7,7 +7,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// scale etc. tomorrow). Kept separate from `PlaybackPrefs` because the
 /// concerns are unrelated — playback prefs cluster around the engine,
 /// display prefs around the widget tree.
-class DisplayPrefs {
+///
+/// Extends [ChangeNotifier] so [save] can broadcast updates to anyone
+/// who [ref.watch]s the [ChangeNotifierProvider]-wrapped singleton.
+/// Previously the Settings page used `ref.invalidate(displayPrefsProvider)`
+/// after each save, which actually DESTROYED the singleton + created a
+/// fresh `DisplayPrefs()` with default values — losing every other
+/// persisted setting in-memory until the next app boot. Switching to a
+/// notify-based change-broadcast keeps the singleton intact and only
+/// signals "something changed, please re-read".
+class DisplayPrefs extends ChangeNotifier {
   static const _kThemeMode = 'display.theme_mode';
   static const _kLongPressPlays = 'display.long_press_plays';
   static const _kNowPlayingTint = 'display.now_playing_tint';
@@ -129,5 +138,6 @@ class DisplayPrefs {
     await p.setBool(_kDebugLogsEnabled, debugLogsEnabled);
     await p.setBool(_kAppBackground, appBackgroundEnabled);
     await p.setString(_kRecentSearches, jsonEncode(recentSearches));
+    notifyListeners();
   }
 }

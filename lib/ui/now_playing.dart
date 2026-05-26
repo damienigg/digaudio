@@ -27,11 +27,12 @@ const _accent = Color(0xFF1ED760);
 ///   - the palette extraction fails (network glitch, decode error).
 /// Call sites use `??  _accent` to fall back to brand green cleanly.
 ///
-/// Prefers `lightVibrantColor` because the Now Playing surface is
-/// dark and a saturated-but-bright accent reads best against the
-/// full-bleed artwork + dark scrim. Falls through to `vibrantColor`
-/// and `dominantColor` if the palette doesn't expose the preferred
-/// shade.
+/// Prefers `vibrantColor` (max saturation, no light bias). The
+/// previous order put `lightVibrantColor` first but it tends to pick
+/// near-white shades on artworks with bright whites in them — fine
+/// behind a dark scrim but reads as "no tint applied" on the play
+/// FAB. Falls through to `lightVibrant`, then `muted`, then
+/// `dominant` when the preferred shade is absent from the palette.
 final nowPlayingTintProvider = FutureProvider.autoDispose<Color?>((ref) async {
   final track = ref.watch(currentTrackProvider);
   final enabled = ref.watch(displayPrefsProvider).nowPlayingTint;
@@ -47,8 +48,9 @@ final nowPlayingTintProvider = FutureProvider.autoDispose<Color?>((ref) async {
       size: const Size(80, 80),
       maximumColorCount: 8,
     );
-    return palette.lightVibrantColor?.color ??
-        palette.vibrantColor?.color ??
+    return palette.vibrantColor?.color ??
+        palette.lightVibrantColor?.color ??
+        palette.mutedColor?.color ??
         palette.dominantColor?.color;
   } catch (_) {
     return null;
@@ -541,10 +543,49 @@ class _UpNextStrip extends ConsumerWidget {
     // auto-advance. engine.currentIndex tracks the actual queue
     // position.
     final currentIdx = engine.currentIndex;
+    // Show up to 6 upcoming tracks (2 columns × 3 rows) — user
+    // request for a denser preview without scrolling.
     final upcoming = (currentIdx >= 0 && currentIdx + 1 < queue.length)
-        ? queue.sublist(currentIdx + 1, (currentIdx + 4).clamp(0, queue.length))
+        ? queue.sublist(currentIdx + 1, (currentIdx + 7).clamp(0, queue.length))
         : const <Track>[];
     if (upcoming.isEmpty) return const SizedBox.shrink();
+    Widget tile(int i) => InkWell(
+          onTap: () => engine.seekToIndex(currentIdx + 1 + i),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Row(
+              children: [
+                Artwork(
+                    coverArt: upcoming[i].coverArt,
+                    origin: upcoming[i].origin,
+                    serverId: upcoming[i].serverId,
+                    size: 32),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(upcoming[i].title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 12)),
+                      Text(upcoming[i].displayArtist,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              color: context.textTertiary, fontSize: 10)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+    // 2-column layout: row N has tile (2N) on the left + tile (2N+1)
+    // on the right when present. Odd total → last row has one tile
+    // + an empty Expanded so the columns stay aligned.
+    final rowCount = (upcoming.length + 1) ~/ 2;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -557,38 +598,18 @@ class _UpNextStrip extends ConsumerWidget {
                   letterSpacing: 1.5,
                   fontWeight: FontWeight.w700)),
         ),
-        for (var i = 0; i < upcoming.length; i++)
-          InkWell(
-            onTap: () => engine.seekToIndex(currentIdx + 1 + i),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Row(
-                children: [
-                  Artwork(
-                      coverArt: upcoming[i].coverArt,
-                      origin: upcoming[i].origin,
-                      size: 32),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(upcoming[i].title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 12)),
-                        Text(upcoming[i].displayArtist,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                                color: context.textTertiary, fontSize: 10)),
-                      ],
-                    ),
-                  ),
-                ],
+        for (var row = 0; row < rowCount; row++)
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(child: tile(row * 2)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: (row * 2 + 1 < upcoming.length)
+                    ? tile(row * 2 + 1)
+                    : const SizedBox.shrink(),
               ),
-            ),
+            ],
           ),
       ],
     );

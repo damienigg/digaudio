@@ -7,6 +7,62 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.30.19] — 2026-05-27
+
+### Fixed (Display settings toggles silently destroying other prefs)
+- Latent severe bug: every Display toggle called
+  `ref.invalidate(displayPrefsProvider)` after `prefs.save()`. With
+  `Provider<DisplayPrefs>`, invalidate re-runs the create lambda —
+  which constructs a **fresh** `DisplayPrefs()` with default values.
+  Net effect: toggling any Display setting reset *every other*
+  in-memory display pref (theme mode, Material You, audio-geek
+  toggle, debug mode, recent searches, etc.) until the next cold
+  start when `load()` ran again. Toggle UI also visually stuck on
+  the default value rather than the user's choice.
+- Fix: `DisplayPrefs extends ChangeNotifier`; `save()` calls
+  `notifyListeners()` at the end. `displayPrefsProvider` switched to
+  `ChangeNotifierProvider`. Removed all five
+  `ref.invalidate(displayPrefsProvider)` calls in settings.dart. Now
+  the singleton stays alive, mutation persists in-memory, and
+  `ref.watch` consumers rebuild correctly.
+
+### Fixed (Subsonic artwork loading late + flickering on rebuild)
+- `Artwork` widget's `CachedNetworkImage` had no `cacheKey`. Subsonic's
+  salt+token auth regenerates the URL on every call, so a parent
+  rebuild made CachedNetworkImage see a "new" image → cancel-and-
+  refetch loop → artwork appeared late and disappeared on refresh.
+- Fix: pin `cacheKey: 'subsonic:$serverId:$coverArt:$pxSize'` so the
+  cache identifies the image by its stable shape regardless of the
+  ephemeral salt in the URL.
+
+### Fixed (App background invisible despite toggle on)
+- v0.30.17's `_AppBackground` lived inside `AppShell.body` behind the
+  StatefulNavigationShell. Inner shell branches (Home / Search /
+  Library) each have their own Scaffold with an opaque
+  `scaffoldBackgroundColor` that covered the background. Result:
+  bg was rendered but never visible.
+- Fix architecture: moved `AppBackground` to its own widget at
+  `lib/ui/widgets/app_background.dart` and applied it globally via
+  `MaterialApp.builder` — every route gets the same backdrop. Theme
+  override sets `scaffoldBackgroundColor: Colors.transparent` so all
+  Scaffolds (shell, secondary pages, settings, etc.) bleed through
+  to the global bg. Now Playing's own opaque `_BgArtwork` continues
+  to override locally on that route.
+
+### Changed (Now-Playing tint colour source)
+- Tint extraction order was `lightVibrantColor → vibrantColor →
+  dominantColor`. `lightVibrantColor` is luminance-biased toward
+  bright shades and often picked near-white for artworks containing
+  bright whites — the play FAB ended up looking un-tinted. Reordered
+  to `vibrantColor → lightVibrantColor → mutedColor → dominantColor`
+  so the play / slider / heart accents pop more often.
+
+### Changed (Up Next strip is denser — 2 columns × 3 rows)
+- Previously showed 3 tracks vertically. Bumped to 6 (2-column ×
+  3-row layout) per user request. Last row gracefully shows one tile
+  + empty space when the upcoming queue is odd-length. Each tile is
+  still tap-to-jump.
+
 ## [0.30.18] — 2026-05-27
 
 ### Added (Mini-player on secondary pages)

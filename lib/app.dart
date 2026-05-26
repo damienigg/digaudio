@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'audio/providers.dart';
 import 'router.dart';
 import 'theme.dart';
+import 'ui/widgets/app_background.dart';
 
 class DigaudioApp extends ConsumerStatefulWidget {
   const DigaudioApp({super.key});
@@ -84,12 +85,19 @@ class _DigaudioAppState extends ConsumerState<DigaudioApp> {
         // 12+), wrap our theme with the dynamic scheme. Otherwise
         // fall back to the brand-accent themes so existing devices
         // (and pre-Android 12) keep their look.
-        final lightTheme = useMaterialYou && lightDynamic != null
-            ? AppTheme.fromDynamic(lightDynamic)
-            : AppTheme.light();
-        final darkTheme = useMaterialYou && darkDynamic != null
-            ? AppTheme.fromDynamic(darkDynamic)
-            : AppTheme.dark();
+        // scaffoldBackgroundColor: Colors.transparent lets the global
+        // AppBackground (rendered via builder below) bleed through
+        // every page — Home / Search / Library, Album / Artist /
+        // Playlist, Settings, etc. Now Playing draws its own opaque
+        // _BgArtwork on top so the global bg is irrelevant there.
+        final lightTheme = (useMaterialYou && lightDynamic != null
+                ? AppTheme.fromDynamic(lightDynamic)
+                : AppTheme.light())
+            .copyWith(scaffoldBackgroundColor: Colors.transparent);
+        final darkTheme = (useMaterialYou && darkDynamic != null
+                ? AppTheme.fromDynamic(darkDynamic)
+                : AppTheme.dark())
+            .copyWith(scaffoldBackgroundColor: Colors.transparent);
         return MaterialApp.router(
           title: 'digaudio',
           debugShowCheckedModeBanner: false,
@@ -97,6 +105,21 @@ class _DigaudioAppState extends ConsumerState<DigaudioApp> {
           darkTheme: darkTheme,
           themeMode: mode,
           routerConfig: _router,
+          builder: (context, child) {
+            if (child == null) return const SizedBox.shrink();
+            // Wrap every route with a Stack: solid theme-surface
+            // base + optional AppBackground (artwork or icon) + the
+            // active page on top. Scaffolds are transparent (theme
+            // override above) so the bg reads through their bodies.
+            return Consumer(builder: (ctx, ref, _) {
+              final enabled =
+                  ref.watch(displayPrefsProvider).appBackgroundEnabled;
+              return Stack(fit: StackFit.expand, children: [
+                if (enabled) const AppBackground(),
+                child,
+              ]);
+            });
+          },
         );
       },
     );

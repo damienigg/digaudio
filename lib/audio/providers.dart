@@ -88,7 +88,15 @@ final localLibraryProvider = Provider<LocalLibrary>((_) => LocalLibrary());
 
 final playbackPrefsProvider = Provider<PlaybackPrefs>((_) => PlaybackPrefs());
 
-final displayPrefsProvider = Provider<DisplayPrefs>((_) => DisplayPrefs());
+// `ChangeNotifierProvider` (not the plain `Provider`) so widgets that
+// `ref.watch` it auto-rebuild on `notifyListeners()` — which the
+// `save()` method now calls. Plain Provider returned the singleton
+// without ever emitting "I changed", and the previous workaround
+// (`ref.invalidate(displayPrefsProvider)` after each toggle) destroyed
+// the singleton + reset every other persisted pref in-memory. See
+// `DisplayPrefs`'s class doc for the full rationale.
+final displayPrefsProvider =
+    ChangeNotifierProvider<DisplayPrefs>((_) => DisplayPrefs());
 
 /// Reactive theme mode — seeded from [DisplayPrefs] in main and updated
 /// from the Display settings picker. MaterialApp.router watches this.
