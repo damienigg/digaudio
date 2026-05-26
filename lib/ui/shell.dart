@@ -7,19 +7,29 @@ import 'widgets/download_banner.dart';
 import 'widgets/mini_player.dart';
 import 'widgets/selection_bar.dart';
 
-/// The persistent bottom-nav shell: tabs preserve their own navigation stack,
-/// and the mini-player sits above the bar so it's always reachable. A thin
-/// banner appears between body and mini-player when the active Subsonic
-/// server is unreachable — so the user knows they're seeing cached state.
+/// The persistent bottom-nav shell: 3 branch tabs (Home / Search / Library)
+/// preserve their own navigation stacks, plus a 4th "Now Playing"
+/// destination that pushes the `/now-playing` route on tap WITHOUT
+/// switching branch (so the back arrow returns to whichever tab the
+/// user was on). The mini-player still sits above the bar — when it
+/// renders it gives one-tap transport — but the Now Playing nav icon
+/// is the always-reachable entry point regardless of the
+/// mini-player's state.
 class AppShell extends ConsumerWidget {
   final StatefulNavigationShell shell;
   const AppShell({super.key, required this.shell});
 
+  /// First 3 entries map 1:1 to the [StatefulNavigationShell] branches.
+  /// The 4th (Now Playing) is handled separately in
+  /// [onDestinationSelected] — it pushes a route instead of switching
+  /// branches, so the selectedIndex stays on whichever tab is current.
   static const _items = [
     (icon: Icons.home_outlined, selected: Icons.home, label: 'Home'),
     (icon: Icons.search, selected: Icons.search, label: 'Search'),
     (icon: Icons.library_music_outlined, selected: Icons.library_music, label: 'Library'),
+    (icon: Icons.play_circle_outline, selected: Icons.play_circle, label: 'Now Playing'),
   ];
+  static const _nowPlayingIndex = 3;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -38,8 +48,13 @@ class AppShell extends ConsumerWidget {
           const MiniPlayer(),
           NavigationBar(
             selectedIndex: shell.currentIndex,
-            onDestinationSelected: (i) =>
-                shell.goBranch(i, initialLocation: i == shell.currentIndex),
+            onDestinationSelected: (i) {
+              if (i == _nowPlayingIndex) {
+                context.push('/now-playing');
+              } else {
+                shell.goBranch(i, initialLocation: i == shell.currentIndex);
+              }
+            },
             destinations: [
               for (final it in _items)
                 NavigationDestination(

@@ -412,8 +412,24 @@ class AudioEngine extends BaseAudioHandler {
     unawaited(WidgetArtFetcher
         .fetch(t, _subsonicResolver().forTrack(t))
         .then((path) {
+      // Guard against fast skip: if the user has already moved past
+      // [t], the file written by WidgetArtFetcher belongs to the
+      // previous fetch race-winner — don't stamp it onto the
+      // current notification.
+      if (currentTrack?.uniqueKey != t.uniqueKey) return;
       _widgetArtPath = path;
       _pushWidget();
+      // Re-publish MediaItem with the local file URI. The notification
+      // + lockscreen artwork on Android come from audio_service which
+      // tries to download MediaItem.artUri itself; in our setup that
+      // download is flaky on Tailscale-hosted Subsonic (the
+      // MediaSession service runs in a process that doesn't share the
+      // app's network namespace 1:1). Pointing at the tmp JPEG we
+      // already downloaded ourselves cuts out the second fetch and
+      // makes the notification artwork reliable.
+      if (path != null) {
+        mediaItem.add(_toMediaItem(t, overrideArtUri: Uri.file(path)));
+      }
     }));
   }
 
@@ -618,13 +634,13 @@ class AudioEngine extends BaseAudioHandler {
     }
   }
 
-  MediaItem _toMediaItem(Track t) => MediaItem(
+  MediaItem _toMediaItem(Track t, {Uri? overrideArtUri}) => MediaItem(
         id: t.uniqueKey,
         title: t.title,
         artist: t.artist,
         album: t.album,
         duration: t.duration,
-        artUri: _artworkUri(t),
+        artUri: overrideArtUri ?? _artworkUri(t),
         playable: true,
       );
 
@@ -941,6 +957,13 @@ class AudioEngine extends BaseAudioHandler {
     if (_currentIndex < 0 || _currentIndex >= _tracks.length) return null;
     return _tracks[_currentIndex];
   }
+
+  /// Engine-managed index into [_tracks] for the audibly-playing track.
+  /// `-1` when no queue is loaded. Do NOT use `engine.raw.currentIndex`
+  /// for queue-relative reads — that's just_audio's per-source index
+  /// which is always 0 in our two-player engine (each player owns one
+  /// AudioSource at a time).
+  int get currentIndex => _currentIndex;
 
   Stream<Track?> get currentTrackStream => _trackController.stream;
 }

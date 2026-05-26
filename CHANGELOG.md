@@ -7,6 +7,68 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.30.5] — 2026-05-27
+
+### Fixed (Mini-player invisible on first play)
+- **Root cause** (smoking-gun symptom from the user: *"ca chante mais
+  pas de mini-player… une fois que la première chanson se termine,
+  tout marche comme prévu"*): the engine's stream controllers are
+  `StreamController.broadcast()` so multiple widgets can listen,
+  but broadcast streams do NOT replay past events to new subscribers.
+  The first `_onTrackChanged` event fires synchronously inside
+  `setQueue()` — i.e. before any UI consumer has had a chance to
+  attach. Listeners that subscribe afterwards (mini-player,
+  Now Playing page, transport icons) never see that event → they
+  render as if the queue were empty. Subsequent track changes work
+  because by then the listeners are attached.
+- **Fix**: every `Stream*Provider` in `lib/audio/providers.dart`
+  now seeds with the engine's current synchronous state via an
+  `async*` generator, then yields the broadcast stream. Applied to
+  `currentTrack`, `playerState`, `position`, `duration`, `shuffle`,
+  `loop`. Listeners now see the right initial state on first attach,
+  regardless of when the prior broadcast event fired.
+
+### Fixed (Notification artwork missing on Subsonic tracks)
+- `audio_service` downloads `MediaItem.artUri` for the lockscreen +
+  notification, but on our Tailscale-hosted Subsonic that fetch was
+  flaky (the MediaSession service runs in a process boundary
+  separate from the app, network reachability isn't identical).
+- **Fix**: when `WidgetArtFetcher` lands a tmp JPEG (we already
+  fetch this for the homescreen widget — single-slot, overwritten
+  per track), we now re-publish the MediaItem with `Uri.file(path)`
+  pointing at that local file. The notification + lockscreen pick
+  up the local artwork immediately and reliably. Guard prevents
+  race conditions on rapid skip (if `currentTrack` has moved past
+  the original fetch's track when the file lands, we don't stamp
+  it).
+
+### Added (Now Playing nav icon)
+- 4th destination in the bottom nav (`Icons.play_circle_outline`)
+  that **pushes** `/now-playing` instead of switching branches —
+  so back arrow returns to whichever tab the user was on. Always
+  reachable regardless of mini-player state. The mini-player still
+  appears above the nav when a track is loaded (now that the
+  provider seeding fix above is in place) and still offers one-tap
+  transport; the new icon is the *guaranteed* entry point.
+
+### Changed (Now Playing — full-bleed artwork background)
+- Replaced the centred rounded-square artwork with a full-bleed
+  background. The cover fills the entire Player tab (`BoxFit.cover`
+  at 1024 px source) with a dark vertical gradient overlay for
+  legibility. Title / artist / audio info line / scrubber /
+  transport / Up Next stack over the lower portion of the gradient.
+  The `_TintBackground` palette gradient still wraps Queue + Lyrics
+  tabs (where there's no full-bleed artwork to anchor the visual).
+
+### Fixed (Up Next strip didn't advance after auto-advance)
+- `_UpNextStrip` was reading `engine.raw.currentIndex` — that's
+  just_audio's per-source index, which is always 0 in our
+  two-player engine (each AudioPlayer owns one source at a time).
+  After auto-advance the index didn't change → Up Next was frozen
+  at queue positions 1/2/3 even though the queue had moved.
+  Exposed `AudioEngine.currentIndex` (the engine-managed queue
+  index) and routed `_UpNextStrip` through it.
+
 ## [0.30.4] — 2026-05-27
 
 ### Fixed (Subsonic artwork never loaded on Now Playing)

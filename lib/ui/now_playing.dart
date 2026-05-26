@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
@@ -142,90 +143,147 @@ class _PlayerTab extends ConsumerWidget {
     // renders. Position lives inside [_ScrubberAndTimes] which is
     // the only widget that actually needs to rebuild on tick.
 
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            Expanded(
-              flex: 5,
-              child: Center(
-                child: AspectRatio(
-                  aspectRatio: 1,
-                  child: Artwork(
-                    coverArt: track.coverArt,
-                    origin: track.origin,
-                    serverId: track.serverId,
-                    size: 600,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            Row(
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        // Full-bleed background artwork. 1024 px source so up-scaling
+        // to phone screen (1080 px native on a 411 dp width) stays
+        // crisp. BoxFit.cover crops left/right edges of the square
+        // cover to fill the tall portrait viewport — focal centre of
+        // the artwork stays visible.
+        _BgArtwork(track: track),
+        // Dark gradient overlay: legibility of title / scrubber /
+        // transport regardless of how bright the artwork is. Pure
+        // black at the bottom (where the controls sit) fades to a
+        // soft tint at the top.
+        const _LegibilityScrim(),
+        // Foreground content — pushed to the lower portion so the
+        // artwork breathes above.
+        SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(track.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              fontSize: 22, fontWeight: FontWeight.w800)),
-                      const SizedBox(height: 4),
-                      Text(track.displayArtist,
-                          style: TextStyle(
-                              color: context.textTertiary, fontSize: 14)),
-                      _AudioInfoLine(track: track),
-                    ],
-                  ),
+                const Spacer(flex: 4),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(track.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                  fontSize: 22, fontWeight: FontWeight.w800)),
+                          const SizedBox(height: 4),
+                          Text(track.displayArtist,
+                              style: TextStyle(
+                                  color: context.textTertiary, fontSize: 14)),
+                          _AudioInfoLine(track: track),
+                        ],
+                      ),
+                    ),
+                    _FavoriteToggle(track: track),
+                  ],
                 ),
-                _FavoriteToggle(track: track),
+                const SizedBox(height: 12),
+                const _ScrubberAndTimes(),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    IconButton(
+                      tooltip: shuffle ? 'Shuffle on' : 'Shuffle off',
+                      icon: Icon(Icons.shuffle, color: shuffle ? _accent : context.textSecondary),
+                      onPressed: () => engine.setShuffle(!shuffle),
+                    ),
+                    IconButton(tooltip: 'Previous track', iconSize: 40, icon: const Icon(Icons.skip_previous), onPressed: engine.previous),
+                    FloatingActionButton(
+                      onPressed: () => playing ? engine.pause() : engine.play(),
+                      backgroundColor: _accent,
+                      foregroundColor: Colors.black,
+                      child: Icon(playing ? Icons.pause : Icons.play_arrow, size: 32),
+                    ),
+                    IconButton(tooltip: 'Next track', iconSize: 40, icon: const Icon(Icons.skip_next), onPressed: engine.next),
+                    IconButton(
+                      tooltip: loop == LoopMode.one
+                          ? 'Repeat one'
+                          : (loop == LoopMode.all ? 'Repeat all' : 'Repeat off'),
+                      icon: Icon(
+                        loop == LoopMode.one ? Icons.repeat_one : Icons.repeat,
+                        color: loop == LoopMode.off ? context.textSecondary : _accent,
+                      ),
+                      onPressed: () => engine.setRepeat(_cycleLoop(loop)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                const _UpNextStrip(),
               ],
             ),
-            const SizedBox(height: 12),
-            const _ScrubberAndTimes(),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                IconButton(
-                  tooltip: shuffle ? 'Shuffle on' : 'Shuffle off',
-                  icon: Icon(Icons.shuffle, color: shuffle ? _accent : context.textSecondary),
-                  onPressed: () => engine.setShuffle(!shuffle),
-                ),
-                IconButton(tooltip: 'Previous track', iconSize: 40, icon: const Icon(Icons.skip_previous), onPressed: engine.previous),
-                FloatingActionButton(
-                  onPressed: () => playing ? engine.pause() : engine.play(),
-                  backgroundColor: _accent,
-                  foregroundColor: Colors.black,
-                  child: Icon(playing ? Icons.pause : Icons.play_arrow, size: 32),
-                ),
-                IconButton(tooltip: 'Next track', iconSize: 40, icon: const Icon(Icons.skip_next), onPressed: engine.next),
-                IconButton(
-                  tooltip: loop == LoopMode.one
-                      ? 'Repeat one'
-                      : (loop == LoopMode.all ? 'Repeat all' : 'Repeat off'),
-                  icon: Icon(
-                    loop == LoopMode.one ? Icons.repeat_one : Icons.repeat,
-                    color: loop == LoopMode.off ? context.textSecondary : _accent,
-                  ),
-                  onPressed: () => engine.setRepeat(_cycleLoop(loop)),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            const _UpNextStrip(),
-          ],
+          ),
         ),
-      ),
+      ],
     );
   }
 
   LoopMode _cycleLoop(LoopMode m) =>
       m == LoopMode.off ? LoopMode.all : (m == LoopMode.all ? LoopMode.one : LoopMode.off);
+}
+
+/// Full-bleed background artwork — replaces the centred rounded
+/// square that previously dominated the Player tab. Renders at a
+/// large source size (1024 px) so the up-scale to phone width stays
+/// crisp; `BoxFit.cover` crops the square cover left+right to fill
+/// the tall portrait viewport. `cacheKey` keyed by track unique key
+/// rather than the salt-mutated URL so a rebuild doesn't trigger a
+/// re-fetch (same defence as the main Artwork widget, but inlined
+/// here because [Artwork] is hardcoded to a fixed `SizedBox(size)`).
+class _BgArtwork extends ConsumerWidget {
+  final Track track;
+  const _BgArtwork({required this.track});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final fallback = Container(color: const Color(0xFF18181B));
+    if (track.coverArt == null || track.origin != MediaOrigin.subsonic) {
+      return fallback;
+    }
+    final s = ref.watch(subsonicResolverProvider).forId(track.serverId);
+    if (s == null) return fallback;
+    return CachedNetworkImage(
+      imageUrl: s.coverUri(track.coverArt!, size: 1024).toString(),
+      cacheKey: '${track.uniqueKey}:bg',
+      fit: BoxFit.cover,
+      placeholder: (c, __) => fallback,
+      errorWidget: (c, __, ___) => fallback,
+    );
+  }
+}
+
+/// Dark gradient over the full-bleed artwork — title, scrubber and
+/// transport sit in the bottom half, where this scrim is darkest, so
+/// they stay legible on any artwork brightness. Top is barely tinted
+/// so the artwork stays the focal element.
+class _LegibilityScrim extends StatelessWidget {
+  const _LegibilityScrim();
+  @override
+  Widget build(BuildContext context) => DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.black.withOpacity(0.20),
+              Colors.transparent,
+              Colors.black.withOpacity(0.65),
+              Colors.black.withOpacity(0.92),
+            ],
+            stops: const [0.0, 0.35, 0.78, 1.0],
+          ),
+        ),
+      );
 }
 
 /// Editable queue: drag the handle to reorder, swipe a row to remove.
@@ -443,8 +501,13 @@ class _UpNextStrip extends ConsumerWidget {
     ref.watch(currentTrackProvider); // rebuild on track change
     final engine = ref.watch(audioEngineProvider);
     final queue = engine.currentQueue;
-    final currentIdx = engine.raw.currentIndex ?? 0;
-    final upcoming = (currentIdx + 1 < queue.length)
+    // engine.raw.currentIndex was wrong here — just_audio's per-source
+    // index is always 0 in our two-player engine, so Up Next never
+    // advanced past the queue's first three tracks even after an
+    // auto-advance. engine.currentIndex tracks the actual queue
+    // position.
+    final currentIdx = engine.currentIndex;
+    final upcoming = (currentIdx >= 0 && currentIdx + 1 < queue.length)
         ? queue.sublist(currentIdx + 1, (currentIdx + 4).clamp(0, queue.length))
         : const <Track>[];
     if (upcoming.isEmpty) return const SizedBox.shrink();
