@@ -108,3 +108,6 @@ android/*.iml
 # Template lives at tool/run.example.sh — copy to tool/run.sh and edit.
 # ---------------------------------------------------------------------------
 tool/run.sh
+
+# Claude Code runtime artefacts (local-only, never relevant to others).
+.claude/
