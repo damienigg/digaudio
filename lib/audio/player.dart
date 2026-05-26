@@ -378,11 +378,19 @@ class AudioEngine extends BaseAudioHandler {
   /// natural advance, user skip, or initial setQueue). Updates cache /
   /// history / mediaItem / scrobble + emits index + track streams.
   void _onTrackChanged(Track t) {
+    // ignore: avoid_print
+    print('[digaudio.dbg] _onTrackChanged: "${t.title}" '
+        '(uniqueKey=${t.uniqueKey}, idx=$_currentIndex, '
+        'engine=${identityHashCode(this)})');
     _cache.touch(t.uniqueKey);
     _history.recordPlay(t.uniqueKey);
     mediaItem.add(_toMediaItem(t));
     _indexController.add(_currentIndex);
     _trackController.add(t);
+    // ignore: avoid_print
+    print('[digaudio.dbg] _trackController.add fired '
+        '(controller=${identityHashCode(_trackController)}, '
+        'isClosed=${_trackController.isClosed})');
     _nowPlayingKey = t.uniqueKey;
     _scrobbledCurrent = false;
     if (t.origin == MediaOrigin.subsonic) {
@@ -524,6 +532,11 @@ class AudioEngine extends BaseAudioHandler {
   // ===========================================================================
 
   Future<void> setQueue(List<Track> tracks, {int initialIndex = 0}) async {
+    // ignore: avoid_print
+    print('[digaudio.dbg] setQueue called: ${tracks.length} tracks, '
+        'initialIndex=$initialIndex, engine=${identityHashCode(this)}, '
+        'trackController=${identityHashCode(_trackController)}, '
+        'hasListener=${_trackController.hasListener}');
     if (tracks.isEmpty) return;
     _transitionTimer?.cancel();
     _inTransition = false;

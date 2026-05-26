@@ -345,10 +345,30 @@ final playlistImporterProvider = Provider<PlaylistImporter>((ref) => PlaylistImp
 class _StreamMirror<T> extends StateNotifier<T> {
   late final StreamSubscription<T> _sub;
   _StreamMirror(super.initial, Stream<T> source) {
-    _sub = source.listen((v) => state = v);
+    // ignore: avoid_print
+    print('[digaudio.dbg] _StreamMirror<$T> ctor: initial=$initial, '
+        'stream=${identityHashCode(source)}, '
+        'isBroadcast=${source.isBroadcast}');
+    _sub = source.listen(
+      (v) {
+        // ignore: avoid_print
+        print('[digaudio.dbg] _StreamMirror<$T> onData: $v');
+        state = v;
+      },
+      onError: (e, st) {
+        // ignore: avoid_print
+        print('[digaudio.dbg] _StreamMirror<$T> onError: $e');
+      },
+      onDone: () {
+        // ignore: avoid_print
+        print('[digaudio.dbg] _StreamMirror<$T> onDone');
+      },
+    );
   }
   @override
   void dispose() {
+    // ignore: avoid_print
+    print('[digaudio.dbg] _StreamMirror<$T> dispose');
     _sub.cancel();
     super.dispose();
   }

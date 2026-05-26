@@ -7,6 +7,19 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.30.8] — 2026-05-27
+
+### Debug
+- Temporary `print('[digaudio.dbg] ...')` instrumentation across
+  `AudioEngine.setQueue`, `_onTrackChanged`, `_trackController.add`
+  and `_StreamMirror` lifecycle (ctor / onData / onError / onDone /
+  dispose). The smoking gun we need is whether
+  `_trackController.hasListener` is true at the moment of the first
+  `_trackController.add(t)` — if false, the StateNotifier
+  subscription was created AFTER the event fired (race we missed).
+  This is a one-version diagnostic build; the prints come out in
+  v0.30.9 once the cause is identified.
+
 ## [0.30.7] — 2026-05-27
 
 ### Fixed — Mini-player STILL invisible after v0.30.5 (race in `async*` seeding)
