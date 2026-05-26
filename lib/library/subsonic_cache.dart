@@ -42,6 +42,58 @@ class SubsonicLibraryCache {
 
   /// Reads the entire cached library for [serverId] as full [Track]
   /// objects. Cheap — even a 50k-row scan returns in tens of ms.
+  /// Derives the full album list for [serverId] from the cached
+  /// per-track data — same shape `LocalLibrary.getAllAlbums` exposes,
+  /// so the Library tabs can union local + Subsonic uniformly.
+  Future<List<Album>> allAlbums(String serverId) async {
+    final tracks = await all(serverId);
+    final groups = <String, List<Track>>{};
+    for (final t in tracks) {
+      if (t.albumId == null) continue;
+      groups.putIfAbsent(t.albumId!, () => []).add(t);
+    }
+    return groups.entries
+        .map((e) {
+          final first = e.value.first;
+          return Album(
+            id: e.key,
+            title: first.album ?? 'Unknown',
+            artist: first.artist,
+            artistId: first.artistId,
+            coverArt: first.coverArt,
+            songCount: e.value.length,
+            origin: MediaOrigin.subsonic,
+            serverId: serverId,
+          );
+        })
+        .toList(growable: false)
+      ..sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
+  }
+
+  /// Derives the full artist list for [serverId]. albumCount is the
+  /// number of distinct albumIds linked to that artist via the cache.
+  Future<List<Artist>> allArtists(String serverId) async {
+    final tracks = await all(serverId);
+    final byId = <String, ({String name, Set<String> albums})>{};
+    for (final t in tracks) {
+      if (t.artistId == null) continue;
+      final existing = byId[t.artistId!];
+      final albums = existing?.albums ?? <String>{};
+      if (t.albumId != null) albums.add(t.albumId!);
+      byId[t.artistId!] = (name: t.artist ?? 'Unknown', albums: albums);
+    }
+    return byId.entries
+        .map((e) => Artist(
+              id: e.key,
+              name: e.value.name,
+              albumCount: e.value.albums.length,
+              origin: MediaOrigin.subsonic,
+              serverId: serverId,
+            ))
+        .toList(growable: false)
+      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+  }
+
   Future<List<Track>> all(String serverId) async {
     final rows = await (_db.select(_db.cachedSubsonicSongs)
           ..where((s) => s.serverId.equals(serverId)))

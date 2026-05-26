@@ -41,6 +41,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Library'),
+          actions: const [_LibrarySourceToggle()],
           bottom: const TabBar(
             isScrollable: true,
             indicatorColor: Color(0xFF1ED760),
@@ -153,12 +154,12 @@ class _TracksTab extends ConsumerWidget {
   const _TracksTab();
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final local = ref.watch(localSongsProvider);
-    return local.when(
+    final state = ref.watch(libraryTracksProvider);
+    return state.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(child: Text('$e', style: const TextStyle(color: Colors.redAccent))),
       data: (tracks) => tracks.isEmpty
-          ? const _Empty('No local tracks found.')
+          ? const _Empty('No tracks. (Sync the Subsonic library cache via Settings → Playback.)')
           : ListView.builder(
               itemCount: tracks.length,
               itemBuilder: (_, i) => TrackTile(queue: tracks, index: i),
@@ -171,7 +172,7 @@ class _AlbumsTab extends ConsumerWidget {
   const _AlbumsTab();
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final local = ref.watch(localAlbumsProvider);
+    final local = ref.watch(libraryAlbumsProvider);
     return local.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(child: Text('$e', style: const TextStyle(color: Colors.redAccent))),
@@ -196,7 +197,7 @@ class _ArtistsTab extends ConsumerWidget {
   const _ArtistsTab();
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(localArtistsProvider);
+    final state = ref.watch(libraryArtistsProvider);
     return state.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(child: Text('$e', style: const TextStyle(color: Colors.redAccent))),
@@ -411,4 +412,50 @@ class _Empty extends StatelessWidget {
           child: Text(text, textAlign: TextAlign.center, style: TextStyle(color: context.textMuted)),
         ),
       );
+}
+
+/// Source picker for the Library Tracks/Albums/Artists tabs — local
+/// files / Subsonic cache / both. Sits in the Library AppBar as a
+/// popup so it doesn't fight for nav-bar real estate.
+class _LibrarySourceToggle extends ConsumerWidget {
+  const _LibrarySourceToggle();
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final src = ref.watch(librarySourceProvider);
+    final icon = switch (src) {
+      LibrarySource.local => Icons.phone_android,
+      LibrarySource.remote => Icons.cloud_outlined,
+      LibrarySource.both => Icons.all_inclusive,
+    };
+    return PopupMenuButton<LibrarySource>(
+      tooltip: 'Library source',
+      icon: Icon(icon),
+      initialValue: src,
+      onSelected: (v) =>
+          ref.read(librarySourceProvider.notifier).state = v,
+      itemBuilder: (_) => const [
+        PopupMenuItem(
+            value: LibrarySource.both,
+            child: Row(children: [
+              Icon(Icons.all_inclusive, size: 18),
+              SizedBox(width: 8),
+              Text('Local + Subsonic'),
+            ])),
+        PopupMenuItem(
+            value: LibrarySource.local,
+            child: Row(children: [
+              Icon(Icons.phone_android, size: 18),
+              SizedBox(width: 8),
+              Text('Local only'),
+            ])),
+        PopupMenuItem(
+            value: LibrarySource.remote,
+            child: Row(children: [
+              Icon(Icons.cloud_outlined, size: 18),
+              SizedBox(width: 8),
+              Text('Subsonic only'),
+            ])),
+      ],
+    );
+  }
 }

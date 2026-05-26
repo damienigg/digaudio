@@ -42,8 +42,17 @@ final coverAccentProvider =
   final s = ref.watch(subsonicResolverProvider).forId(key.serverId);
   if (s == null) return null;
   try {
+    // CachedNetworkImageProvider — reuses the cover already on disk
+    // (cached by the Artwork widget + _BgArtwork). Previously
+    // NetworkImage triggered a fresh network fetch every time the
+    // tint provider ran, so the play FAB stayed brand-green for
+    // several hundred ms after each track change. Sharing the cache
+    // makes the palette extraction near-instant on repeat plays.
     final palette = await PaletteGenerator.fromImageProvider(
-      NetworkImage(s.coverUri(key.coverArt).toString()),
+      CachedNetworkImageProvider(
+        s.coverUri(key.coverArt).toString(),
+        cacheKey: 'subsonic:${key.serverId ?? "active"}:${key.coverArt}:bg',
+      ),
       size: const Size(80, 80),
       maximumColorCount: 8,
     );
@@ -380,8 +389,11 @@ class _QueueTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(currentTrackProvider); // rebuild on track change
+    // Watching currentQueueProvider so the full queue stays in sync
+    // with auto-queue appends + Up Next. Without this the two views
+    // could drift apart whenever a mutation happened between tracks.
+    final queue = ref.watch(currentQueueProvider);
     final engine = ref.watch(audioEngineProvider);
-    final queue = engine.currentQueue;
     if (queue.isEmpty) return const Center(child: Text('Empty queue'));
     return ReorderableListView.builder(
       itemCount: queue.length,
@@ -584,13 +596,12 @@ class _UpNextStrip extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(currentTrackProvider); // rebuild on track change
+    // Watching currentQueueProvider keeps Up Next perfectly in sync
+    // with auto-queue appends, removals, reorders — previously we
+    // only triggered on track change, so a queue mutation between
+    // tracks wouldn't refresh the strip.
+    final queue = ref.watch(currentQueueProvider);
     final engine = ref.watch(audioEngineProvider);
-    final queue = engine.currentQueue;
-    // engine.raw.currentIndex was wrong here — just_audio's per-source
-    // index is always 0 in our two-player engine, so Up Next never
-    // advanced past the queue's first three tracks even after an
-    // auto-advance. engine.currentIndex tracks the actual queue
-    // position.
     final currentIdx = engine.currentIndex;
     // Show up to 6 upcoming tracks (2 columns × 3 rows) — user
     // request for a denser preview without scrolling.

@@ -423,6 +423,18 @@ final loopProvider =
   return _StreamMirror<LoopMode>(engine.raw.loopMode, engine.loopModeStream);
 });
 
+/// Mirrors the engine's queue contents. Fires on every mutation
+/// (setQueue, appendToQueue, playNext, moveInQueue, removeFromQueue,
+/// shuffle toggle). UI surfaces — Now Playing Queue tab + Up Next
+/// strip — watch this so they stay perfectly in sync regardless of
+/// who mutated the queue (user action, auto-queue append, etc.).
+final currentQueueProvider =
+    StateNotifierProvider<_StreamMirror<List<Track>>, List<Track>>((ref) {
+  final engine = ref.watch(audioEngineProvider);
+  return _StreamMirror<List<Track>>(
+      engine.currentQueue, engine.currentQueueStream);
+});
+
 // ---- Browse data (lazy) ----------------------------------------------------
 
 final newestAlbumsProvider = FutureProvider<List<Album>>((ref) async {
@@ -467,6 +479,62 @@ final localAlbumsProvider = FutureProvider<List<Album>>((ref) async =>
 
 final localArtistsProvider = FutureProvider<List<Artist>>((ref) async =>
     ref.watch(localLibraryProvider).getAllArtists());
+
+/// Library tab source filter: Local-only / Subsonic-only / Both.
+/// Default `both` because that's what most users expect (Library =
+/// "everything I can play"). Combined providers below switch on this.
+enum LibrarySource { local, remote, both }
+
+final librarySourceProvider =
+    StateProvider<LibrarySource>((_) => LibrarySource.both);
+
+/// Returns local + Subsonic-cached tracks combined per [librarySourceProvider].
+/// Subsonic side reads from the local drift cache (synced via
+/// Settings → Playback → Sync library) — so it works offline too.
+final libraryTracksProvider = FutureProvider<List<Track>>((ref) async {
+  final src = ref.watch(librarySourceProvider);
+  final local = src != LibrarySource.remote
+      ? (ref.watch(localSongsProvider).valueOrNull ?? const <Track>[])
+      : const <Track>[];
+  if (src == LibrarySource.local) return local;
+  final active = await ref.watch(activeServerProvider.future);
+  final remote = active == null
+      ? const <Track>[]
+      : await ref.read(subsonicCacheProvider).all(active.id);
+  if (src == LibrarySource.remote) return remote;
+  return [...local, ...remote]
+    ..sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
+});
+
+final libraryAlbumsProvider = FutureProvider<List<Album>>((ref) async {
+  final src = ref.watch(librarySourceProvider);
+  final local = src != LibrarySource.remote
+      ? (ref.watch(localAlbumsProvider).valueOrNull ?? const <Album>[])
+      : const <Album>[];
+  if (src == LibrarySource.local) return local;
+  final active = await ref.watch(activeServerProvider.future);
+  final remote = active == null
+      ? const <Album>[]
+      : await ref.read(subsonicCacheProvider).allAlbums(active.id);
+  if (src == LibrarySource.remote) return remote;
+  return [...local, ...remote]
+    ..sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
+});
+
+final libraryArtistsProvider = FutureProvider<List<Artist>>((ref) async {
+  final src = ref.watch(librarySourceProvider);
+  final local = src != LibrarySource.remote
+      ? (ref.watch(localArtistsProvider).valueOrNull ?? const <Artist>[])
+      : const <Artist>[];
+  if (src == LibrarySource.local) return local;
+  final active = await ref.watch(activeServerProvider.future);
+  final remote = active == null
+      ? const <Artist>[]
+      : await ref.read(subsonicCacheProvider).allArtists(active.id);
+  if (src == LibrarySource.remote) return remote;
+  return [...local, ...remote]
+    ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+});
 
 final searchQueryProvider = StateProvider<String>((_) => '');
 

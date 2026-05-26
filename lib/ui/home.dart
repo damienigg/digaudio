@@ -96,7 +96,7 @@ class _HomeHero extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text('digaudio',
+                  const Text('DIGaudio',
                       style: TextStyle(
                           fontSize: 26,
                           fontWeight: FontWeight.w900,

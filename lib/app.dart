@@ -99,7 +99,7 @@ class _DigaudioAppState extends ConsumerState<DigaudioApp> {
                 : AppTheme.dark())
             .copyWith(scaffoldBackgroundColor: Colors.transparent);
         return MaterialApp.router(
-          title: 'digaudio',
+          title: 'DIGaudio',
           debugShowCheckedModeBanner: false,
           theme: lightTheme,
           darkTheme: darkTheme,

@@ -10,7 +10,7 @@
 
 
     <application
-        android:label="digaudio"
+        android:label="DIGaudio"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:usesCleartextTraffic="true">
@@ -56,7 +56,7 @@
              AudioService → toggles play/pause on the engine. -->
         <service
             android:name=".PlaybackTileService"
-            android:label="digaudio"
+            android:label="DIGaudio"
             android:icon="@mipmap/ic_launcher"
             android:exported="true"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">

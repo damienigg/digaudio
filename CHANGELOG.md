@@ -7,6 +7,51 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.30.26] — 2026-05-27
+
+### Changed (App name: DIGaudio)
+- "digaudio" → **DIGaudio** in user-visible places: Home hero,
+  MaterialApp title, AndroidManifest `android:label`. The "DIG"
+  emphasises the brand; "audio" stays lowercase. The Subsonic
+  client identifier on the wire stays lowercase (server doesn't
+  care; consistency with prior installs).
+
+### Fixed (Up Next ↔ Queue drift)
+- The Up Next 6-tile strip and the Now Playing Queue tab could
+  drift apart when the queue mutated between track changes (auto-
+  queue append, addToQueue, etc.) — both widgets only rebuilt on
+  track change, missing in-between mutations.
+- New `engine.currentQueueStream` (broadcast) fires on every mutation
+  via a single `_publishQueue()` helper that all 7 mutation sites
+  now route through. `currentQueueProvider` mirrors it via
+  StateNotifier; both Up Next + Queue tab watch this — always in
+  sync.
+
+### Changed (Tint extraction shares the artwork cache)
+- `coverAccentProvider` used `NetworkImage` for PaletteGenerator —
+  triggered a fresh network fetch every time the tint provider ran,
+  so the play FAB stayed brand-green for several hundred ms after
+  each track change. Switched to `CachedNetworkImageProvider` with
+  the same cacheKey as `_BgArtwork` → palette extraction reads the
+  cover off disk (already cached for the bg) → near-instant tint
+  on repeat plays.
+
+### Fixed (Library tabs were local-only)
+- Library → Tracks / Albums / Artists tabs surfaced ONLY the local
+  MediaStore content. Subsonic tracks (cached or otherwise) were
+  invisible — a real Library should show "everything you can play".
+- New `librarySourceProvider` (StateProvider) with 3 modes:
+  - **Both** (default) — local + Subsonic union, sorted by title /
+    name.
+  - **Local only** — old behaviour.
+  - **Subsonic only** — pulled from the drift cache; offline-safe.
+- AppBar action: source-picker popup with icon hint
+  (`all_inclusive` / `phone_android` / `cloud_outlined`).
+- New `SubsonicLibraryCache.allAlbums()` + `allArtists()` derive
+  the album / artist lists from the cached per-track rows.
+- Empty state copy now mentions running the library sync when
+  nothing shows up (sync via Settings → Playback).
+
 ## [0.30.25] — 2026-05-27
 
 ### Changed (Album mode moved into the sleep-timer sheet)

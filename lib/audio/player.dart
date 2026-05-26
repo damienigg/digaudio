@@ -87,6 +87,12 @@ class AudioEngine extends BaseAudioHandler {
   final _bufferedController = StreamController<Duration?>.broadcast();
   final _indexController = StreamController<int?>.broadcast();
   final _trackController = StreamController<Track?>.broadcast();
+  /// Fires whenever `_tracks` mutates (setQueue, appendToQueue,
+  /// playNext, moveInQueue, removeFromQueue, shuffle toggle). Drives
+  /// the `currentQueueProvider` so the Now Playing Queue tab + the
+  /// Up Next strip stay synchronised with auto-queue appends without
+  /// waiting for a track change.
+  final _queueController = StreamController<List<Track>>.broadcast();
   final _loopController = StreamController<LoopMode>.broadcast();
   final _shuffleController = StreamController<bool>.broadcast();
 
@@ -609,7 +615,7 @@ class AudioEngine extends BaseAudioHandler {
       _currentIndex = initialIndex.clamp(0, _tracks.length - 1);
     }
     _preloadedIndex = null;
-    queue.add(_tracks.map(_toMediaItem).toList());
+    _publishQueue();
 
     final t = _tracks[_currentIndex];
     _targetVolume = _rgVolumeFor(t);
@@ -650,7 +656,7 @@ class AudioEngine extends BaseAudioHandler {
 
   Future<void> appendToQueue(Track t) async {
     _tracks = List.unmodifiable([..._tracks, t]);
-    queue.add(_tracks.map(_toMediaItem).toList());
+    _publishQueue();
     // Append might have introduced a new "next" (if we were at the end).
     unawaited(_preloadNextIfNeeded());
   }
@@ -658,7 +664,7 @@ class AudioEngine extends BaseAudioHandler {
   Future<void> playNext(Track t) async {
     final idx = (_currentIndex + 1).clamp(0, _tracks.length);
     _tracks = List.unmodifiable([..._tracks]..insert(idx, t));
-    queue.add(_tracks.map(_toMediaItem).toList());
+    _publishQueue();
     _preloadedIndex = null; // stale — new "next" is the inserted track
     unawaited(_preloadNextIfNeeded());
   }
@@ -681,7 +687,7 @@ class AudioEngine extends BaseAudioHandler {
     } else if (from > _currentIndex && clamped <= _currentIndex) {
       _currentIndex++;
     }
-    queue.add(_tracks.map(_toMediaItem).toList());
+    _publishQueue();
     _preloadedIndex = null;
     unawaited(_preloadNextIfNeeded());
   }
@@ -692,7 +698,7 @@ class AudioEngine extends BaseAudioHandler {
     final list = [..._tracks]..removeAt(index);
     _tracks = List.unmodifiable(list);
     if (index < _currentIndex) _currentIndex--;
-    queue.add(_tracks.map(_toMediaItem).toList());
+    _publishQueue();
     _preloadedIndex = null;
     unawaited(_preloadNextIfNeeded());
   }
@@ -886,7 +892,7 @@ class AudioEngine extends BaseAudioHandler {
         if (idx >= 0) _currentIndex = idx;
       }
     }
-    queue.add(_tracks.map(_toMediaItem).toList());
+    _publishQueue();
     _preloadedIndex = null;
     unawaited(_preloadNextIfNeeded());
   }
@@ -1043,6 +1049,7 @@ class AudioEngine extends BaseAudioHandler {
     await _bufferedController.close();
     await _indexController.close();
     await _trackController.close();
+    await _queueController.close();
     await _loopController.close();
     await _shuffleController.close();
     await _a.dispose();
@@ -1074,4 +1081,19 @@ class AudioEngine extends BaseAudioHandler {
   int get currentIndex => _currentIndex;
 
   Stream<Track?> get currentTrackStream => _trackController.stream;
+
+  Stream<List<Track>> get currentQueueStream => _queueController.stream;
+
+  /// Single point of truth for "queue contents changed" broadcasts.
+  /// Pushes to audio_service's MediaItem queue (lockscreen / Android
+  /// Auto consumers) AND to our internal `_queueController`
+  /// (Now Playing Queue tab + Up Next strip). Must be called after
+  /// EVERY mutation of `_tracks` so the UI never reads a stale
+  /// snapshot — previously some mutation paths (auto-queue append,
+  /// shuffle toggle) updated audio_service but not the in-app
+  /// widgets.
+  void _publishQueue() {
+    _publishQueue();
+    _queueController.add(_tracks);
+  }
 }
