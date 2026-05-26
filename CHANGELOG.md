@@ -7,6 +7,16 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.30.28] — 2026-05-27
+
+### Changed (App icon v3)
+- New artwork dropped into `assets/icon/digaudio_icon.png` (v3
+  variant the user supplied). Re-generated the adaptive foreground
+  via `tool/make_adaptive_fg.py` + the Android launcher icons via
+  `dart run flutter_launcher_icons`. All surfaces inherit the new
+  icon: app launcher, Home hero card, faded `_AppBackground` when
+  nothing is playing.
+
 ## [0.30.27] — 2026-05-27
 
 ### Fixed (CI concurrency cancelling tag-push runs)
