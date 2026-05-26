@@ -7,6 +7,27 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.30.1] — 2026-05-27
+
+### Fixed
+- **Settings → Playback no longer hangs on a fresh launch.** Latent
+  bug since v0.17.0 (when the EQ section first shipped). The page's
+  `_hydrate()` awaited `AndroidEqualizer.parameters`, which on
+  Android only resolves once the engine has materialised an
+  `AudioTrack` — i.e. after the user has played at least one
+  track in the current process. On a freshly-launched app (or right
+  after `adb install -r`), opening Settings → Playback before any
+  playback spun a `CircularProgressIndicator` indefinitely.
+  Root-cause fix: extracted the EQ block into a self-managing
+  `_EqualizerSection` widget that owns its own readiness. The rest
+  of Playback (cache, storage, crossfade, RG, ListenBrainz,
+  Last.fm, auto-play, auto-queue) now renders immediately. The
+  EQ section shows an inline placeholder ("becomes available once
+  a track has played") and swaps in the band sliders the instant
+  the future lands — without the user having to leave + re-enter
+  the page. The previously-`AppBar`-level "Flat" button moves
+  inside the section header where it belongs.
+
 ## [0.30.0] — 2026-05-27
 
 ### Added (Last.fm scrobble direct)

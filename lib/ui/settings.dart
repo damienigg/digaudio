@@ -543,9 +543,6 @@ class PlaybackPage extends ConsumerStatefulWidget {
 }
 
 class _PlaybackPageState extends ConsumerState<PlaybackPage> {
-  AndroidEqualizerParameters? _params;
-  List<double> _gainsDb = const [];
-  bool _enabled = false;
   bool _ready = false;
   int _cachedCount = 0;
   DateTime? _lastSync;
@@ -564,23 +561,19 @@ class _PlaybackPageState extends ConsumerState<PlaybackPage> {
     _hydrate();
   }
 
+  /// Loads prefs + fast drift queries only. The equalizer used to be
+  /// awaited here, but `AndroidEqualizer.parameters` only resolves once
+  /// the engine has materialised an AudioTrack (i.e. after the first
+  /// play). On a fresh process before any track has played, that
+  /// Future hangs forever — gating the whole Settings → Playback page
+  /// on it spun a `CircularProgressIndicator` indefinitely. The EQ
+  /// section now owns its own readiness in [_EqualizerSection].
   Future<void> _hydrate() async {
     final prefs = ref.read(playbackPrefsProvider);
     await prefs.load();
-    final engine = ref.read(audioEngineProvider);
-    final params = await engine.eqParameters;
-    final stored = List<double>.from(prefs.eqGainsDb);
-    while (stored.length < params.bands.length) {
-      stored.add(0);
-    }
     await _refreshCacheStatus();
     await _refreshStorage();
-    setState(() {
-      _params = params;
-      _enabled = prefs.eqEnabled;
-      _gainsDb = stored;
-      _ready = true;
-    });
+    if (mounted) setState(() => _ready = true);
   }
 
   Future<void> _refreshStorage() async {
@@ -673,72 +666,13 @@ class _PlaybackPageState extends ConsumerState<PlaybackPage> {
     }
   }
 
-  Future<void> _toggleEnabled(bool v) async {
-    setState(() => _enabled = v);
-    final prefs = ref.read(playbackPrefsProvider);
-    prefs.eqEnabled = v;
-    await prefs.save();
-    await ref.read(audioEngineProvider).setEqEnabled(v);
-  }
-
-  Future<void> _setBandGain(int i, double db) async {
-    setState(() => _gainsDb[i] = db);
-    final prefs = ref.read(playbackPrefsProvider);
-    prefs.eqGainsDb = List.of(_gainsDb);
-    await prefs.save();
-    final engine = ref.read(audioEngineProvider);
-    final params = _params!;
-    await params.bands[i].setGain(db.clamp(params.minDecibels, params.maxDecibels));
-    if (!_enabled) {
-      // Auto-enable when the user starts moving sliders — otherwise the gains
-      // wouldn't actually do anything, which is confusing UX.
-      await _toggleEnabled(true);
-      await engine.applyEqGains(_gainsDb);
-    }
-  }
-
-  /// Apply a preset to all bands. Pads/truncates if the preset's length
-  /// doesn't match the device's actual band count (Android usually
-  /// returns 5; some return 10).
-  Future<void> _applyPreset(List<double> presetGains) async {
-    final params = _params!;
-    final gains = List<double>.filled(params.bands.length, 0);
-    for (var i = 0; i < gains.length; i++) {
-      final raw = i < presetGains.length ? presetGains[i] : 0.0;
-      gains[i] = raw.clamp(params.minDecibels, params.maxDecibels).toDouble();
-    }
-    setState(() => _gainsDb = gains);
-    final prefs = ref.read(playbackPrefsProvider);
-    prefs.eqGainsDb = gains;
-    await prefs.save();
-    final engine = ref.read(audioEngineProvider);
-    await engine.applyEqGains(gains);
-    if (!_enabled) await _toggleEnabled(true);
-  }
-
-  Future<void> _resetFlat() async {
-    final params = _params!;
-    final flat = List<double>.filled(params.bands.length, 0);
-    setState(() => _gainsDb = flat);
-    final prefs = ref.read(playbackPrefsProvider);
-    prefs.eqGainsDb = flat;
-    await prefs.save();
-    await ref.read(audioEngineProvider).applyEqGains(flat);
-  }
-
   @override
   Widget build(BuildContext context) {
     if (!_ready) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-    final params = _params!;
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Playback'),
-        actions: [
-          TextButton(onPressed: _resetFlat, child: const Text('Flat')),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Playback')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -840,43 +774,176 @@ class _PlaybackPageState extends ConsumerState<PlaybackPage> {
             },
           ),
           Divider(height: 32, color: context.dividerSoft),
-          SwitchListTile.adaptive(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('Equalizer', style: TextStyle(fontWeight: FontWeight.w700)),
-            subtitle: Text(
-              params.bands.isEmpty
-                  ? 'No equalizer available on this device.'
-                  : '${params.bands.length} bands · '
-                      '${params.minDecibels.toStringAsFixed(0)} to ${params.maxDecibels.toStringAsFixed(0)} dB',
-              style: TextStyle(color: context.textMuted, fontSize: 12),
-            ),
-            value: _enabled,
-            onChanged: params.bands.isEmpty ? null : _toggleEnabled,
-          ),
-          if (params.bands.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            _EqPresets(
-              enabled: _enabled,
-              bandCount: params.bands.length,
-              onApply: _applyPreset,
-            ),
-          ],
-          const SizedBox(height: 8),
-          for (var i = 0; i < params.bands.length; i++)
-            _BandRow(
-              band: params.bands[i],
-              gainDb: _gainsDb[i],
-              minDb: params.minDecibels,
-              maxDb: params.maxDecibels,
-              enabled: _enabled,
-              onChanged: (v) => _setBandGain(i, v),
-            ),
-          if (params.bands.isNotEmpty) ...[
-            Divider(height: 32, color: context.dividerSoft),
-            const _BtEqCard(),
-          ],
+          const _EqualizerSection(),
         ],
       ),
+    );
+  }
+}
+
+/// Equalizer + per-Bluetooth-device EQ — extracted out of [PlaybackPage]
+/// so its readiness is independent of the rest of the page. `AndroidEqualizer.parameters`
+/// only resolves once the engine has materialised an AudioTrack (i.e.
+/// after the user has played at least one track in this process).
+/// Awaiting that future at the page level used to spin a global
+/// `CircularProgressIndicator` forever on a fresh launch. This widget
+/// now renders an inline placeholder explaining the constraint instead,
+/// and swaps in the full EQ UI the instant the future lands (without
+/// the user having to leave + re-enter the page).
+class _EqualizerSection extends ConsumerStatefulWidget {
+  const _EqualizerSection();
+  @override
+  ConsumerState<_EqualizerSection> createState() => _EqualizerSectionState();
+}
+
+class _EqualizerSectionState extends ConsumerState<_EqualizerSection> {
+  AndroidEqualizerParameters? _params;
+  List<double> _gainsDb = const [];
+  bool _enabled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _hydrate();
+  }
+
+  Future<void> _hydrate() async {
+    final engine = ref.read(audioEngineProvider);
+    final params = await engine.eqParameters;
+    if (!mounted) return;
+    final prefs = ref.read(playbackPrefsProvider);
+    final stored = List<double>.from(prefs.eqGainsDb);
+    while (stored.length < params.bands.length) {
+      stored.add(0);
+    }
+    setState(() {
+      _params = params;
+      _enabled = prefs.eqEnabled;
+      _gainsDb = stored;
+    });
+  }
+
+  Future<void> _toggleEnabled(bool v) async {
+    setState(() => _enabled = v);
+    final prefs = ref.read(playbackPrefsProvider);
+    prefs.eqEnabled = v;
+    await prefs.save();
+    await ref.read(audioEngineProvider).setEqEnabled(v);
+  }
+
+  Future<void> _setBandGain(int i, double db) async {
+    setState(() => _gainsDb[i] = db);
+    final prefs = ref.read(playbackPrefsProvider);
+    prefs.eqGainsDb = List.of(_gainsDb);
+    await prefs.save();
+    final engine = ref.read(audioEngineProvider);
+    final params = _params!;
+    await params.bands[i].setGain(db.clamp(params.minDecibels, params.maxDecibels));
+    if (!_enabled) {
+      // Auto-enable when the user starts moving sliders — otherwise the gains
+      // wouldn't actually do anything, which is confusing UX.
+      await _toggleEnabled(true);
+      await engine.applyEqGains(_gainsDb);
+    }
+  }
+
+  /// Apply a preset to all bands. Pads/truncates if the preset's length
+  /// doesn't match the device's actual band count (Android usually
+  /// returns 5; some return 10).
+  Future<void> _applyPreset(List<double> presetGains) async {
+    final params = _params!;
+    final gains = List<double>.filled(params.bands.length, 0);
+    for (var i = 0; i < gains.length; i++) {
+      final raw = i < presetGains.length ? presetGains[i] : 0.0;
+      gains[i] = raw.clamp(params.minDecibels, params.maxDecibels).toDouble();
+    }
+    setState(() => _gainsDb = gains);
+    final prefs = ref.read(playbackPrefsProvider);
+    prefs.eqGainsDb = gains;
+    await prefs.save();
+    final engine = ref.read(audioEngineProvider);
+    await engine.applyEqGains(gains);
+    if (!_enabled) await _toggleEnabled(true);
+  }
+
+  Future<void> _resetFlat() async {
+    final params = _params!;
+    final flat = List<double>.filled(params.bands.length, 0);
+    setState(() => _gainsDb = flat);
+    final prefs = ref.read(playbackPrefsProvider);
+    prefs.eqGainsDb = flat;
+    await prefs.save();
+    await ref.read(audioEngineProvider).applyEqGains(flat);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final params = _params;
+    if (params == null) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Equalizer',
+              style: TextStyle(fontWeight: FontWeight.w700)),
+          const SizedBox(height: 4),
+          Text(
+            'Becomes available once a track has played in this session — '
+            'Android only reports the equalizer band layout after an '
+            'AudioTrack is live. Play any track briefly, then come back '
+            'and the bands appear here automatically.',
+            style: TextStyle(color: context.textMuted, fontSize: 12),
+          ),
+        ],
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: SwitchListTile.adaptive(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Equalizer',
+                    style: TextStyle(fontWeight: FontWeight.w700)),
+                subtitle: Text(
+                  params.bands.isEmpty
+                      ? 'No equalizer available on this device.'
+                      : '${params.bands.length} bands · '
+                          '${params.minDecibels.toStringAsFixed(0)} to ${params.maxDecibels.toStringAsFixed(0)} dB',
+                  style: TextStyle(color: context.textMuted, fontSize: 12),
+                ),
+                value: _enabled,
+                onChanged: params.bands.isEmpty ? null : _toggleEnabled,
+              ),
+            ),
+            if (params.bands.isNotEmpty)
+              TextButton(onPressed: _resetFlat, child: const Text('Flat')),
+          ],
+        ),
+        if (params.bands.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          _EqPresets(
+            enabled: _enabled,
+            bandCount: params.bands.length,
+            onApply: _applyPreset,
+          ),
+        ],
+        const SizedBox(height: 8),
+        for (var i = 0; i < params.bands.length; i++)
+          _BandRow(
+            band: params.bands[i],
+            gainDb: _gainsDb[i],
+            minDb: params.minDecibels,
+            maxDb: params.maxDecibels,
+            enabled: _enabled,
+            onChanged: (v) => _setBandGain(i, v),
+          ),
+        if (params.bands.isNotEmpty) ...[
+          Divider(height: 32, color: context.dividerSoft),
+          const _BtEqCard(),
+        ],
+      ],
     );
   }
 }
