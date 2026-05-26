@@ -92,10 +92,14 @@ class _ArtworkBg extends StatelessWidget {
         fit: StackFit.expand,
         children: [
           Container(color: base),
+          // sigma 12 = noticeable artwork through soft blur (user wants
+          // to recognise the cover). Opacity bumped to 0.35 so colours
+          // read; previous 40+0.22 was too smeared to make anything
+          // out.
           ImageFiltered(
-            imageFilter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
+            imageFilter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
             child: Opacity(
-              opacity: 0.22,
+              opacity: 0.35,
               child: Image(image: image, fit: BoxFit.cover),
             ),
           ),

@@ -7,6 +7,31 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.30.21] — 2026-05-27
+
+### Changed (Background visible through the blur)
+- Blur sigma 40 was too smeared — couldn't make out the artwork at
+  all. Dropped to 12 and bumped overlay opacity 0.22 → 0.35 so the
+  cover reads through cleanly without overwhelming the foreground
+  content.
+
+### Changed (Home page: no more top bandeau)
+- Home's AppBar was an opaque strip with the "digaudio" title +
+  settings gear. Now transparent (no title) + `extendBodyBehindAppBar`,
+  so the global `AppBackground` flows all the way to the status bar.
+  The settings gear stays accessible top-right, floating over the
+  background. The "digaudio" branding is already in the Home hero
+  card below — no need for a redundant title.
+
+### Added (Album Play button tinted by cover palette)
+- Generalised `nowPlayingTintProvider` into a family `coverAccentProvider`
+  keyed by `(serverId, coverArt)`. Reuses the same palette-extraction
+  + same vibrant/light-vibrant/muted/dominant fallback chain.
+- `AlbumPage`'s Play button pulls its background colour from the
+  album cover's palette (falls back to brand green for local
+  albums / palette failure). Visually matches Now Playing's
+  tinted FAB.
+
 ## [0.30.20] — 2026-05-27
 
 ### Changed (Artwork is snappier + sleeker)

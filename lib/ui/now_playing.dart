@@ -18,33 +18,29 @@ import 'widgets/track_tile.dart';
 
 const _accent = Color(0xFF1ED760);
 
-/// Now-Playing tint colour extracted from the current artwork — used as
-/// the dynamic accent for slider, play/pause FAB and heart toggle so
-/// those controls inherit a hue from the cover instead of staying
-/// fixed-brand green. Falls back to null when:
-///   - the "Now Playing colour tint" toggle is off (user pref);
-///   - the track has no Subsonic cover (local track / no coverArt);
-///   - the palette extraction fails (network glitch, decode error).
-/// Call sites use `??  _accent` to fall back to brand green cleanly.
+/// Key for [coverAccentProvider] — uniquely identifies a Subsonic
+/// cover by its originating server + coverArt id. Records are
+/// hashable / equatable in Dart 3 so they make a good family key.
+typedef CoverRef = ({String? serverId, String coverArt});
+
+/// Extracts an accent colour from any Subsonic cover. Family-cached so
+/// the palette is computed once per (server, coverArt) pair across
+/// the app — both Now Playing (current track) and Album page (Play
+/// button) share the same result.
 ///
 /// Prefers `vibrantColor` (max saturation, no light bias). The
 /// previous order put `lightVibrantColor` first but it tends to pick
-/// near-white shades on artworks with bright whites in them — fine
-/// behind a dark scrim but reads as "no tint applied" on the play
-/// FAB. Falls through to `lightVibrant`, then `muted`, then
-/// `dominant` when the preferred shade is absent from the palette.
-final nowPlayingTintProvider = FutureProvider.autoDispose<Color?>((ref) async {
-  final track = ref.watch(currentTrackProvider);
-  final enabled = ref.watch(displayPrefsProvider).nowPlayingTint;
-  if (!enabled || track == null) return null;
-  if (track.origin != MediaOrigin.subsonic || track.coverArt == null) {
-    return null;
-  }
-  final s = ref.watch(subsonicResolverProvider).forId(track.serverId);
+/// near-white shades on artworks with bright whites — fine behind a
+/// dark scrim but reads as "no tint applied" on the play FAB. Falls
+/// through to `lightVibrant`, then `muted`, then `dominant` when the
+/// preferred shade is absent from the palette.
+final coverAccentProvider =
+    FutureProvider.autoDispose.family<Color?, CoverRef>((ref, key) async {
+  final s = ref.watch(subsonicResolverProvider).forId(key.serverId);
   if (s == null) return null;
   try {
     final palette = await PaletteGenerator.fromImageProvider(
-      NetworkImage(s.coverUri(track.coverArt!).toString()),
+      NetworkImage(s.coverUri(key.coverArt).toString()),
       size: const Size(80, 80),
       maximumColorCount: 8,
     );
@@ -55,6 +51,23 @@ final nowPlayingTintProvider = FutureProvider.autoDispose<Color?>((ref) async {
   } catch (_) {
     return null;
   }
+});
+
+/// Now-Playing tint colour — the dynamic accent for slider, play/pause
+/// FAB and heart toggle so those controls inherit a hue from the cover
+/// instead of staying fixed-brand green. Null when the "Now Playing
+/// colour tint" toggle is off, when the track has no Subsonic cover,
+/// or when palette extraction fails. Call sites use `?? _accent` to
+/// fall back to brand green cleanly.
+final nowPlayingTintProvider = FutureProvider.autoDispose<Color?>((ref) async {
+  final track = ref.watch(currentTrackProvider);
+  final enabled = ref.watch(displayPrefsProvider).nowPlayingTint;
+  if (!enabled || track == null) return null;
+  if (track.origin != MediaOrigin.subsonic || track.coverArt == null) {
+    return null;
+  }
+  return ref.watch(coverAccentProvider(
+      (serverId: track.serverId, coverArt: track.coverArt!)).future);
 });
 
 class NowPlayingPage extends ConsumerWidget {

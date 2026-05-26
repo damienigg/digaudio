@@ -19,8 +19,15 @@ class HomePage extends ConsumerWidget {
     final subsonicConfigured = ref.watch(subsonicProvider) != null;
 
     return Scaffold(
+      // Drop the opaque app-bar bandeau noir so the global
+      // AppBackground bleeds all the way up to the status bar. The
+      // settings gear stays accessible top-right, just floating over
+      // the background instead of sitting on a dark strip.
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text('digaudio'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
         actions: [
           IconButton(
             icon: const Icon(Icons.settings_outlined),

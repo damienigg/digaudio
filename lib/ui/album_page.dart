@@ -3,10 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../audio/providers.dart';
 import '../domain.dart';
+import 'now_playing.dart' show coverAccentProvider;
 import 'widgets/artwork.dart';
 import 'widgets/mini_player.dart';
 import 'widgets/theme_ext.dart';
 import 'widgets/track_tile.dart';
+
+const _accent = Color(0xFF1ED760);
 
 class AlbumPage extends ConsumerWidget {
   final String origin;
@@ -28,7 +31,6 @@ class AlbumPage extends ConsumerWidget {
           if (!snap.hasData) return const Center(child: CircularProgressIndicator());
           final album = snap.data!.album;
           final tracks = snap.data!.tracks;
-          final engine = ref.watch(audioEngineProvider);
           return CustomScrollView(
             slivers: [
               SliverAppBar(
@@ -61,11 +63,7 @@ class AlbumPage extends ConsumerWidget {
                           ],
                         ),
                       ),
-                      FilledButton.icon(
-                        icon: const Icon(Icons.play_arrow),
-                        label: const Text('Play'),
-                        onPressed: tracks.isEmpty ? null : () => engine.setQueue(tracks),
-                      ),
+                      _AlbumPlayButton(album: album, tracks: tracks),
                     ],
                   ),
                 ),
@@ -99,5 +97,38 @@ class AlbumPage extends ConsumerWidget {
     final album = albums.firstWhere((a) => a.id == id,
         orElse: () => Album(id: id, title: 'Album', origin: MediaOrigin.local));
     return (album: album, tracks: tracks);
+  }
+}
+
+/// Play CTA on the Album page header — tinted from the album's cover
+/// palette so it matches the visual on Now Playing controls. Falls back
+/// to brand accent green when the album is local / has no cover /
+/// palette extraction fails.
+class _AlbumPlayButton extends ConsumerWidget {
+  final Album album;
+  final List<Track> tracks;
+  const _AlbumPlayButton({required this.album, required this.tracks});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final accent = (album.origin == MediaOrigin.subsonic &&
+            album.coverArt != null)
+        ? (ref
+                .watch(coverAccentProvider(
+                    (serverId: album.serverId, coverArt: album.coverArt!)))
+                .valueOrNull ??
+            _accent)
+        : _accent;
+    return FilledButton.icon(
+      icon: const Icon(Icons.play_arrow),
+      label: const Text('Play'),
+      style: FilledButton.styleFrom(
+        backgroundColor: accent,
+        foregroundColor: Colors.black,
+      ),
+      onPressed: tracks.isEmpty
+          ? null
+          : () => ref.read(audioEngineProvider).setQueue(tracks),
+    );
   }
 }
