@@ -1,7 +1,7 @@
 name: digaudio
 description: "digaudio — a lightweight, modern, high-quality audio player (local + Subsonic)."
 publish_to: 'none'
-version: 0.30.12+78
+version: 0.30.13+79
 
 environment:
   sdk: ^3.5.4
@@ -56,6 +56,10 @@ dependencies:
 
   # Browser launch for Last.fm OAuth-style auth handshake (v0.30.0).
   url_launcher: ^6.3.1
+
+  # Reads version + build number from PackageManager so Settings can
+  # show the running build at the bottom of the page (v0.30.13).
+  package_info_plus: ^8.0.2
 
 dev_dependencies:
   flutter_test:

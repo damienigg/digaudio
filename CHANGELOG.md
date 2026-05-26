@@ -7,6 +7,61 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.30.13] — 2026-05-27
+
+### Fixed (THE mini-player race — for real this time, with proof)
+- v0.30.12's per-step logs in `setQueue` pinpointed the freeze:
+  ```
+  setQueue: setVolume returned, awaiting play…
+  [silence — never reaches "play returned"]
+  ```
+- Root cause: `await _primary.play()` in `setQueue` (and 5 other
+  call sites). just_audio's `play()` returns a `Future<void>` that
+  resolves only when playback STOPS (pauses / completes / stops),
+  NOT when playback starts. Awaiting it blocks every line that
+  follows — including `_onTrackChanged(t)` which is the one that
+  emits the new track to `_trackController` and updates the
+  StateNotifier feeding the mini-player.
+- Symptom that finally cracked the case: "auto-advance ca marche
+  après la première chanson". Auto-advance uses a different code
+  path (`_finalizeAdvance` fires `_onTrackChanged` synchronously
+  inside the swap completion, NOT after the play() future).
+  Latent bug since v0.18.0 (two-player crossfade engine). The
+  v0.30.7 StateNotifier refactor didn't introduce it — just made
+  the symptom more obvious by removing the AsyncValue.loading
+  noise.
+- Fix: replaced `await _primary.play()` / `await _secondary.play()`
+  with `unawaited(_primary.play())` / `unawaited(_secondary.play())`
+  across all 6 call sites in setQueue, _startTransition (×2),
+  _instantAdvance (×2), skipToPrevious, skipToQueueItem. `play()`
+  is fire-and-forget; the rest of the chain continues immediately;
+  `_onTrackChanged` fires; the engine state propagates to the UI.
+
+### Added (Version info in Settings)
+- Bottom of Settings main page: tiny low-contrast line
+  `digaudio v0.30.13 · build 79`. Reads from `PackageManager` via
+  `package_info_plus`. Useful when triaging bugs: the user can read
+  back the running build at a glance.
+- New dep: `package_info_plus: ^8.0.2`.
+
+### Added (Recent searches)
+- When the Search field is empty and the user has searched before,
+  the empty state now shows a "RECENT SEARCHES" section with
+  tappable chips for the last 10 queries (LRU, dedup'd). Tap a
+  chip → fills the field + fires the search. X on a chip → deletes
+  that entry. "Clear all" button in the section header wipes the
+  list.
+- Storage: `DisplayPrefs.recentSearches` (JSON-encoded `List<String>`),
+  capped at 10. Recording: any debounced `_applyQuery` with a
+  trimmed query of ≥ 2 chars. Dedup moves the existing entry to
+  the head.
+
+### Kept (Debug instrumentation)
+- All `[digaudio.dbg]` prints across engine + providers + mini-player
+  stay in place per user preference. Future bugs benefit from the
+  ready-to-tail chain. A Settings toggle to silence them is
+  planned but not in this build.
+
 ## [0.30.12] — 2026-05-27
 
 ### Debug

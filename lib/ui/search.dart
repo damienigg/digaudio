@@ -63,6 +63,38 @@ class _SearchPageState extends ConsumerState<SearchPage> {
       _albumsExhausted = false;
       _artistsExhausted = false;
     });
+    // Persist anything that survives the 280 ms debounce — short
+    // enough that typos still slip in, but [touchRecentSearch]'s
+    // dedup keeps the list tidy as the user refines a query. Cap
+    // at 2 chars to skip accidental single-letter taps.
+    final trimmed = v.trim();
+    if (trimmed.length >= 2) {
+      final prefs = ref.read(displayPrefsProvider);
+      if (prefs.touchRecentSearch(trimmed)) {
+        unawaited(prefs.save());
+      }
+    }
+  }
+
+  void _fillFromRecent(String q) {
+    _ctrl.text = q;
+    _ctrl.selection = TextSelection.collapsed(offset: q.length);
+    _debounce?.cancel();
+    _applyQuery(q);
+  }
+
+  Future<void> _removeRecent(String q) async {
+    final prefs = ref.read(displayPrefsProvider);
+    prefs.removeRecentSearch(q);
+    await prefs.save();
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _clearAllRecents() async {
+    final prefs = ref.read(displayPrefsProvider);
+    prefs.clearRecentSearches();
+    await prefs.save();
+    if (mounted) setState(() {});
   }
 
   void _onChanged(String v) {
@@ -165,9 +197,46 @@ class _SearchPageState extends ConsumerState<SearchPage> {
             style: const TextStyle(color: Colors.redAccent))),
         data: (r) {
           if (r.isEmpty) {
-            return Center(
-                child: Text('Type to search.',
-                    style: TextStyle(color: context.textDisabled)));
+            final recents = ref.watch(displayPrefsProvider).recentSearches;
+            if (recents.isEmpty) {
+              return Center(
+                  child: Text('Type to search.',
+                      style: TextStyle(color: context.textDisabled)));
+            }
+            return ListView(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              children: [
+                Row(
+                  children: [
+                    Text('RECENT SEARCHES',
+                        style: TextStyle(
+                            color: context.textTertiary,
+                            fontSize: 11,
+                            letterSpacing: 1.5,
+                            fontWeight: FontWeight.w700)),
+                    const Spacer(),
+                    TextButton(
+                      onPressed: _clearAllRecents,
+                      child: const Text('Clear all',
+                          style: TextStyle(fontSize: 12)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: [
+                    for (final q in recents)
+                      InputChip(
+                        label: Text(q, style: const TextStyle(fontSize: 12)),
+                        onPressed: () => _fillFromRecent(q),
+                        onDeleted: () => _removeRecent(q),
+                      ),
+                  ],
+                ),
+              ],
+            );
           }
           final allArtists = [...r.artists, ..._extraArtists];
           final allAlbums = [...r.albums, ..._extraAlbums];

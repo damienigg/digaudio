@@ -302,7 +302,10 @@ class AudioEngine extends BaseAudioHandler {
       // Instant swap — no overlap. Start secondary at full target
       // volume and stop primary the same moment.
       await _secondary.setVolume(nextTarget);
-      await _secondary.play();
+      // play() must NOT be awaited — just_audio resolves that future
+      // only when playback stops. See setQueue's note for the full
+      // explanation. _finalizeAdvance fires _onTrackChanged directly.
+      unawaited(_secondary.play());
       await _primary.stop();
       _finalizeAdvance(nextIndex, nextTrack, nextTarget);
       return;
@@ -310,7 +313,7 @@ class AudioEngine extends BaseAudioHandler {
 
     // Overlap window: both players audible, A fades out, B fades in.
     await _secondary.setVolume(0.0);
-    await _secondary.play();
+    unawaited(_secondary.play());
 
     final start = DateTime.now();
     _transitionTimer?.cancel();
@@ -339,7 +342,9 @@ class AudioEngine extends BaseAudioHandler {
     _inTransition = true;
     if (_preloadedIndex == nextIndex) {
       await _secondary.setVolume(nextTarget);
-      await _secondary.play();
+      // See setQueue's note: never await player.play() — that future
+      // only resolves on stop, blocking the rest of the chain.
+      unawaited(_secondary.play());
       await _primary.stop();
       _finalizeAdvance(nextIndex, nextTrack, nextTarget);
     } else {
@@ -347,7 +352,7 @@ class AudioEngine extends BaseAudioHandler {
       try {
         await _primary.setAudioSource(_sourceFor(nextTrack));
         await _primary.setVolume(nextTarget);
-        await _primary.play();
+        unawaited(_primary.play());
       } catch (_) {
         _inTransition = false;
         return;
@@ -577,10 +582,17 @@ class AudioEngine extends BaseAudioHandler {
         'awaiting setVolume…');
     await _primary.setVolume(_targetVolume);
     // ignore: avoid_print
-    print('[digaudio.dbg] setQueue: setVolume returned, awaiting play…');
-    await _primary.play();
-    // ignore: avoid_print
-    print('[digaudio.dbg] setQueue: play returned, firing _onTrackChanged…');
+    print('[digaudio.dbg] setQueue: setVolume returned, firing play() '
+        '(fire-and-forget) + _onTrackChanged…');
+    // DO NOT await player.play(). just_audio's `play()` returns a
+    // Future that completes when playback STOPS (paused/completed/
+    // stopped), not when it starts. Awaiting it blocks _onTrackChanged
+    // for the entire duration of the track — so mini-player +
+    // currentTrackProvider never see the new track until playback
+    // ends. Years-old latent bug exposed by v0.30.7's StateNotifier
+    // refactor (which made the symptom obvious because the seeded
+    // initial value was null and nothing replaced it until track-end).
+    unawaited(_primary.play());
     _onTrackChanged(t);
     unawaited(_preloadNextIfNeeded());
     _maybeResume(t);
@@ -756,7 +768,8 @@ class AudioEngine extends BaseAudioHandler {
     try {
       await _primary.setAudioSource(_sourceFor(prev));
       await _primary.setVolume(_targetVolume);
-      await _primary.play();
+      // Fire-and-forget — see setQueue's note.
+      unawaited(_primary.play());
     } catch (_) {
       return;
     }
@@ -778,7 +791,8 @@ class AudioEngine extends BaseAudioHandler {
     try {
       await _primary.setAudioSource(_sourceFor(t));
       await _primary.setVolume(_targetVolume);
-      await _primary.play();
+      // Fire-and-forget — see setQueue's note.
+      unawaited(_primary.play());
     } catch (_) {
       return;
     }

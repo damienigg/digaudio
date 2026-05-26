@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../audio/providers.dart';
@@ -45,8 +46,48 @@ class SettingsPage extends StatelessWidget {
               trailing: Icon(Icons.chevron_right, color: context.textDisabled),
               onTap: () => context.push('/settings/display'),
             ),
+            const SizedBox(height: 32),
+            const _AppVersionFooter(),
           ],
         ),
+      );
+}
+
+/// Tiny build-info line at the bottom of Settings — "digaudio v0.30.13 ·
+/// build 79". Reads from PackageManager via `package_info_plus`. Useful
+/// when triaging bugs: the user can read it back at a glance instead
+/// of guessing which APK they have installed. Low-contrast so it
+/// doesn't draw attention away from the settings tiles.
+class _AppVersionFooter extends StatefulWidget {
+  const _AppVersionFooter();
+  @override
+  State<_AppVersionFooter> createState() => _AppVersionFooterState();
+}
+
+class _AppVersionFooterState extends State<_AppVersionFooter> {
+  late final Future<PackageInfo> _info = PackageInfo.fromPlatform();
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<PackageInfo>(
+        future: _info,
+        builder: (ctx, snap) {
+          final label = snap.hasData
+              ? 'digaudio v${snap.data!.version} · build ${snap.data!.buildNumber}'
+              : '…';
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: Center(
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: ctx.textDisabled,
+                  fontSize: 11,
+                  letterSpacing: 0.3,
+                ),
+              ),
+            ),
+          );
+        },
       );
 }
 

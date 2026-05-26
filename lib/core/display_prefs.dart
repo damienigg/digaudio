@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -11,6 +13,12 @@ class DisplayPrefs {
   static const _kNowPlayingTint = 'display.now_playing_tint';
   static const _kMaterialYou = 'display.material_you';
   static const _kAudioGeekInfo = 'display.audio_geek_info';
+  static const _kRecentSearches = 'display.recent_searches';
+
+  /// Cap on persisted recent searches — anything past this is the
+  /// LRU tail and gets evicted. 10 fits comfortably in the empty
+  /// state of Search without scrolling.
+  static const recentSearchesCap = 10;
 
   ThemeMode themeMode = ThemeMode.dark;
 
@@ -39,6 +47,41 @@ class DisplayPrefs {
   /// non-audiophile users. Opt-in via Settings → Display.
   bool audioGeekInfoEnabled = false;
 
+  /// LRU-ordered list of recent search queries (most recent first).
+  /// Surfaced as tappable chips on the Search empty-state so the user
+  /// doesn't have to retype "daft punk" each session. Capped at
+  /// [recentSearchesCap]; mutation goes through [touchRecentSearch] /
+  /// [removeRecentSearch] / [clearRecentSearches] which handle dedup
+  /// and persistence.
+  List<String> recentSearches = const [];
+
+  /// Move (or insert) `q` to the head of [recentSearches], dedup'd
+  /// case-sensitively against existing entries, capped at the LRU
+  /// limit. Returns true when the list changed (so callers can
+  /// debounce-skip a no-op save).
+  bool touchRecentSearch(String q) {
+    final trimmed = q.trim();
+    if (trimmed.isEmpty) return false;
+    final next = [trimmed, ...recentSearches.where((e) => e != trimmed)];
+    if (next.length > recentSearchesCap) {
+      next.removeRange(recentSearchesCap, next.length);
+    }
+    if (next.length == recentSearches.length &&
+        next.first == recentSearches.firstOrNull) {
+      return false;
+    }
+    recentSearches = next;
+    return true;
+  }
+
+  void removeRecentSearch(String q) {
+    recentSearches = recentSearches.where((e) => e != q).toList();
+  }
+
+  void clearRecentSearches() {
+    recentSearches = const [];
+  }
+
   Future<void> load() async {
     final p = await SharedPreferences.getInstance();
     themeMode = switch (p.getString(_kThemeMode)) {
@@ -50,6 +93,11 @@ class DisplayPrefs {
     nowPlayingTint = p.getBool(_kNowPlayingTint) ?? true;
     materialYouEnabled = p.getBool(_kMaterialYou) ?? false;
     audioGeekInfoEnabled = p.getBool(_kAudioGeekInfo) ?? false;
+    final raw = p.getString(_kRecentSearches);
+    if (raw != null && raw.isNotEmpty) {
+      recentSearches =
+          (jsonDecode(raw) as List).map((e) => e as String).toList();
+    }
   }
 
   Future<void> save() async {
@@ -59,5 +107,6 @@ class DisplayPrefs {
     await p.setBool(_kNowPlayingTint, nowPlayingTint);
     await p.setBool(_kMaterialYou, materialYouEnabled);
     await p.setBool(_kAudioGeekInfo, audioGeekInfoEnabled);
+    await p.setString(_kRecentSearches, jsonEncode(recentSearches));
   }
 }
