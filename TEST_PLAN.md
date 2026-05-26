@@ -1,247 +1,323 @@
-# User test plan — digaudio (v0.21.2)
+# Acceptance test plan — digaudio (v0.30.0)
 
-Phone-side acceptance checklist. Run through each section; tick the box when verified. Failures: file an issue or ping in chat with the exact steps + actual result.
+Real-device walk-through. Tag v1.0.0 only after every section is ticked. Each item is self-contained: it states where you start, what to tap, and what to see. If a step fails, file an issue or ping in chat with the exact section name + tap sequence + actual behaviour.
 
-## Prerequisites
+**Phone**: Samsung Galaxy `R5GL21FEWCR` (or any Android 10+ phone with USB debugging enabled). **Connectivity**: Tailscale must be on the phone for the Subsonic server to be reachable.
 
-- [ ] APK installed (v0.21.2 or later)
-- [ ] At least one Subsonic server configured & active (Settings → Servers)
-- [ ] At least one local audio file on device (`/sdcard/Music/*.flac|mp3|…`)
-- [ ] (Required for many features) Library cache synced once: Settings → Playback → Storage shows "Subsonic library cache" with non-zero count
+---
 
-## Playback basics
+## 0 · Install
 
-- [ ] **Play a Subsonic track from search**. Type in Search, tap result. → Now Playing opens, audio starts within 1–2 s, artwork visible
-- [ ] **Play a local track from Library → Tracks**. → Same UX as Subsonic
-- [ ] **Background playback survives screen-off**. Play, lock screen, wait 30 s. → Still playing; lockscreen shows artwork + transport
-- [ ] **Bluetooth play/pause/next**. Connect BT headphones, tap pause on headphones, tap next. → App responds, lockscreen reflects new state
-- [ ] **Notification controls**. Pull down notification shade during playback. → Compact + expanded controls present, all functional
+- [ ] **APK installed**. From the v0.30.0 GitHub release: `gh release download v0.30.0 -p '*.apk' -O /tmp/digaudio.apk && adb install -r /tmp/digaudio.apk && adb shell am start -n com.digaudio.digaudio/.MainActivity`. → App opens to Home.
+- [ ] **At least one Subsonic server is configured + active**. Settings → Servers. If the build had `SUBSONIC_URL` baked in, it appears pre-filled. → A green check sits next to the active server.
+- [ ] **At least one local audio file is on the device** (any MP3 / FLAC under `/sdcard/Music/`).
+- [ ] **Library cache is synced once**. Settings → Playback → "Subsonic library cache" → tap "Sync now" if it shows 0 songs. → Count becomes non-zero (~thousands depending on library size).
 
-## Queue & navigation
+---
 
-- [ ] **Album play-all**. Open any album, tap play. → Queue = full tracklist in order, plays from track 1
-- [ ] **Play next** via ⋮ button. → Track inserted right after current
-- [ ] **Add to queue** via ⋮ button. → Track appended at end of Now Playing → Queue tab
-- [ ] **Skip prev / next** from Now Playing transport. → Moves through queue cleanly
-- [ ] **Scrubber**. Drag the position slider. → Audio seeks to that point
-- [ ] **Shuffle on/off**. Toggle shuffle icon. → Becomes accent green when active; queue is genuinely re-ordered (engine-level shuffle now)
-- [ ] **Repeat off/one/all** (cycle). Tap repeat icon. → Cycles through 3 states; LoopMode.one loops seamlessly via just_audio; LoopMode.all wraps the queue from end to 0
-- [ ] **Up Next strip**. Play a Subsonic album with autoqueue. → Strip below transport shows next 3 tracks; tap one → jumps to it
+## 1 · Playback basics
 
-## Queue editor (v0.16.0)
+Start from Home.
 
-- [ ] **Drag-to-reorder**. Now Playing → Queue tab → drag a row's trailing handle up/down. → Order persists, audio uninterrupted
-- [ ] **Swipe-to-remove**. Swipe a non-current row left. → Row dismissed with red background; track removed from queue
+- [ ] **Play a Subsonic track via Search**. Search tab → type a known title → tap a result. → Now Playing opens, audio starts within 1–2 s, artwork visible.
+- [ ] **Play a local track**. Library → Tracks → tap any local-origin track (no "· server" suffix). → Same behaviour.
+- [ ] **Background playback survives screen-off**. While playing, press the power button → wait 30 s → press power again. → Audio still playing; lockscreen shows artwork + transport controls.
+- [ ] **Notification controls**. Pull down the notification shade during playback. → Compact + expanded notification controls are present and functional (play/pause, prev, next).
+- [ ] **Notification rich actions** (v0.23.1). On the expanded notification: tap the 10-second-back arrow → audio rewinds 10 s. Tap the 10-second-forward arrow → audio jumps forward 10 s.
 
-## Album mode (v0.16.0)
+---
 
-- [ ] **Stop at end of album**. Play any album. On Now Playing, tap the album icon (AppBar). → Icon turns accent green. When the last track of the album finishes, playback pauses; icon returns to outlined
+## 2 · Now Playing — Player tab
 
-## Per-track resume (v0.16.1)
+Open Now Playing (tap the mini-player) → Player tab.
 
-- [ ] **Pause mid-track + return**. Play a long track (≥3 min), let it run to ~1:30, pause, switch to a different track, play. Now go back to the first track. → Playback resumes around 1:30 (not 0:00) once buffered
-- [ ] **Short tracks don't trigger**. Play a track from start to ~0:05, pause, switch away, return. → Plays from 0:00 (threshold protects against "resume at 0:05" UX)
+- [ ] **Full-screen artwork** renders for Subsonic tracks (local tracks fall back to a soft placeholder when no embedded art).
+- [ ] **Colour-tint background gradient**. → A soft gradient of the dominant artwork colour fades from top to bottom. (Disable check: Settings → Display → "Now Playing tint" off → gradient disappears next track switch.)
+- [ ] **Audio routing info line** (v0.29.0). A small line under the artist reads e.g. `FLAC · 24-bit/96 kHz · 938 kbps  →  Speaker · 48 kHz ⚠`. Verify the matrix:
+  - **Built-in speaker, mismatched rates** (e.g. 96 kHz source on 48 kHz mix) → line is amber + ⚠.
+  - **Matched rates** (e.g. 48 kHz source on 48 kHz mix) → line is neutral grey, no ⚠.
+  - **Plug a USB DAC** → after the next track switch, device segment reads `USB: <product name> · <output kHz>`.
+  - **Connect Bluetooth A2DP** → after next track switch, `Bluetooth: <device> · 48 kHz`.
+  - **Wired 3.5 mm headphones** → `Wired · …`.
+  - **Local file** → source segment shows only the codec (no sample rate / bit depth); output still renders.
+  - **Stock-Subsonic track** (no OpenSubsonic `samplingRate` field) → source shows codec + bit-rate only; resampling can't be detected → line stays neutral.
+- [ ] **Heart toggle**. Tap the heart icon next to the title → fills + turns accent green. Tap again → empties.
+- [ ] **Position scrubber**. Drag the slider. → Audio seeks accordingly.
+- [ ] **Transport**. Tap shuffle → goes accent green; queue is genuinely re-ordered (next track is no longer the album's track 2). Tap prev → previous track. Tap play/pause → toggles. Tap next → next track. Tap repeat → cycles off / one / all.
+- [ ] **Up Next strip**. → Below the transport, the next 3 queued tracks appear. Tap one → jumps to that track.
 
-## True crossfade (v0.18.0) — **important regression check**
+## 3 · Now Playing — AppBar actions
 
-- [ ] **Overlap audible**. Settings → Playback → Crossfade → 5 s. Play an album. → Last ~5 s of current track audibly overlaps the first 5 s of the next — you should briefly hear **both** simultaneously
-- [ ] **No overlap = still gapless**. Crossfade → Off. Same album. → Seamless transition with no perceived gap (preloaded secondary swaps in at the moment primary ends)
-- [ ] **Pause during fade**. Trigger a crossfade, hit pause mid-overlap. → Both players pause; resume plays both back
-- [ ] **Skip during fade**. Trigger a crossfade, hit skip-next. → Transition cancelled, secondary silenced, target track loaded on primary, plays from start
+Still on Now Playing.
 
-## Auto-cache + downloads
+- [ ] **Album mode**. Tap the album icon (AppBar). → Icon turns accent green; tooltip "Cancel album-end stop". Let the album finish. → Playback pauses when the last track ends; icon returns to outlined.
+- [ ] **Speed**. Tap the "1.0x" pill → pick 1.5×. → Audibly faster. Close + re-open app. → Pill still shows "1.5x" (persisted).
+- [ ] **Sleep timer (countdown)**. Tap bedtime icon → "5 minutes". → Bedtime icon active + "5:00" countdown next to it. Let it tick down.
+- [ ] **Sleep timer fade-out** (v0.23.0). When the countdown reaches 0:10 → volume audibly ramps down across 10 s. At 0:00 → playback pauses. Volume is restored to its pre-fade value on the next play.
+- [ ] **Sleep timer end-of-track**. Tap bedtime icon → "Stop at end of current track". → Bedtime icon active, no countdown. → Pauses at the end of the current track.
+- [ ] **Cancel timer**. Tap bedtime icon → "Cancel timer". → Indicator disappears; current track keeps playing.
+- [ ] **Share track**. Tap the share icon (AppBar). → System share sheet opens with `Listening to <title> — <artist>  ·  via digaudio`.
 
-- [ ] **Auto-cache toggles a fresh play**. Auto-cache ON, play a Subsonic track never played before. Wait for it to finish. → Track tile now shows grey ✓ cached badge
-- [ ] **Cached track plays offline**. Airplane mode. Play the same cached track. → Plays from disk; offline banner appears
-- [ ] **Pin a download**. ⋮ on cached track → "Keep download". → Badge turns green ✓
-- [ ] **Remove a download**. ⋮ on pinned track → "Remove download". → Badge disappears; file gone
-- [ ] **Cache budget enforced**. Settings → Playback → Storage → Max cache to 512 MB. Play music until limit approaches. → Oldest non-pinned tracks evicted; usage ≤ 512 MB
-- [ ] **"Clear auto-cache" preserves pinned**. With both kinds present, tap "Clear auto-cache". → Auto-cached gone, pinned remain
+## 4 · Now Playing — Queue + Lyrics
 
-## Favourites & ratings
+- [ ] **Queue tab — drag to reorder**. Now Playing → Queue tab → long-press a row's trailing drag-handle → drag up or down → release. → Order persists; audio uninterrupted.
+- [ ] **Queue tab — swipe to remove**. Swipe a non-current row left. → Red background flashes; row dismissed; queue length shrinks by 1.
+- [ ] **Lyrics — synced**. Now Playing → Lyrics tab. For a track with synced lyrics on the Subsonic server (OpenSubsonic `getLyricsBySongId`). → Lines render; active line is accent + larger; view auto-scrolls.
+- [ ] **Lyrics — plain fallback**. For a track without synced lyrics but with plain ones. → Plain text block, no highlighting.
+- [ ] **Lyrics — none**. Track with no lyrics at all. → "No lyrics available."
 
-- [ ] **Heart on Now Playing**. Play any track, tap heart icon next to title. → Icon fills + turns green; tile badge appears everywhere
-- [ ] **5-star rating** on Subsonic track via ⋮ → tap a star. → Stars 1–N fill, server receives the rating (re-open sheet to confirm)
-- [ ] **Clear rating**. Tap the current rating star again. → Stars clear
-- [ ] **Rating row hidden for local tracks**. ⋮ on a local track. → No star row
+---
 
-## Bulk select (v0.16.3, polished v0.21.2)
+## 5 · Library browsing
 
-- [ ] **Enter select mode**. Long-press any track tile. → Tile leading swaps to a 36 dp check-circle; SelectionBar appears above mini-player
-- [ ] **Toggle more in same list**. Tap (not long-press) other tiles. → Each toggles in/out; count updates
-- [ ] **Cross-screen selection**. Select in Library, navigate to Search, long-press a track there. → Count = sum of both
-- [ ] **Bulk Play**. Tap "Play" in the bar. → Queue replaced; selection clears
-- [ ] **Bulk Add to queue / Play next**. → Appends / inserts after current respectively
-- [ ] **Bulk favourite / add to playlist**. → All selected tracks treated; selection clears
-- [ ] **Cancel**. Tap X. → Bar disappears, tiles return to normal
+From the bottom-nav, tap **Library**.
 
-## Playlists
+- [ ] **6 sub-tabs visible**: Tracks / Albums / Artists / Genres / Decades / Playlists.
+- [ ] **Tracks** — list populated; tap any → plays.
+- [ ] **Albums** — grid populated; tap one → Album page (tracklist + Play / Shuffle header) → tap Play → queue = full tracklist in order.
+- [ ] **Artists** — list populated. Scroll: a vertical alphabetical strip on the right lets you jump to any letter.
+- [ ] **Tap an artist** → discography page → tap an album → tracklist.
+- [ ] **Genres** — list of genres with counts. Tap one → page with Play all + Shuffle.
+- [ ] **Decades** — 1970s / 1980s / etc. Tap one → same UX as Genres.
+- [ ] **Playlists** — shows both local + Subsonic playlists, plus Favorites / Wishlist / Smart playlists / Stats entries.
 
-- [ ] **Create local playlist**. ⋮ → "Add to playlist…" → "New playlist…" → name. → Created in Library → Playlists → Local
-- [ ] **Reorder + delete in local playlist**. Open it, long-drag rows, swipe delete. → Persists across app restart
-- [ ] **Export local playlist as JSON**. Open → menu → Export. → Share sheet opens with `.json`
-- [ ] **Import playlist**. Library → Playlists → "Import playlist…" → pick `.m3u` or `.json`. → New local playlist; matched tracks visible, unmatched greyed
-- [ ] **Subsonic playlist plays**. Library → Playlists → tap any Subsonic playlist → Play. → Full tracklist queues + starts
+---
 
-## Smart playlists (v0.15.3 + v0.21.0 v2 joins)
+## 6 · Search
 
-### v1 builtins (seeded first run)
-- [ ] **4 builtins present**. Library → Playlists → "Smart playlists". → Lists "All time random", "80s revival", "90s revival", "Recent (year−4 → year)"
-- [ ] **All time random plays**. Tap → 50 random tracks; Play all / Shuffle header
-- [ ] **Decade filter works**. Tap "90s revival" → at least one displayed track has a 199x year
+From bottom-nav, tap **Search**.
 
-### v1 custom rule
-- [ ] **Create a custom column-based playlist**. "+ New" → name "Rock 2000s" → add `genre eq Rock` + `year between 2000 2009` → order random → limit 30 → Save. → Plays only Rock 2000–2009
+- [ ] **Type a 2-3 letter query**. → Results appear within ~50-280 ms (FTS local hits are instant; remote merges in shortly after).
+- [ ] **Accent-insensitive**. Type "cafe". → Finds tracks containing "Café" or "Cafe".
+- [ ] **Prefix-AND**. Type `daf pun` (with space). → Finds "Daft Punk".
+- [ ] **"Show more"** in any section with ≥ 20 results. → Section grows by 20.
+- [ ] **Local + remote mix**. Type a term matching both. → Local tracks first, then remote.
+- [ ] **Works offline**. Airplane mode + type a known term. → FTS-cached results still appear (remote silently skipped).
+- [ ] **Voice search** (v0.26.0). Tap the mic icon in the Search AppBar. → Google "Listening…" dialog opens. Speak a track / artist / album. → Dialog closes; text drops into the field; results appear immediately (no debounce wait).
+- [ ] **Voice search cancel**. Tap mic → tap outside the dialog. → Field unchanged; no error.
 
-### v2 joins (the powerful ones)
-- [ ] **Favourite filter**. Create "Recurring favs": `favourite eq Yes AND playCount30d gte 3`. → Lists tracks you favourited AND played ≥3 times this month
-- [ ] **Throwback filter**. Create "Throwback 90s": `favourite eq Yes AND lastPlayedDaysAgo gte 180 AND year between 1990 1999`. → Lists 90s favs you haven't touched in 6+ months (or never)
-- [ ] **Cached state filter**. Create "Offline-ready unplayed": `cached eq Yes AND playCount30d lte 1`. → Tracks on disk that you've barely touched
+### 6a · Multi-server search (only with ≥ 2 servers)
 
-## Genre + Decade browsers (v0.15.1)
+Add a second Subsonic server first (Settings → Servers → "Add server").
 
-- [ ] **Genres tab populated**. Library → Genres. → List of genres with counts
-- [ ] **Decades tab populated**. Library → Decades. → 1970s / 1980s / etc.
-- [ ] **Tap a genre → page loads + plays**. → All tracks of that genre; Play all queues + starts
-- [ ] **Tap a decade → same**. → Tracks of that decade
+- [ ] **Both servers' results appear**. Search a term known to exist on both. → Mixed result list; each row's subtitle ends with ` · <server label>`. Single-server users see no label (clean subtitle).
+- [ ] **Cross-server playback**. Tap a track from the **non**-active server. → Streams from the originating server (no 404); cover art renders.
+- [ ] **One server offline**. Disconnect one of two servers (URL unreachable). → Other server's results still appear; no error banner blocks the page.
 
-## Subsonic radio (v0.15.2 + v0.21.1 auto-refill)
+---
 
-- [ ] **Start radio**. ⋮ on a Subsonic track → "Start radio". → Queue = seed + 30 similar; plays
-- [ ] **Auto-refill**. Listen until you're within 3 tracks of the end. → 10 more tracks appended without you doing anything; refill seeded by the queue's tail
-- [ ] **Self-disengages**. While radio is active, navigate to Library → tap an album → Play. → Radio stops refilling silently (verify by listening to the end of the album — no more auto-appended tracks)
-- [ ] **Empty fallback**. Try radio on a track the server has no similar data for. → Toast "no similar tracks…"; original queue untouched
+## 7 · Smart playlists
 
-## Stats — On-this-day + Year-by-year (v0.15.0)
+Library → Playlists → "Smart playlists".
 
-- [ ] **On this day**. → For installs ≥1 year old: tracks played same MM-DD in prior years. Fresh installs: hint text
-- [ ] **Year-by-year**. → For each year present in history, one block with top 5 tracks (tap to play)
+- [ ] **4 builtins seeded first run**: "All time random", "80s revival", "90s revival", "Recent (year−4 → year)".
+- [ ] **All time random plays**. Tap → 50 random tracks; Play all / Shuffle header at top.
+- [ ] **Decade filter works**. Tap "90s revival" → at least one displayed track has a 199x year.
+- [ ] **Create a v1 custom rule**. "+ New" → name "Rock 2000s" → `genre eq Rock` AND `year between 2000 2009` → order random → limit 30 → Save. → Plays only Rock 2000-2009.
+- [ ] **v2 join — favourite filter**. Create "Recurring favs": `favourite eq Yes AND playCount30d gte 3`. → Lists tracks you favourited AND played ≥ 3 times this month.
+- [ ] **v2 join — throwback filter**. Create "Throwback 90s": `favourite eq Yes AND lastPlayedDaysAgo gte 180 AND year between 1990 1999`. → Lists 90s favs you haven't touched in 6+ months (or never).
+- [ ] **v2 join — cached state filter**. Create "Offline-ready unplayed": `cached eq Yes AND playCount30d lte 1`. → Tracks on disk barely touched.
 
-## Search (FTS-first, v0.19.0)
+---
 
-- [ ] **Type query → results appear instantly**. Type 2-3 letters. → Results within ~50–280 ms (FTS hits are instant; remote search adds new tracks ~280 ms later)
-- [ ] **Accent-insensitive**. Type "cafe". → Finds tracks containing "Café" or "Cafe"
-- [ ] **Prefix-AND**. Type "daf pun" (with space). → Finds "Daft Punk"
-- [ ] **"Show more"** in any section with ≥20 results. → Section grows by 20
-- [ ] **Local + remote mix**. Type a term matching both local and Subsonic. → Local tracks first, then remote
-- [ ] **Works offline**. Airplane mode + type a known term. → FTS-cached results still appear (remote is silently skipped)
-- [ ] **Voice search** (v0.26.0). Tap the mic icon in the Search AppBar. → Google "Listening…" dialog → speak a track / album / artist name → dialog closes → text appears in the field → results appear immediately (no debounce wait)
-- [ ] **Voice search cancel**. Tap mic → tap outside the dialog. → Field unchanged
-- [ ] **Voice search — no recogniser**. On a device with no Google speech app (rare). → Mic tap is silently no-op (graceful fallback)
-- [ ] **Multi-server search** (v0.27.0, ≥2 servers configured). Type a term known to exist on both servers. → Results from both servers appear together; each row's subtitle ends with " · <server label>"; single-server users see no label (clean subtitle)
-- [ ] **Multi-server playback**. Tap a track from the *non*-active server. → Streams from the originating server (not 404); cover art renders
-- [ ] **One server offline**. Disconnect one of two servers (e.g. URL unreachable). → Other server's results still appear; no error banner blocks the page
+## 8 · Local + Subsonic playlists
 
-## Sleep timer + speed + crossfade
+Library → Playlists.
 
-- [ ] **Sleep timer 5 min** from Now Playing AppBar (bedtime icon). → Countdown badge appears; ticks down; pauses at 0
-- [ ] **Sleep timer "end of track"**. → Bedtime icon active, no countdown; pauses at next track end
-- [ ] **Cancel timer**. → Badge disappears
-- [ ] **Speed 1.5×**. Tap "1.0x" → 1.5×. → Audibly faster
-- [ ] **Speed persists** across app restart. → AppBar still shows the previously-set speed
+- [ ] **Create local playlist**. ⋮ on any track → "Add to playlist…" → "New playlist…" → name. → Created; visible in Library → Playlists.
+- [ ] **Reorder + delete in local playlist**. Open it → long-drag rows; swipe-delete a row. → Persists across app restart.
+- [ ] **Export local playlist as JSON**. Open it → menu → Export. → System share sheet opens with the `.json` file.
+- [ ] **Import playlist**. Library → Playlists → "Import playlist…" → pick a `.m3u`, `.m3u8`, or `digaudio.json` file. → New local playlist; matched tracks visible, unmatched greyed.
+- [ ] **Subsonic playlist plays**. Tap any Subsonic playlist → Play. → Full tracklist queues + starts.
 
-## Equalizer (v0.17.0 presets + v0.17.3 per-BT)
+---
 
-- [ ] **Preset chip**. Settings → Playback → Equalizer → enable → tap "Bass boost". → All bands set to preset values; bass audibly stronger
-- [ ] **Custom slider after preset**. Pull 60 Hz to +6 dB on top of Bass boost. → Saves as custom (presets are not "modes" — they just write values)
-- [ ] **Per-BT EQ**. Connect a BT headphone → Settings → Playback → Equalizer → "Per-Bluetooth-device EQ" → "Save current EQ". → Saved. Disconnect + reconnect → profile auto-applies
+## 9 · Track actions + bulk select
 
-## Replay Gain (v0.17.2)
+- [ ] **Long-press any track** anywhere. → Tile leading swaps to a 36 dp check-circle; **SelectionBar** appears above the mini-player.
+- [ ] **Tap (not long-press) more tiles** in the same list. → Each toggles in / out; count updates.
+- [ ] **Cross-screen selection**. Long-press a track in Library, navigate to Search, long-press another. → Count = sum.
+- [ ] **Bulk Play**. Tap "Play" in the SelectionBar. → Queue replaced; selection clears.
+- [ ] **Bulk Add to queue / Play next**. → Appends / inserts after current respectively.
+- [ ] **Bulk Add to playlist + favourites**. → All selected tracks affected; selection clears.
+- [ ] **Bulk Download** (Subsonic tracks only). → Routes through the background download queue; DownloadBanner appears above mini-player with live progress.
+- [ ] **Bulk Cancel** = tap the X in the SelectionBar. → Bar disappears; tiles return to normal.
+- [ ] **5-star rating** (Subsonic track via ⋮). Tap any star. → Stars 1-N fill; server receives the rating (re-open the sheet to confirm). Tap the current rating again → clears.
+- [ ] **Rating row hidden for local tracks**. ⋮ on a local track → no star row.
+- [ ] **Start radio** (Subsonic track via ⋮ → "Start radio"). → Queue = seed + 30 similar; plays.
 
-- [ ] **Track mode evens out loud / quiet**. Settings → Playback → Volume normalisation → Track. Play a known loud track followed by a known quiet one (Subsonic server must expose `replayGain` — Navidrome does, stock Subsonic ≤ 1.16 doesn't). → Perceived loudness similar between the two
-- [ ] **Album mode preserves intra-album dynamics**. Same setup, mode = Album. → Within one album, quiet songs stay quiet relative to loud ones (album RG normalises across albums, not within)
-- [ ] **Off behaves as before**. Mode = Off. → No volume change between tracks
+---
 
-## Auto-queue
+## 10 · Subsonic radio + auto-queue
 
-- [ ] **Lookahead fills the queue**. Auto-queue ON. Start with a single track. → Queue tab shows the original + ~3 similar follow-ups
+- [ ] **Radio auto-refills**. Start a radio (above), listen until you're within 3 tracks of the queue end. → 10 more tracks appended without you doing anything.
+- [ ] **Radio disengages on user action**. While radio is active, Library → tap an album → Play. → Radio stops refilling silently (verify by listening to the end of the album — no auto-appended tracks).
+- [ ] **Empty-radio fallback**. Try radio on a track the server has no similar data for. → Toast "no similar tracks…"; original queue untouched.
+- [ ] **Auto-queue (Settings → Playback → Auto-queue ON)**. Start with a single Subsonic track. → Queue tab shows the original + ~3 similar follow-ups appended.
 
-## Sleep auto-pause via headphone unplug
+---
 
-- [ ] **Yank wired headphones during playback**. → Playback pauses automatically (`audio_session.music` config handles this)
-- [ ] **Auto-play on BT connect** (opt-in, Settings → Playback). Pair + connect BT headphones while a paused queue is loaded. → Playback resumes automatically
+## 11 · Playback effects
 
-## Quick Settings tile (v0.20.0)
+Settings → Playback.
 
-- [ ] **Add the tile once**. Pull down notif shade twice → tap edit (pencil) → find "digaudio" in available tiles → drag into active set
-- [ ] **Tap the tile**. → Toggles play/pause without opening the app
+- [ ] **Crossfade — true overlap**. Set Crossfade → 5 s. Play an album. → Last ~5 s of current track audibly overlap the first 5 s of the next — you should briefly hear **both** simultaneously.
+- [ ] **Crossfade off = still gapless**. Crossfade → Off. → Seamless transition with no perceived gap (preloaded secondary swaps in at the end of primary).
+- [ ] **Pause during a crossfade**. Trigger one, pause mid-overlap. → Both players pause; resume plays both back.
+- [ ] **Skip during a crossfade**. Trigger one, hit skip-next. → Transition cancelled; target track loaded; plays from start.
+- [ ] **Replay Gain — Track mode**. Volume normalisation → Track. Play a known-loud track followed by a known-quiet one (Subsonic server must expose `replayGain` — Navidrome does, stock Subsonic ≤ 1.16 doesn't). → Perceived loudness similar.
+- [ ] **Replay Gain — Album mode**. Same setup, mode = Album. → Within one album, quiet songs stay quiet relative to loud ones (album RG normalises across albums, not within them).
+- [ ] **Replay Gain — Off**. → No volume change between tracks.
+- [ ] **Equalizer preset**. Equalizer → enable → tap "Bass boost". → All bands set; bass audibly stronger.
+- [ ] **Custom slider after preset**. Pull 60 Hz to +6 dB on top of Bass boost. → Saves as a custom curve (presets are not "modes", they just stamp values).
+- [ ] **Per-Bluetooth-device EQ**. Connect a BT headphone → Equalizer → "Per-Bluetooth-device EQ" → "Save current EQ". → Saved. Disconnect + reconnect → profile auto-applies.
 
-## Homescreen widget — artwork (v0.28.0)
+---
 
-- [ ] **Cover appears on widget**. Long-press homescreen → Widgets → drag "digaudio". Play a Subsonic track. → Within ~1 s of the track switch the launcher icon is replaced by the album cover (256 px JPEG prefetched by `WidgetArtFetcher` → `setImageViewBitmap`)
-- [ ] **Pause/resume preserves art**. → Art stays during pause; no re-download / no flicker on resume
-- [ ] **Local track fallback**. Play a track from local MediaStore. → Widget falls back to launcher icon (local artwork prefetch is deliberately deferred; same as MediaItem.artUri)
-- [ ] **Cross-track flicker is brief**. Skip rapidly between Subsonic tracks. → Each fetch takes ~200-500 ms; previous track's art may persist briefly until new one lands. Acceptable v2 behaviour.
+## 12 · Per-track resume + headphone auto-pause
 
-## Audio routing info line (v0.29.0)
+- [ ] **Pause mid-track + return**. Play a ≥ 3 min track, let it run to ~1:30, pause, switch to a different track, play that. Now go back to the first track. → Playback resumes around 1:30 (not 0:00) once buffered.
+- [ ] **Short tracks don't trigger**. Play from start to ~0:05, pause, switch away, return. → Plays from 0:00 (threshold protects against "resume at 0:05" UX).
+- [ ] **Wired headphone yank**. Play music with wired headphones plugged → yank them mid-playback. → Playback pauses automatically.
+- [ ] **Auto-play on BT connect** (opt-in, Settings → Playback). Pair + connect BT headphones while a paused queue is loaded. → Playback resumes automatically. (Default off — verify default is off if you flip it.)
 
-- [ ] **Built-in speaker, Subsonic FLAC**. Play a FLAC track on a server that exposes OpenSubsonic `samplingRate`/`bitDepth` (Navidrome ≥ 0.50). → Under the artist on Now Playing → Player, a small line reads `FLAC · 24-bit/96 kHz · 938 kbps  →  Speaker · 48 kHz ⚠` (amber + ⚠ when source ≠ output mix rate)
-- [ ] **Matched rates**. Play a 48 kHz track on a system mixing at 48 kHz. → Line is neutral grey, no `⚠`, no arrow colour
-- [ ] **USB DAC plugged in**. Plug a USB DAC, skip to the next track. → Line updates to `… → USB: <DAC product name> · <output kHz>` (priority chain pick: USB > BT > wired > built-in)
-- [ ] **Bluetooth headphones**. Connect BT A2DP, skip to the next track. → `… → Bluetooth: <device name> · 48 kHz`
-- [ ] **Wired 3.5 mm**. Plug wired headphones, skip. → `… → Wired · …`
-- [ ] **Stock Subsonic (no samplingRate)**. Play a track on a server without OpenSubsonic extensions. → Source segment shows codec + bit-rate only (no sample rate / bit depth); resampling can't be detected → line stays neutral. Acceptable degradation.
-- [ ] **Local file**. Play a local MediaStore track. → Source segment is just the codec (`MP3`, `FLAC`, etc.); output device + rate still render.
+---
 
-## Admin library scan (v0.28.0)
+## 13 · Storage + downloads
 
-- [ ] **Admin user**. Settings → Servers → Edit (admin server) → "Library scan (admin)" section → "Check status". → Shows "Idle — N songs in the library" or "Scanning…"
-- [ ] **Trigger scan**. → "Scanning… N songs indexed so far" updates; "Check status" again later shows idle + final count
-- [ ] **Non-admin user**. → "Trigger scan" tap surfaces "Admin role required on this server." inline (red text); no exception
+Settings → Playback → Storage.
 
-## Wear OS (system mirror, no companion APK)
+- [ ] **Auto-cache toggles a fresh play**. Auto-cache ON. Play a Subsonic track never played before. Let it finish. → Track tile now shows a grey ✓ cached badge.
+- [ ] **Cached track plays offline**. Airplane mode. Play the same cached track. → Plays from disk; offline banner appears above mini-player.
+- [ ] **Pin a download**. ⋮ on a cached track → "Keep download". → Badge turns accent green ✓.
+- [ ] **Remove a download**. ⋮ on a pinned track → "Remove download". → Badge disappears; file gone.
+- [ ] **Cache budget enforced**. Storage → Max cache → 512 MB. Play music until close to limit. → Oldest non-pinned tracks evicted; total usage ≤ 512 MB.
+- [ ] **"Clear auto-cache" preserves pinned**. With both kinds present, tap "Clear auto-cache". → Auto-cached gone, pinned remain.
+- [ ] **Download queue banner**. Select 10+ Subsonic tracks → Bulk → Download. → DownloadBanner appears above mini-player: current track title + queued count + live progress + Cancel button. Tap Cancel → pending cleared; in-flight finishes.
 
-- [ ] **Pair a Wear OS 3+ watch** (Pixel Watch / TicWatch / Galaxy Watch) with the phone via the Wear OS app
-- [ ] **Start playback** on phone, then raise wrist on watch → Media Controls tile shows title / artist / play-pause / skip (auto-published from our `audio_service` MediaSession)
-- [ ] **Tap play/pause on watch**. → Phone playback toggles
-- [ ] **Tap skip on watch**. → Phone advances to next track
-- [ ] **If tile is absent**: long-press a watch face → Tiles → add "Media Controls"
+---
 
-## Material You (v0.20.1, Android 12+)
+## 14 · Scrobbling (3 parallel paths)
 
-- [ ] **Toggle on**. Settings → Display → "Use system colours". → Material 3 widgets (FilledButtons, chips, indicators) follow the wallpaper palette
-- [ ] **Brand accent splashes still green**. → Heart icons, EQ-active, transport play button stay `#1ED760` regardless (intentional, brand)
+### 14a · Subsonic server scrobble
 
-## Settings — servers
+- [ ] **Track-start scrobble**. Start any Subsonic track. → Within ~1 s the Subsonic server logs it as a play (visible in Navidrome's "Now Playing" admin page).
+- [ ] **Definitive scrobble at threshold**. Let the track play past 4 min OR past 50 % of duration (whichever is shorter). → Server increments its play count for that track.
 
-- [ ] **Add a 2nd server**. Settings → Servers → "Add server" → URL + creds → "Test & save". → "Connected"; appears in list
-- [ ] **Switch active server**. Tap any inactive server. → Active checkmark moves; Home reloads
-- [ ] **Delete a non-builtin server**. Edit → trash → confirm. → Disappears
+### 14b · ListenBrainz direct (after pasting a user token)
 
-## Settings — display
+- [ ] **Connect**. Settings → Playback → ListenBrainz card → paste a token from `listenbrainz.org/profile/` → green check appears next to "ListenBrainz".
+- [ ] **`playing_now` at track start**. Play any track → within ~1 s, your ListenBrainz profile shows it as currently playing.
+- [ ] **`single` listen at threshold**. Past the 4-min / 50 % threshold → listen appears in your LB history within ~1 min.
 
-- [ ] **Light theme**. Settings → Display → Light. → Entire app switches (some widgets retain dark-ish tones — the Colors.white* migration in v0.12.0 covered most but not all)
-- [ ] **Follow system**. Toggle OS dark mode. → App follows
-- [ ] **Now Playing tint toggle**. → Toggle controls whether the background gradient appears
+### 14c · Last.fm direct (after `LASTFM_API_KEY` + `LASTFM_SHARED_SECRET` secrets baked in)
 
-## Offline behaviour
+Prerequisite check: open Settings → Playback → Last.fm card. If you see "This APK was built without LASTFM_API_KEY / LASTFM_SHARED_SECRET", add both secrets to GitHub repo settings (or pass them via `--dart-define=` on a local build), re-build, re-install, then retry this section.
 
-- [ ] **Banner appears on server down**. Airplane mode → within 60 s. → Amber banner above mini-player
-- [ ] **Banner clears on recover**. Restore network → within 60 s. → Banner gone
-- [ ] **Cached track plays in offline mode**. → Plays fine. Uncached tracks fail visibly
+- [ ] **Step 1 — request token + open browser**. Tap "Connect Last.fm". → The default browser opens at `last.fm/api/auth/?api_key=…&token=…`. In the app, the card switches to "Step 2 of 2: in the browser tab that just opened, click Yes, allow access" + Finish / Cancel buttons.
+- [ ] **Step 2 — approve in browser**. In the browser, log in to Last.fm if needed, then click "Yes, allow access". → Browser confirms approval.
+- [ ] **Step 3 — finish in app**. Return to digaudio → tap "I approved — finish". → Green check + your Last.fm username appear next to the "Last.fm" heading.
+- [ ] **Now-Playing at track start**. Play any track. → Within ~1 s, `last.fm/user/<you>` shows it as "playing now".
+- [ ] **Scrobble at threshold**. Past the 4-min / 50 % threshold. → `last.fm/user/<you>` shows the scrobble within ~1 min. Subsonic + LB scrobble counts stay in sync (same threshold).
+- [ ] **Cancel mid-flow**. Tap "Connect Last.fm" → don't approve in the browser → return to app → tap "Cancel". → Card returns to "Connect" state; no session key persisted.
+- [ ] **Disconnect**. From a connected state, tap "Disconnect Last.fm". → Card returns to "Connect" state. Play another track → no scrobble to Last.fm (Subsonic + LB still scrobble).
 
-## Android Auto (requires hardware)
+---
 
-- [ ] Connect phone to car head unit (or AA Desktop Head Unit simulator)
-- [ ] **digaudio appears in the AA app list**
-- [ ] **Browse tree shows "Favourites / Recently played / Most played"**
-- [ ] **Tapping a leaf starts playback**
-- [ ] **Voice command "Play <song>" works**
+## 15 · External surfaces
 
-## Last.fm direct scrobble (v0.30.0, only after `LASTFM_API_KEY` + `LASTFM_SHARED_SECRET` secrets set)
+### 15a · Quick Settings tile (v0.20.0)
 
-- [ ] **Connect flow**. Settings → Playback → Last.fm card → "Connect Last.fm" → browser tab opens at `last.fm/api/auth/?api_key=…&token=…` → click "Yes, allow access" → tab confirms approval → return to app → tap "I approved — finish" → green check + your last.fm username appears next to the "Last.fm" heading
-- [ ] **Now-Playing on track start**. Play any track. → Within ~1 s, https://www.last.fm/user/<you> live tab (or any LFM client) shows it as "playing now"
-- [ ] **Scrobble at threshold**. Let a track play past 4 min OR past 50 % of duration (whichever is shorter). → https://www.last.fm/user/<you> shows the scrobble within a minute. Subsonic + ListenBrainz scrobble counts stay in sync
-- [ ] **Disconnect**. Tap "Disconnect Last.fm". → Card returns to "Connect" state; subsequent plays no longer scrobble to Last.fm. Subsonic + ListenBrainz scrobble paths still fire (unchanged)
-- [ ] **Build without secrets**. If you run a debug build with no `LASTFM_API_KEY` / `LASTFM_SHARED_SECRET` dart-defines: card greys out with "This APK was built without LASTFM_API_KEY / LASTFM_SHARED_SECRET" — no buttons exposed (correct graceful degradation)
-- [ ] **Cancel mid-flow**. Tap Connect → don't approve in browser → come back → tap Cancel. → Returns to "Connect" state; no session key persisted
+- [ ] **Add the tile once**. Pull down the notification shade twice → tap the pencil (edit) → find "digaudio" in available tiles → drag into active set.
+- [ ] **Tap the tile**. → Toggles play / pause without opening the app.
 
-## Last.fm ranker (only after `LASTFM_API_KEY` secret set)
+### 15b · Homescreen widget (v0.25.0 + artwork v0.28.0)
 
-- [ ] **Subjective check** after a few weeks: auto-queue picks "feel" more musically related than just artist/genre matches
+- [ ] **Add the widget once**. Long-press homescreen → Widgets → drag "digaudio" 4×1 cell onto the homescreen.
+- [ ] **Cover appears on widget**. Play a Subsonic track. → Within ~1 s the launcher icon is replaced by the album cover (256 px JPEG prefetched + `setImageViewBitmap`).
+- [ ] **Pause/resume preserves art**. → Art stays during pause; no re-download, no flicker on resume.
+- [ ] **Local track fallback**. Play a track from local MediaStore. → Widget falls back to the launcher icon (local artwork prefetch is deferred; same behaviour as MediaItem `artUri`).
+- [ ] **Cross-track flicker is brief**. Skip rapidly between Subsonic tracks. → Each fetch takes 200-500 ms; previous track's art may persist briefly until new one lands. Acceptable.
 
-## Signed builds (only after keystore secrets set)
+### 15c · Wear OS mirror (no companion APK)
 
-- [ ] **First install**: uninstall the previous debug-signed APK + install the new release-signed one. → No more "unknown source" warning (or just once when whitelisting GitHub as a source)
-- [ ] **Subsequent updates** install in place without uninstall
+Skip if you don't have a Wear OS 3+ watch (Pixel Watch / TicWatch / Galaxy Watch).
+
+- [ ] **Pair the watch** with the phone via the Wear OS app.
+- [ ] **Add the "Media Controls" tile** on the watch (long-press a watch face → Tiles → add "Media Controls" if absent).
+- [ ] **Start playback on phone**, then raise wrist on watch. → Media Controls tile shows title / artist / play-pause / skip.
+- [ ] **Tap play/pause on watch**. → Phone playback toggles.
+- [ ] **Tap skip on watch**. → Phone advances to next track.
+
+### 15d · Bluetooth controls
+
+- [ ] **BT play/pause/next**. Connect BT headphones → tap the play/pause button on the headphones → tap next. → App responds; lockscreen reflects new state.
+
+### 15e · Android Auto (requires hardware or AA Desktop Head Unit simulator)
+
+- [ ] Connect phone to car head unit (or AA DHU).
+- [ ] **digaudio appears in the AA app list**.
+- [ ] **Browse tree shows "Favourites / Recently played / Most played"**.
+- [ ] **Tapping a leaf starts playback**.
+- [ ] **Voice command "Play <song>" works**.
+
+---
+
+## 16 · Server admin (Subsonic admin user only)
+
+Settings → Servers → Edit (your admin server) → "Library scan (admin)" section.
+
+- [ ] **Check status**. Tap "Check status". → "Idle — N songs in the library" or "Scanning…".
+- [ ] **Trigger scan**. → "Scanning… N songs indexed so far" updates live; tap "Check status" again later → idle + final count.
+- [ ] **Non-admin user**. As a non-admin Subsonic user on a different server, tap "Trigger scan". → "Admin role required on this server." inline (red text); no exception.
+
+---
+
+## 17 · Stats
+
+Library → Playlists → Stats.
+
+- [ ] **Time-window picker** at the top: 30 d / 90 d / all time → tapping each updates the page.
+- [ ] **Totals**: plays / unique tracks / listening days.
+- [ ] **Streak chips**: current + longest.
+- [ ] **Year-grid heatmap** (365 days, GitHub style) renders below totals.
+- [ ] **On this day** (same MM-DD in prior years). For installs ≥ 1 year old: tracks listed. For fresh installs: a hint string.
+- [ ] **Year-by-year tops** (top 5 per year) at the bottom — each year a block of 5 tracks tappable to play.
+- [ ] **Monthly tops** (last 12 months, top 3 each) further down.
+
+---
+
+## 18 · Theme + accessibility
+
+Settings → Display.
+
+- [ ] **Light theme**. Pick "Light". → Entire app switches to a light palette.
+- [ ] **Follow system**. Pick "System" → toggle OS dark mode. → App follows.
+- [ ] **Material You** (Android 12+). Enable "Use system colours". → Material 3 widgets (FilledButtons, chips, indicators) follow the wallpaper palette. The brand accent `#1ED760` stays green on hearts / EQ-active / transport play button (intentional).
+- [ ] **Now Playing tint**. Toggle "Now Playing tint". → Background gradient appears / disappears on next track switch.
+- [ ] **TalkBack** (enable in Android Settings → Accessibility → TalkBack). Open digaudio. → Tooltips read out on every IconButton; the alpha-scroll letter strip (Library → Artists) and the year heatmap (Stats) are announced semantically.
+
+---
+
+## 19 · Offline behaviour
+
+- [ ] **Banner appears on server down**. Airplane mode → wait ~60 s. → Amber "Server offline" banner above mini-player.
+- [ ] **Banner clears on recover**. Restore network → wait ~60 s. → Banner gone.
+- [ ] **Cached track plays in offline mode**. With airplane mode on, play a cached track. → Plays fine. Uncached tracks fail visibly with an error toast.
+
+---
+
+## 20 · Build & release verifications
+
+### 20a · Signed builds (after keystore secrets set in CI)
+
+- [ ] **First install** with the release-signed APK (uninstall any prior debug-signed APK first). → No "unknown source" warning on install (or only once when whitelisting GitHub as a source).
+- [ ] **Subsequent updates** install in place without uninstall.
+
+### 20b · Last.fm ranker (after `LASTFM_API_KEY` set)
+
+- [ ] **Subjective check** after a few weeks of use: auto-queue picks "feel" more musically related than just artist/genre matches.
+
+### 20c · Last.fm direct scrobble (after `LASTFM_API_KEY` + `LASTFM_SHARED_SECRET` set)
+
+Covered in §14c above.

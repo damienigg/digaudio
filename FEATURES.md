@@ -1,6 +1,8 @@
 # Features — digaudio (v0.30.0)
 
-What's shipped, where to find it. Each row gives the entry point + a one-line description. **TEST_PLAN.md** covers acceptance tests, **TODO.md** covers what's left.
+What's shipped, where to find it. Each row gives the entry point + a one-line description. `TEST_PLAN.md` covers acceptance tests (the validation pass that gates v1.0.0).
+
+**Release status (2026-05-27)**: feature set is complete. The remaining gate to v1.0.0 is a real-device validation walk-through of `TEST_PLAN.md`. Post-1.0, **i18n FR** is the only open optional polish — pursued only if the user explicitly wants the app in French.
 
 ---
 
@@ -8,7 +10,7 @@ What's shipped, where to find it. Each row gives the entry point + a one-line de
 
 - **just_audio** + custom `BaseAudioHandler` (audio_service) — single source of truth for playback state.
 - **Two-player crossfade engine** (v0.18.0): `_primary` audible + `_secondary` preloaded; true overlap fades between tracks when `crossfadeMs > 0`, instant gapless swap when `crossfadeMs == 0`.
-- Origin-agnostic queue: local + Subsonic mix freely.
+- Origin-agnostic queue: local + Subsonic mix freely (per-track `serverId` since v0.27.0).
 - MediaSession surface: lockscreen, notification, Bluetooth, Android Auto — all driven by the same handler.
 - **Per-track resume position** (v0.16.1) — saves every ~5 s; re-play seeks to saved position once duration is known.
 - **Replay Gain** (v0.17.2) — applies per-track attenuation from OpenSubsonic's `replayGain.{track,album}Gain`. No boost (caps at 1.0).
@@ -22,7 +24,7 @@ What's shipped, where to find it. Each row gives the entry point + a one-line de
 - **Multi-server** — N Subsonic servers registered, one active (Settings → Servers).
 - **Multi-server unified search** (v0.27.0) — Search fans out across all configured servers + local in parallel, results tagged "· <server>" when ≥2 servers configured; engine streams from the originating server (per-track `serverId` routing).
 
-## Playback features
+## Playback controls
 
 | Feature | Where |
 |---|---|
@@ -49,6 +51,13 @@ What's shipped, where to find it. Each row gives the entry point + a one-line de
 | Remove a download | Track sheet → "Remove download" |
 | Cache state badge (✓ green = pinned, ✓ grey = cached) | Track tile next to title |
 
+### Background download queue (v0.22.2)
+
+- `DownloadQueueService` wraps `DownloadsManager`. `enqueue(t)` / `enqueueAll(tracks)` — concurrency 1 (one server's bandwidth saturates anyway).
+- **DownloadBanner** above mini-player when active — current track + queued count + live progress bar + Cancel (clears pending; in-flight finishes).
+- Per-track "Download for offline" routes through the queue (`Queued "X"` toast).
+- **Bulk Download** via the SelectionBar — filters non-Subsonic tracks silently. Pair with long-press → select-album → Download for one-tap album pin.
+
 ## Library browsing
 
 | Feature | Where |
@@ -71,7 +80,9 @@ What's shipped, where to find it. Each row gives the entry point + a one-line de
 | **Smart playlists v2** (rules: genre / year / artist / album / title / duration / favourite / pinned / cached / playCount30d / playCountAll / lastPlayedDaysAgo) | Library → Playlists → "Smart playlists" |
 | 4 builtin smart mixes seeded first run | All time random / 80s / 90s / Recent |
 
-## Track-level actions (long-press = select mode; ⋮ = sheet)
+## Track-level actions
+
+Long-press any tile = enter multi-select mode. Tap ⋮ on a tile = open the action sheet.
 
 | Action | Where |
 |---|---|
@@ -83,22 +94,38 @@ What's shipped, where to find it. Each row gives the entry point + a one-line de
 | Download / pin / remove | ⋮ → contextual label |
 | **Start radio** (Subsonic, endless auto-refilling) | ⋮ → "Start radio" |
 
-## Bulk select (v0.16.3)
+## Bulk select (v0.16.3, polished v0.21.2)
 
 - Long-press any tile → enters multi-select mode (tile leading swaps to a 36 dp check-circle in v0.21.2).
 - Tap (in mode) = toggle. Tap (out of mode) = play.
 - SelectionBar above the mini-player: **Play** (replace queue) · Add to queue · Play next · Add to playlist · Add to favourites · X cancel.
 - Selection is **global** — long-press in Library, navigate to Search, add more, act on the union.
 
-## Recommendation engine (combo 1 complete)
+## Recommendation engine
 
 1. **Metadata score** (artist +10, album +5, genre +6, year ±5 +3, duration ±60 s +1)
-2. **Last.fm `track.getSimilar` ranker** (+12 max if `LASTFM_API_KEY` secret set)
+2. **Last.fm `track.getSimilar` ranker** (+12 max if `LASTFM_API_KEY` secret set; gracefully omitted otherwise)
 3. **Subsonic radio** (server-side `getSimilarSongs2`, **endless auto-refill** in v0.21.1)
 4. **Smart playlists v2** (rules-based materialisation with joins on plays / favourites / downloads)
 5. **Library FTS** (v0.19.0) — drift FTS5 virtual table, accent-insensitive, prefix-AND; Search page is FTS-first + Subsonic search3 in parallel, merged & deduped
 6. Auto-queue lookahead 3 tracks ahead, chains off the last track in queue
 7. "Suggested next" hint after favoriting
+
+## Now Playing
+
+| Feature | Where |
+|---|---|
+| Full-screen artwork | Player tab |
+| **Colour tint background** (dominant artwork colour gradient) | Player tab — Settings toggle to disable |
+| Title + artist + heart toggle | Below artwork |
+| **Audio routing info line** (codec / bit-depth / sample-rate / bitrate → device / output rate) | Under the artist — v0.29.0 |
+| Position scrubber + duration | Below title |
+| Transport (shuffle / prev / play/pause / next / repeat) | Below scrubber |
+| **Up Next inline strip** (next 3 tracks, tap to jump) | Below transport |
+| Album mode + Speed + Sleep timer actions | AppBar |
+| Active queue (editable: drag + swipe) | Queue tab |
+| Lyrics — synced via OpenSubsonic, plain fallback, active-line highlight + auto-scroll | Lyrics tab |
+| **Share track** (system share sheet, text card) | Now Playing AppBar — v0.24.0 |
 
 ## Stats
 
@@ -113,21 +140,6 @@ What's shipped, where to find it. Each row gives the entry point + a one-line de
 | Top 10 tracks + Top 10 artists (window) | Lists |
 | **Year-by-year tops** (top 5 per year) | Bottom of stats |
 | Monthly tops (last 12 months, top 3 each) | Bottom of stats |
-
-## Now Playing
-
-| Feature | Where |
-|---|---|
-| Full-screen artwork | Player tab |
-| **Colour tint background** (dominant artwork colour gradient) | Player tab — Settings toggle to disable |
-| Title + artist + heart toggle | Below artwork |
-| Position scrubber + duration | Below title |
-| Transport (shuffle / prev / play/pause / next / repeat) | Below scrubber |
-| **Up Next inline strip** (next 3 tracks, tap to jump) | Below transport |
-| Album mode + Speed + Sleep timer actions | AppBar |
-| Active queue (editable: drag + swipe) | Queue tab |
-| Lyrics — synced via OpenSubsonic, plain fallback, active-line highlight + auto-scroll | Lyrics tab |
-| **Share track** (system share sheet, text card) | Now Playing AppBar — v0.24.0 |
 
 ## MediaSession surfaces
 
@@ -144,15 +156,22 @@ What's shipped, where to find it. Each row gives the entry point + a one-line de
 | Headphone-removal auto-pause | ✓ free via `audio_session.music` |
 | Auto-play on BT connect | ✓ v0.20.1 (opt-in toggle) |
 
+## Scrobbling & external services
+
+Three independent scrobble paths fire in parallel — counts stay aligned because all three use the same Last.fm-style threshold (≥ 4 min OR ≥ 50 % of duration, whichever is shorter).
+
+| Path | Trigger | Where to enable |
+|---|---|---|
+| **Subsonic server scrobble** | track start (`submission=false`) + threshold (`submission=true`) | Automatic when the active server has a configured scrobble integration |
+| **ListenBrainz direct** (v0.24.1) | `playing_now` at start + `single` at threshold | Settings → Playback → ListenBrainz card — paste user token from `listenbrainz.org/profile/` → "User token" |
+| **Last.fm direct** (v0.30.0) | `track.updateNowPlaying` at start + `track.scrobble` at threshold | Settings → Playback → Last.fm card — tap "Connect Last.fm" → approve in browser → tap Finish. Required because Navidrome's Last.fm integration is metadata-only (it does NOT forward listens). Build needs `LASTFM_API_KEY` + `LASTFM_SHARED_SECRET` dart-defines; without them the card greys out with an inline explanation. |
+
 ## Server features
 
 - Subsonic salt+token auth (no plain-text passwords on wire).
 - Server reachability ping (every 60 s) → offline banner above mini-player.
 - Subsonic library cache (drift): full song-level metadata for autoqueue scoring + Genre/Decade browsers + smart playlists + FTS.
 - **Cache auto-refresh** (v0.22.0) — Settings → Playback → Subsonic library cache → Auto-refresh dropdown (Off / Daily / 3 d / Weekly / 2 wk / Monthly). On boot if older than threshold + already-synced, background rebuild kicks off.
-- Subsonic scrobble at track-start + at Last.fm-style played-threshold.
-- **ListenBrainz scrobble** (v0.24.1) — opt-in via Settings → Playback → ListenBrainz (paste user token). `playing_now` at start + `single` at the same threshold; runs in parallel with Subsonic scrobbling.
-- **Last.fm direct scrobble** (v0.30.0) — opt-in via Settings → Playback → Last.fm (2-step browser handshake: tap Connect → approve in browser → tap Finish). `track.updateNowPlaying` at start + `track.scrobble` at the same threshold; runs in parallel with Subsonic + ListenBrainz. Required because Navidrome's Last.fm integration is metadata-only (doesn't forward listens). Build needs `LASTFM_API_KEY` + `LASTFM_SHARED_SECRET` dart-defines; without them the card greys out.
 - **Admin library scan** (v0.28.0) — Settings → Servers → Edit → "Trigger scan" / "Check status". Admin-only endpoint; non-admin users see "Admin role required" inline. Shows live `scanning…` count then idle `N songs`.
 
 ## Theme & UI
@@ -166,22 +185,23 @@ What's shipped, where to find it. Each row gives the entry point + a one-line de
 - Offline banner + **Download banner** + Selection bar appear conditionally above the mini-player.
 - **Accessibility** (v0.23.2): tooltips on every IconButton; alpha-scroll letter strip + year heatmap wrapped with `Semantics` for TalkBack.
 
-## Background download queue (v0.22.2)
-
-- `DownloadQueueService` wraps `DownloadsManager`. `enqueue(t)` / `enqueueAll(tracks)` — concurrency 1 (one server's bandwidth saturates anyway).
-- **DownloadBanner** above mini-player when active — current track + queued count + live progress bar + Cancel (clears pending; in-flight finishes).
-- Per-track "Download for offline" routes through the queue (`Queued "X"` toast).
-- **Bulk Download** via the SelectionBar — filters non-Subsonic tracks silently. Pair with long-press → select-album → Download for one-tap album pin.
-
 ## Build & release
 
 - GitHub Actions CI on push to `main` + `v*` tags.
 - APK artifact (90-day retention) on every push.
 - Auto-published GitHub Release on tag.
 - Concurrency dedup by SHA.
-- **Optional release-signed APKs** via 3 secrets (`KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`); falls back to debug signing if absent.
-- **Optional Last.fm ranker** via `LASTFM_API_KEY` secret.
-- Optional Subsonic URL pre-bake via `SUBSONIC_URL` + `SUBSONIC_LABEL`.
+
+### Optional GitHub repo secrets
+
+| Secret | Effect when set |
+|---|---|
+| `SUBSONIC_URL` + `SUBSONIC_LABEL` | Bakes the active-server URL + label into the build (first-run onboarding can skip server entry) |
+| `KEYSTORE_BASE64` + `KEYSTORE_PASSWORD` + `KEY_PASSWORD` + `KEY_ALIAS` | Release-signed APKs (no "unknown source" install warning) |
+| `LASTFM_API_KEY` | Activates the autoqueue Last.fm ranker (`track.getSimilar`) |
+| `LASTFM_SHARED_SECRET` (v0.30.0) | Together with `LASTFM_API_KEY`, unlocks the direct scrobble path (Settings → Playback → Last.fm card) |
+
+Without any of these, CI still builds a working debug-signed APK with no functional regression — every feature gated by a missing secret degrades gracefully.
 
 ## Database schema (drift v8)
 
