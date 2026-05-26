@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../audio/providers.dart';
 import '../domain.dart';
 import 'widgets/artwork.dart';
+import 'widgets/mini_player.dart';
 import 'widgets/theme_ext.dart';
 import 'widgets/track_tile.dart';
 
@@ -20,6 +21,7 @@ class AlbumPage extends ConsumerWidget {
         : _localAlbum(ref, id);
 
     return Scaffold(
+      bottomNavigationBar: const MiniPlayer(),
       body: FutureBuilder<({Album album, List<Track> tracks})>(
         future: loader,
         builder: (context, snap) {

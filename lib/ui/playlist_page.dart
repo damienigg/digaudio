@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../audio/providers.dart';
 import '../domain.dart';
 import 'widgets/artwork.dart';
+import 'widgets/mini_player.dart';
 import 'widgets/theme_ext.dart';
 import 'widgets/track_tile.dart';
 
@@ -19,6 +20,7 @@ class PlaylistPage extends ConsumerWidget {
       return const Scaffold(body: Center(child: Text('Local playlists not yet supported.')));
     }
     return Scaffold(
+      bottomNavigationBar: const MiniPlayer(),
       appBar: AppBar(),
       body: FutureBuilder<({Playlist playlist, List<Track> tracks})>(
         future: ref.read(subsonicProvider)?.getPlaylist(id),

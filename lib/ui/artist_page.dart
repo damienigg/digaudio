@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../audio/providers.dart';
 import '../domain.dart';
 import 'widgets/album_card.dart';
+import 'widgets/mini_player.dart';
 import 'widgets/track_tile.dart';
 
 class ArtistPage extends ConsumerWidget {
@@ -16,6 +17,7 @@ class ArtistPage extends ConsumerWidget {
     final mo = MediaOrigin.values.firstWhere((e) => e.name == origin);
     return Scaffold(
       appBar: AppBar(),
+      bottomNavigationBar: const MiniPlayer(),
       body: mo == MediaOrigin.subsonic
           ? FutureBuilder<({Artist artist, List<Album> albums})>(
               future: ref.read(subsonicProvider)?.getArtist(id),

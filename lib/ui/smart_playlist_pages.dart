@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../audio/providers.dart';
 import '../core/db.dart';
 import '../domain.dart';
+import 'widgets/mini_player.dart';
 import 'widgets/theme_ext.dart';
 import 'widgets/track_tile.dart';
 
@@ -69,6 +70,7 @@ class _SmartPlaylistBodyState extends ConsumerState<_SmartPlaylistBody> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      bottomNavigationBar: const MiniPlayer(),
       appBar: AppBar(
         title: Text(widget.playlist.name),
         actions: [
@@ -243,6 +245,7 @@ class _SmartPlaylistEditPageState extends ConsumerState<SmartPlaylistEditPage> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
     return Scaffold(
+      bottomNavigationBar: const MiniPlayer(),
       appBar: AppBar(
         title: Text(_isNew ? 'New smart playlist' : 'Edit smart playlist'),
         actions: [

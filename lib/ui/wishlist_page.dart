@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../audio/providers.dart';
+import 'widgets/mini_player.dart';
 import 'widgets/theme_ext.dart';
 
 class WishlistPage extends ConsumerWidget {
@@ -11,6 +12,7 @@ class WishlistPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final items = ref.watch(wishlistProvider).valueOrNull ?? const [];
     return Scaffold(
+      bottomNavigationBar: const MiniPlayer(),
       appBar: AppBar(title: const Text('Wishlist')),
       floatingActionButton: FloatingActionButton.extended(
         icon: const Icon(Icons.add),

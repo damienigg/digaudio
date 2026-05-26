@@ -6,6 +6,7 @@ import '../domain.dart';
 import '../library/collections.dart';
 import '../library/play_history.dart';
 import 'widgets/artwork.dart';
+import 'widgets/mini_player.dart';
 import 'widgets/theme_ext.dart';
 
 const _accent = Color(0xFF1ED760);
@@ -120,6 +121,7 @@ class _StatsState extends ConsumerState<StatsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      bottomNavigationBar: const MiniPlayer(),
       appBar: AppBar(
         title: const Text('Stats'),
         actions: [

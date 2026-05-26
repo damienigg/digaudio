@@ -7,6 +7,31 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.30.18] — 2026-05-27
+
+### Added (Mini-player on secondary pages)
+- Album / Artist / Playlist / Smart-playlist / Favorites / Wishlist
+  / Genre / Decade / Stats pages now show the mini-player at the
+  bottom — was missing because these routes live OUTSIDE the
+  `StatefulShellRoute` so they didn't inherit the AppShell's
+  bottomNavigationBar. Each Scaffold gets
+  `bottomNavigationBar: const MiniPlayer()`. When no queue is
+  loaded, MiniPlayer collapses to zero height (SizedBox.shrink)
+  — no padding visible.
+
+### Added (Skip-previous button on mini-player)
+- Mini-player used to expose only play/pause + skip-next. Adding
+  skip-previous to round out the standard transport, matching the
+  expanded notification + Now Playing transport layouts.
+
+### Changed (Single-instance lock)
+- `MainActivity` launchMode bumped from `singleTop` to
+  `singleTask`. Only one instance system-wide — subsequent app
+  launches surface the existing process instead of starting a
+  parallel one. Matches the media-app standard (Spotify,
+  YouTube Music, etc.). Prevents the "two icons in recents with
+  one playing audio" failure mode.
+
 ## [0.30.17] — 2026-05-27
 
 ### Added (Fancy app background on Home / Search / Library)

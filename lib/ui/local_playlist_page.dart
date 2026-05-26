@@ -10,6 +10,7 @@ import 'package:share_plus/share_plus.dart';
 import '../audio/providers.dart';
 import '../core/db.dart';
 import '../domain.dart';
+import 'widgets/mini_player.dart';
 import 'widgets/theme_ext.dart';
 import 'widgets/track_tile.dart';
 
@@ -46,6 +47,7 @@ class _Body extends ConsumerWidget {
     final engine = ref.watch(audioEngineProvider);
 
     return Scaffold(
+      bottomNavigationBar: const MiniPlayer(),
       appBar: AppBar(
         title: Text(playlist.name),
         actions: [
