@@ -1,30 +1,37 @@
 # Resume — next session
 
-## Where we left off (end of session 2026-05-26)
+## Where we left off (morning of 2026-05-27)
 
-**Shipped tonight**: v0.27.0 (multi-server search) → v0.27.1 (Kotlin
-compile fix — v0.26 + v0.27 CI were both red because `flutter analyze`
-doesn't compile Kotlin) → v0.28.0 (widget artwork v2 + Subsonic admin
-scan). v0.27.1 is the first APK past the Kotlin regression.
+**Shipped this morning**: v0.29.0 — audio routing info line on Now
+Playing. Visual bit-transparency check: `FLAC · 24-bit/96 kHz · 938 kbps
+→ USB: FiiO Q3 · 96 kHz`, line goes amber + ⚠ when source sample rate
+≠ system output mix rate. Closes the two Combo 2 "verify-only" items
+without needing a loop-back DAC or trusting the ear.
 
-**Roadmap state**: A/B/C/D/F/H categories are now **complete** (D
-closed by widget art v2 tonight; F was closed by v0.27.0 multi-server
-search). Combo 1 + Combo 4 both **5/5 ✓**. Combo 2 is 4/6 with the
-remaining items being verify-only (no code — needs real FLAC + USB
-DAC). Two real polish items deliberately deferred: **Last.fm direct
-scrobble** and **i18n**. The app is feature-complete vs Substreamer /
-Symfonium; what's left is genuinely optional.
+**Roadmap state**: A/B/C/D/F/H **complete**. Combo 1 + Combo 2 + Combo 4
+all **complete**. Two real polish items deliberately deferred: **Last.fm
+direct scrobble** and **i18n**. The app is feature-complete vs
+Substreamer / Symfonium; what's left is genuinely optional.
 
-## Tomorrow's first 5 minutes — install + smoke test v0.28.0
+## First 5 minutes — install + smoke test v0.29.0
 
 ```bash
-# Grab the latest signed APK from the v0.28.0 release
-gh release download v0.28.0 -p '*.apk' -O /tmp/digaudio-v0.28.0.apk
-adb install -r /tmp/digaudio-v0.28.0.apk
+# Grab the latest signed APK from the v0.29.0 release
+gh release download v0.29.0 -p '*.apk' -O /tmp/digaudio-v0.29.0.apk
+adb install -r /tmp/digaudio-v0.29.0.apk
 adb shell am start -n com.digaudio.digaudio/.MainActivity
 ```
 
-Smoke checks specific to what shipped tonight:
+Smoke checks for what shipped this morning + carryover from v0.28.0:
+
+0. **Audio routing line** — open Now Playing on any track. → A small
+   line under the artist reads e.g. `FLAC · 24-bit/96 kHz · 938 kbps
+   → Speaker · 48 kHz ⚠` (amber when source ≠ output mix rate),
+   or `FLAC · 24-bit/96 kHz · 938 kbps → USB: FiiO Q3 · 96 kHz`
+   (neutral grey when matched). Plug a USB DAC mid-track → line
+   updates on next track change (it polls on track switch, not
+   live). For local files / stock-Subsonic tracks, sample-rate
+   fields drop out — line still shows codec + device.
 
 1. **Widget artwork** — long-press homescreen → Widgets → drag
    "digaudio". Play a Subsonic track. → Cover art appears on the

@@ -20,6 +20,13 @@ class Track {
   final int? trackNumber;
   final int? bitRate;
   final String? contentType;
+  /// Source sample rate in Hz (OpenSubsonic `samplingRate`). Null on stock
+  /// Subsonic ≤ 1.16 or for local tracks. Used by Now Playing to surface
+  /// silent resampling vs the system output rate.
+  final int? samplingRate;
+  /// Source bit depth in bits per sample (OpenSubsonic `bitDepth`). Null
+  /// when unknown — purely informational.
+  final int? bitDepth;
   final String? genre;
   /// Subsonic user rating (1–5). Null = unrated OR origin doesn't support
   /// per-track ratings (e.g. local files). UI clears via `setRating(0)`.
@@ -52,6 +59,8 @@ class Track {
     this.trackNumber,
     this.bitRate,
     this.contentType,
+    this.samplingRate,
+    this.bitDepth,
     this.genre,
     this.userRating,
     this.replayGainTrackDb,

@@ -7,6 +7,29 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.29.0] — 2026-05-27
+
+### Added (Audio routing info line on Now Playing)
+- **Visual bit-transparency check** on the Player tab: a small line
+  under the artist reads `FLAC · 24-bit/96 kHz · 938 kbps  →  USB: FiiO Q3 · 96 kHz`.
+  When source sample rate is known and differs from the system output
+  mix rate, the line turns amber and a `⚠` glyph appears — silent
+  resampling detected without trusting the ear. Closes Combo 2's
+  FLAC + wired-DAC verify items (no loop-back hardware required).
+- **`AudioInfoChannel`** (Kotlin, channel `digaudio/audio_info`)
+  exposes `getRouting()` → `{deviceName, deviceType, outputSampleRate}`.
+  Picks the active sink by Android's hardware priority chain
+  (USB > BT A2DP > wired > built-in) — same answer as
+  `AudioTrack.getRoutedDevice()` without holding the ExoPlayer-internal
+  AudioTrack reference. `PROPERTY_OUTPUT_SAMPLE_RATE` for the mix rate.
+- **`AudioInfoBridge` + `audioRoutingProvider`** (Dart) re-queries
+  routing on every track change (the moment the user cares); polling
+  outside that window is wasted.
+- **`Track.samplingRate` + `Track.bitDepth`** parsed from OpenSubsonic
+  `samplingRate` / `bitDepth` fields. Null on stock Subsonic ≤ 1.16
+  and on local files (line falls back to codec + bit-rate only —
+  detection of resampling needs both source and output sample rate).
+
 ## [0.28.0] — 2026-05-26
 
 ### Added (Widget artwork v2)

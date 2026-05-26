@@ -1,4 +1,4 @@
-# TODO — digaudio (post-v0.28.0 widget art + admin scan)
+# TODO — digaudio (post-v0.29.0 audio routing info line)
 
 What's left, organised by category + combo. Effort tags: **S** ≈ 30 min, **M** ≈ 1 h, **L** ≈ several hours (own session).
 
@@ -10,7 +10,7 @@ What's left, organised by category + combo. Effort tags: **S** ≈ 30 min, **M**
 
 - **Category A** — UX gold: 7/7
 - **Category B** — Discovery & smart mixes: 7/7
-- **Category C** — Audio fidelity: 5/5
+- **Category C** — Audio fidelity: 5/5 (FLAC + USB-DAC verify closed visually via v0.29.0 routing info line)
 - **Category H** — Session-discovered TODOs: 3/3 (smart playlists v2 / radio auto-refill / checkbox UX)
 - **Combo 1** (Recommendation engine): 4/4 ✓
 - **Combo 4** (Daily driver): 5/5 ✓ (Wear OS validated via Wear OS 3+ system MediaSession mirror — no companion APK needed)
@@ -53,12 +53,10 @@ What's left, organised by category + combo. Effort tags: **S** ≈ 30 min, **M**
 - **BPM-matched crossfade** — *(L)*  
   Detect BPM (either via Subsonic metadata or in-app FFT estimate), skip the crossfade if next track has a wildly different tempo. Niche but unique.
 
-### Combo 2 — Pro-listener — 4/6 remaining (verify-only)
+### Combo 2 — Pro-listener — 6/6 ✓
 
-- **FLAC end-to-end verify** — *(S, no code)*  
-  Play a FLAC track, confirm bit-perfect through to the output (no resampling / dithering by Android). Optionally: display codec + sample rate on Now Playing.
-- **Wired-DAC fidelity verify** — *(S, no code)*  
-  Plug a wired USB DAC, confirm Android routes audio to it (probably free via system audio routing).
+- ~~**FLAC end-to-end verify**~~ — **DONE v0.29.0** via routing info line: Now Playing reads `FLAC · 24-bit/96 kHz · 938 kbps  →  <device> · <output kHz>`. Resampling shown amber + ⚠ when source ≠ output mix rate. No ear required.
+- ~~**Wired-DAC fidelity verify**~~ — **DONE v0.29.0** via same line: the device segment (`USB: FiiO Q3 · 96 kHz`) reads what Android routes to. Plug a DAC, glance at the line.
 
 ---
 
@@ -67,7 +65,7 @@ What's left, organised by category + combo. Effort tags: **S** ≈ 30 min, **M**
 | Combo | Status |
 |---|---|
 | 1 · Recommendation engine (Last.fm × FTS × smart playlists × Subsonic radio) | **4/4 ✓** |
-| 2 · Pro-listener (RG × crossfade × EQ presets × per-BT EQ × FLAC × wired-DAC) | 4/6 (verify-only remaining) |
+| 2 · Pro-listener (RG × crossfade × EQ presets × per-BT EQ × FLAC × wired-DAC) | **6/6 ✓** (FLAC + wired-DAC closed visually via v0.29.0 routing info line) |
 | 3 · Friend-share (ListenBrainz × Now-Playing share × listening parties × webhook) | 0/4 |
 | 4 · Daily driver (Quick Settings tile × widget × Wear OS × Auto-play BT × Per-track resume) | **5/5 ✓** (Wear OS covered via system MediaSession mirror) |
 
@@ -83,8 +81,9 @@ What's left, organised by category + combo. Effort tags: **S** ≈ 30 min, **M**
 - ~~**Wear OS**~~ COVERED — no code release, Wear OS 3+ system mirror is sufficient
 - ~~**v0.27.x** — Multi-server unified search~~ DONE (`Track.serverId` + `SubsonicResolver` fan-out)
 - ~~**v0.27.1** — Kotlin compile fix~~ DONE (voice search regression — v0.26/v0.27 CI both failed; v0.27.1 is first APK past it)
-- ~~**v0.28.0** — Widget artwork v2 + Subsonic admin scan~~ DONE; **i18n + Last.fm direct deferred** (each warrants its own session — see NEXT.md)
-- **v0.29.x** (optional) — Last.fm direct scrobble OR i18n; pick whichever you actually need next
+- ~~**v0.28.0** — Widget artwork v2 + Subsonic admin scan~~ DONE
+- ~~**v0.29.0** — Audio routing info line on Now Playing~~ DONE (closes Combo 2 visually — no loop-back hardware required)
+- **v0.30.x** (optional) — Last.fm direct scrobble OR i18n; pick whichever you actually need next
 - **v1.0.0** — first "release" milestone after a real-device validation pass on every section of `TEST_PLAN.md`. All required-for-1.0 features ship; what's left is genuinely optional
 
 ## Items deliberately not on the roadmap

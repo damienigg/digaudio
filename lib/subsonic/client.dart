@@ -309,6 +309,10 @@ class SubsonicClient {
         trackNumber: j['track'] as int?,
         bitRate: j['bitRate'] as int?,
         contentType: j['contentType'] as String?,
+        // OpenSubsonic extension: stock Subsonic ≤ 1.16 doesn't ship these.
+        // Null → Now Playing falls back to codec + bit-rate only.
+        samplingRate: j['samplingRate'] as int?,
+        bitDepth: j['bitDepth'] as int?,
         genre: j['genre'] as String?,
         userRating: (j['userRating'] as num?)?.toInt(),
         // OpenSubsonic extension — newer servers expose Replay Gain.

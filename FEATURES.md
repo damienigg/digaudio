@@ -1,4 +1,4 @@
-# Features — digaudio (v0.28.0)
+# Features — digaudio (v0.29.0)
 
 What's shipped, where to find it. Each row gives the entry point + a one-line description. **TEST_PLAN.md** covers acceptance tests, **TODO.md** covers what's left.
 
@@ -13,6 +13,7 @@ What's shipped, where to find it. Each row gives the entry point + a one-line de
 - **Per-track resume position** (v0.16.1) — saves every ~5 s; re-play seeks to saved position once duration is known.
 - **Replay Gain** (v0.17.2) — applies per-track attenuation from OpenSubsonic's `replayGain.{track,album}Gain`. No boost (caps at 1.0).
 - **Equalizer**: 5-band Android EQ + 6 presets (Flat / Rock / Jazz / Vocal / Bass boost / Treble boost, v0.17.0) + **per-Bluetooth-device override** (v0.17.3).
+- **Audio routing info line** (v0.29.0) — under the artist on Now Playing: `FLAC · 24-bit/96 kHz · 938 kbps  →  USB: FiiO Q3 · 96 kHz`. Visual bit-transparency check: line goes amber + ⚠ when source sample rate ≠ system output mix rate (silent resampling detected). Source from OpenSubsonic `samplingRate`/`bitDepth`/`bitRate`/`contentType`; routing from `AudioInfoChannel` (hardware priority: USB > BT A2DP > wired > built-in).
 
 ## Audio sources
 

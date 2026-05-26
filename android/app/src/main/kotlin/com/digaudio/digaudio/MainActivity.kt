@@ -14,6 +14,7 @@ class MainActivity : AudioServiceActivity() {
         super.configureFlutterEngine(flutterEngine)
         MediaStoreChannel(applicationContext).register(flutterEngine.dartExecutor.binaryMessenger)
         WidgetChannel(applicationContext).register(flutterEngine)
+        AudioInfoChannel(applicationContext).register(flutterEngine)
         voice.register(flutterEngine)
     }
 

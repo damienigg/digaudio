@@ -6,6 +6,7 @@ import 'package:just_audio/just_audio.dart';
 import 'package:palette_generator/palette_generator.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../audio/audio_info.dart';
 import '../audio/providers.dart';
 import '../domain.dart';
 import '../subsonic/client.dart';
@@ -170,6 +171,7 @@ class _PlayerTab extends ConsumerWidget {
                       Text(track.displayArtist,
                           style: TextStyle(
                               color: context.textTertiary, fontSize: 14)),
+                      _AudioInfoLine(track: track),
                     ],
                   ),
                 ),
@@ -579,6 +581,80 @@ String _fmt(Duration d) {
   final m = d.inMinutes;
   final s = d.inSeconds % 60;
   return '$m:${s.toString().padLeft(2, '0')}';
+}
+
+/// Codec · bit-depth/sample-rate · bitrate  →  device · output-rate
+///
+/// The whole point is *visual* verification of bit-transparent playback:
+/// when the source sample rate is known (OpenSubsonic exposes it) and
+/// differs from the system's output mix rate, the line turns amber + a
+/// ⚠ glyph appears so the user can spot silent resampling at a glance
+/// without trusting their ear. Falls back gracefully when fields are
+/// missing (stock Subsonic, local files): we still show codec + device
+/// but lose the resampling guarantee.
+class _AudioInfoLine extends ConsumerWidget {
+  final Track track;
+  const _AudioInfoLine({required this.track});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final routing = ref.watch(audioRoutingProvider).valueOrNull;
+    final src = <String>[_codec(track.contentType)];
+    if (track.samplingRate != null) {
+      src.add(track.bitDepth != null
+          ? '${track.bitDepth}-bit/${_khz(track.samplingRate!)}'
+          : _khz(track.samplingRate!));
+    }
+    if (track.bitRate != null) src.add('${track.bitRate} kbps');
+
+    final out = <String>[];
+    if (routing != null) {
+      out.add(routing.label);
+      if (routing.outputSampleRate != null) out.add(_khz(routing.outputSampleRate!));
+    }
+
+    final resampling = track.samplingRate != null &&
+        routing?.outputSampleRate != null &&
+        track.samplingRate != routing!.outputSampleRate;
+
+    final body = out.isEmpty
+        ? src.join(' · ')
+        : '${src.join(' · ')}  →  ${out.join(' · ')}${resampling ? '  ⚠' : ''}';
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Text(
+        body,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          color: resampling ? Colors.amber : context.textTertiary,
+          fontSize: 11,
+          letterSpacing: 0.2,
+        ),
+      ),
+    );
+  }
+}
+
+String _codec(String? mime) {
+  if (mime == null || mime.isEmpty) return 'Unknown';
+  final m = mime.toLowerCase();
+  if (m.contains('flac')) return 'FLAC';
+  if (m.contains('mpeg') || m.contains('mp3')) return 'MP3';
+  if (m.contains('opus')) return 'Opus';
+  if (m.contains('vorbis') || m.contains('ogg')) return 'OGG';
+  if (m.contains('alac')) return 'ALAC';
+  if (m.contains('aac') || m.contains('m4a')) return 'AAC';
+  if (m.contains('wav')) return 'WAV';
+  return m.split('/').last.toUpperCase();
+}
+
+String _khz(int hz) {
+  final v = hz / 1000;
+  return v == v.truncateToDouble()
+      ? '${v.toStringAsFixed(0)} kHz'
+      : '${v.toStringAsFixed(1)} kHz';
 }
 
 String _fmtSpeed(double s) =>
