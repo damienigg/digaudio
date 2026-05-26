@@ -7,6 +7,24 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.30.3] — 2026-05-27
+
+### Fixed
+- **App stuck on splash forever for users with saved EQ gains.** Same
+  root cause as the Playback-page hang fixed in v0.30.1: `main()`
+  did `await handler.applyEqGains(prefs.eqGainsDb)`, which iterates
+  bands and awaits `AndroidEqualizer.parameters` per band. On
+  Android that future only resolves once the engine has materialised
+  an `AudioTrack` — i.e. after the first play. At cold boot, no
+  track has played → the future never resolves → `runApp()` is
+  never reached → splash forever. Any user who has saved an EQ
+  curve in a prior session hit this on the next launch.
+  Fix: fire-and-forget the `applyEqGains` call at boot
+  (`unawaited(...)`). The gains land as part of the audio pipeline
+  initialisation, ahead of the first audible frame in practice.
+  `setEqEnabled` stays awaited (it's a fast platform flag, no
+  parameters dependency).
+
 ## [0.30.2] — 2026-05-27
 
 ### Fixed

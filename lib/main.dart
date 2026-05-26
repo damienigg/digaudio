@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -46,8 +48,20 @@ Future<void> main() async {
   await handler.init();
 
   // Restore persisted EQ + speed before the first track plays.
+  // setEqEnabled is a fast flag toggle (no Future on parameters).
+  // applyEqGains awaits `AndroidEqualizer.parameters` per band, which
+  // on Android only resolves once the engine has materialised an
+  // AudioTrack — i.e. after the first play. Awaiting it at boot
+  // would hang the app on splash forever for any user who has saved
+  // EQ gains (since no track has played yet). Fire-and-forget: the
+  // gains land as part of the audio pipeline init, ahead of the
+  // first audible frame in practice. Same architectural fix as the
+  // Playback page in v0.30.1 — never block on eq.parameters
+  // pre-playback.
   await handler.setEqEnabled(prefs.eqEnabled);
-  if (prefs.eqGainsDb.isNotEmpty) await handler.applyEqGains(prefs.eqGainsDb);
+  if (prefs.eqGainsDb.isNotEmpty) {
+    unawaited(handler.applyEqGains(prefs.eqGainsDb));
+  }
   if (prefs.playbackSpeed != 1.0) await handler.setSpeed(prefs.playbackSpeed);
 
   registerAudioEngine(handler);
