@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -257,17 +258,40 @@ class _BgArtwork extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final fallback = Container(color: const Color(0xFF18181B));
-    if (track.coverArt == null || track.origin != MediaOrigin.subsonic) {
-      return fallback;
+    if (track.coverArt == null) return fallback;
+    // Subsonic: fetch the cover via the resolver — same source-of-
+    // truth as the regular Artwork widget, but bigger (1024 px) +
+    // BoxFit.cover so the square stretches to fill the tall portrait.
+    if (track.origin == MediaOrigin.subsonic) {
+      final s = ref.watch(subsonicResolverProvider).forId(track.serverId);
+      if (s == null) return fallback;
+      return CachedNetworkImage(
+        imageUrl: s.coverUri(track.coverArt!, size: 1024).toString(),
+        cacheKey: '${track.uniqueKey}:bg',
+        fit: BoxFit.cover,
+        placeholder: (c, __) => fallback,
+        errorWidget: (c, __, ___) => fallback,
+      );
     }
-    final s = ref.watch(subsonicResolverProvider).forId(track.serverId);
-    if (s == null) return fallback;
-    return CachedNetworkImage(
-      imageUrl: s.coverUri(track.coverArt!, size: 1024).toString(),
-      cacheKey: '${track.uniqueKey}:bg',
-      fit: BoxFit.cover,
-      placeholder: (c, __) => fallback,
-      errorWidget: (c, __, ___) => fallback,
+    // Local: pull the embedded picture from MediaStore via our own
+    // Kotlin channel (LocalLibrary.getArtwork). 1024 px target —
+    // MediaStoreChannel's MediaMetadataRetriever fallback decodes +
+    // downscales to whatever we ask, so we get a sharp full-bleed
+    // background even from MP3s whose APIC frame MediaStore's own
+    // loadThumbnail failed to extract.
+    return FutureBuilder<Uint8List?>(
+      future: ref.read(localLibraryProvider).getArtwork(
+            track.coverArt!,
+            size: 1024,
+          ),
+      builder: (c, snap) {
+        if (!snap.hasData || snap.data == null) return fallback;
+        return Image.memory(
+          snap.data!,
+          fit: BoxFit.cover,
+          gaplessPlayback: true,
+        );
+      },
     );
   }
 }

@@ -486,7 +486,19 @@ class AudioEngine extends BaseAudioHandler {
   /// Looks up the saved position for [t] and seeks if it's meaningfully
   /// mid-track. Waits for the duration to be known via a one-shot
   /// listener before deciding (so we don't seek past the end).
+  /// True after the engine has restored one saved position in this
+  /// session. We only auto-resume the *first* track played per
+  /// session — the feature exists to pick up where the user left off
+  /// after closing the app, not to surprise them mid-session by
+  /// re-playing a track from its old paused offset (user-reported:
+  /// "ce comportement ne devrait s'appliquer que quand on revient
+  /// apres avoir fermé l'app"). In-session replays always start at 0.
+  /// Resets implicitly on app process restart since the engine
+  /// instance is fresh.
+  bool _sessionResumeApplied = false;
+
   void _maybeResume(Track t) async {
+    if (_sessionResumeApplied) return;
     final saved = await _positions.get(t.uniqueKey);
     if (saved == null || saved < const Duration(seconds: 10)) return;
     if (t.uniqueKey != _nowPlayingKey) return;
@@ -497,6 +509,7 @@ class AudioEngine extends BaseAudioHandler {
       if (saved < dur - const Duration(seconds: 10) &&
           t.uniqueKey == _nowPlayingKey) {
         _primary.seek(saved);
+        _sessionResumeApplied = true;
       }
     });
   }

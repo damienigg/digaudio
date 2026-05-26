@@ -7,6 +7,50 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.30.16] — 2026-05-27
+
+### Fixed (Local MP3 artwork on Now Playing full-bleed background)
+- `_BgArtwork` (the full-bleed cover that replaces the old rounded
+  square in v0.30.5) bailed unconditionally on
+  `track.origin != MediaOrigin.subsonic`, falling back to a dark
+  empty container. So local MP3s with embedded artwork — visible
+  in Up Next thumbnails, Library lists, the homescreen widget —
+  showed up as a black void on Now Playing.
+- Fix: when the track is local and has a coverArt id, fetch via
+  `LocalLibrary.getArtwork` (the same path used everywhere else
+  for local artwork) and render with `Image.memory` +
+  `BoxFit.cover`, matching the Subsonic path's full-bleed shape.
+
+### Changed (Per-track resume is session-bounded)
+- Resume-from-saved-position used to fire on every track switch —
+  if you replayed a song mid-session that you had paused 5 min
+  earlier, it picked up at the old offset instead of starting from
+  zero. Confusing UX (user: "ce comportement ne devrait s'appliquer
+  que quand on revient apres avoir fermé l'app").
+- Fix: the engine remembers when it has applied an auto-resume in
+  the current session via a `_sessionResumeApplied` flag. The
+  first track played in a session can still resume from a saved
+  position; every subsequent track (auto-advance, skip, replay,
+  fresh setQueue) starts at 0. The flag resets implicitly on app
+  process restart so the next cold-start replay behaves as expected.
+- Position-saving every ~5 s is untouched — the position is still
+  persisted for use on the *next* cold start.
+
+### Fixed (Embedded MP3 artwork extraction is more robust)
+- `MediaStoreChannel.getArtwork` (Kotlin) only tried
+  `ContentResolver.loadThumbnail`, which on many devices returns
+  null / throws for MP3s whose embedded APIC frame isn't
+  pre-indexed by Android's MediaStore. Symptom in logcat:
+  `getEmbeddedPicture: extractAlbumArt was failed or the media
+  file has no albumart image`.
+- Fix: when `loadThumbnail` fails, fall through to a second path
+  that opens the file via `MediaMetadataRetriever`, reads
+  `embeddedPicture` directly (which actually parses the APIC ID3
+  frame), decodes + downscales to the requested size, and returns
+  PNG bytes. So MP3s that previously thumbnail-failed now surface
+  their embedded art everywhere — Up Next, list rows, mini-player,
+  AND the new full-bleed Now Playing background.
+
 ## [0.30.15] — 2026-05-27
 
 ### Changed (Now Playing accents follow the artwork palette)

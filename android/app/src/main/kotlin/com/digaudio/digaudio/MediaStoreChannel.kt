@@ -3,6 +3,8 @@ package com.digaudio.digaudio
 import android.content.ContentUris
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.media.MediaMetadataRetriever
 import android.provider.MediaStore
 import android.util.Size
 import io.flutter.plugin.common.BinaryMessenger
@@ -80,12 +82,43 @@ class MediaStoreChannel(private val context: Context) : MethodCallHandler {
     }
 
     private fun getArtwork(id: Long, size: Int): ByteArray? {
-        return try {
-            val uri = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, id)
+        val uri = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, id)
+        // Path 1: ContentResolver.loadThumbnail — uses MediaStore's
+        // own cache + extractor. Fast when it works, but on many
+        // devices it returns null / throws for MP3s whose embedded
+        // APIC frame wasn't pre-indexed by the system (logcat:
+        // "getEmbeddedPicture: extractAlbumArt was failed or the
+        // media file has no albumart image").
+        try {
             val bmp = context.contentResolver.loadThumbnail(uri, Size(size, size), null)
-            ByteArrayOutputStream().use {
+            return ByteArrayOutputStream().use {
                 bmp.compress(Bitmap.CompressFormat.PNG, 100, it)
                 it.toByteArray()
+            }
+        } catch (_: Throwable) {
+            // Fall through to MediaMetadataRetriever.
+        }
+        // Path 2: open the file ourselves and read the embedded
+        // picture directly. This works for MP3s whose APIC frame
+        // exists but MediaStore failed to thumbnail. Downscales to
+        // the requested size to keep the round-trip bytes small.
+        return try {
+            val mmr = MediaMetadataRetriever()
+            try {
+                mmr.setDataSource(context, uri)
+                val raw = mmr.embeddedPicture ?: return null
+                val full = BitmapFactory.decodeByteArray(raw, 0, raw.size) ?: return null
+                val scaled = if (full.width <= size && full.height <= size) {
+                    full
+                } else {
+                    Bitmap.createScaledBitmap(full, size, size, true)
+                }
+                ByteArrayOutputStream().use {
+                    scaled.compress(Bitmap.CompressFormat.PNG, 90, it)
+                    it.toByteArray()
+                }
+            } finally {
+                mmr.release()
             }
         } catch (_: Throwable) {
             null
