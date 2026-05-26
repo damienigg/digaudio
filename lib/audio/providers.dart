@@ -344,7 +344,10 @@ final playlistImporterProvider = Provider<PlaylistImporter>((ref) => PlaylistImp
 
 class _StreamMirror<T> extends StateNotifier<T> {
   late final StreamSubscription<T> _sub;
-  _StreamMirror(super.initial, Stream<T> source) {
+  // Regular param (not `super.initial`) so the body can reference it
+  // for debug logging. The use_super_parameters lint preference loses
+  // to the instrumentation need this version.
+  _StreamMirror(T initial, Stream<T> source) : super(initial) {
     // ignore: avoid_print
     print('[digaudio.dbg] _StreamMirror<$T> ctor: initial=$initial, '
         'stream=${identityHashCode(source)}, '

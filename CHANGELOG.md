@@ -7,6 +7,16 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.30.9] — 2026-05-27
+
+### Fixed
+- Compile error in the v0.30.8 debug build: `super.initial` syntax
+  forwards the param to the superclass but doesn't make it
+  accessible in the constructor body, where we wanted to reference
+  it for logging. Switched back to a regular `initial` param +
+  explicit `: super(initial)` forwarding. Same debug instrumentation
+  ships intact in this build.
+
 ## [0.30.8] — 2026-05-27
 
 ### Debug
