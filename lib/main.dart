@@ -33,6 +33,7 @@ Future<void> main() async {
       history: container.read(playHistoryProvider),
       positions: container.read(trackPositionsProvider),
       listenbrainz: () => container.read(listenbrainzClientProvider),
+      lastfmScrobble: () => container.read(lastfmScrobbleClientProvider),
     ),
     config: const AudioServiceConfig(
       androidNotificationChannelId: 'com.digaudio.audio',

@@ -228,6 +228,15 @@ Phone-side acceptance checklist. Run through each section; tick the box when ver
 - [ ] **Tapping a leaf starts playback**
 - [ ] **Voice command "Play <song>" works**
 
+## Last.fm direct scrobble (v0.30.0, only after `LASTFM_API_KEY` + `LASTFM_SHARED_SECRET` secrets set)
+
+- [ ] **Connect flow**. Settings → Playback → Last.fm card → "Connect Last.fm" → browser tab opens at `last.fm/api/auth/?api_key=…&token=…` → click "Yes, allow access" → tab confirms approval → return to app → tap "I approved — finish" → green check + your last.fm username appears next to the "Last.fm" heading
+- [ ] **Now-Playing on track start**. Play any track. → Within ~1 s, https://www.last.fm/user/<you> live tab (or any LFM client) shows it as "playing now"
+- [ ] **Scrobble at threshold**. Let a track play past 4 min OR past 50 % of duration (whichever is shorter). → https://www.last.fm/user/<you> shows the scrobble within a minute. Subsonic + ListenBrainz scrobble counts stay in sync
+- [ ] **Disconnect**. Tap "Disconnect Last.fm". → Card returns to "Connect" state; subsequent plays no longer scrobble to Last.fm. Subsonic + ListenBrainz scrobble paths still fire (unchanged)
+- [ ] **Build without secrets**. If you run a debug build with no `LASTFM_API_KEY` / `LASTFM_SHARED_SECRET` dart-defines: card greys out with "This APK was built without LASTFM_API_KEY / LASTFM_SHARED_SECRET" — no buttons exposed (correct graceful degradation)
+- [ ] **Cancel mid-flow**. Tap Connect → don't approve in browser → come back → tap Cancel. → Returns to "Connect" state; no session key persisted
+
 ## Last.fm ranker (only after `LASTFM_API_KEY` secret set)
 
 - [ ] **Subjective check** after a few weeks: auto-queue picks "feel" more musically related than just artist/genre matches

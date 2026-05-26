@@ -1,4 +1,4 @@
-# Features — digaudio (v0.29.0)
+# Features — digaudio (v0.30.0)
 
 What's shipped, where to find it. Each row gives the entry point + a one-line description. **TEST_PLAN.md** covers acceptance tests, **TODO.md** covers what's left.
 
@@ -152,6 +152,7 @@ What's shipped, where to find it. Each row gives the entry point + a one-line de
 - **Cache auto-refresh** (v0.22.0) — Settings → Playback → Subsonic library cache → Auto-refresh dropdown (Off / Daily / 3 d / Weekly / 2 wk / Monthly). On boot if older than threshold + already-synced, background rebuild kicks off.
 - Subsonic scrobble at track-start + at Last.fm-style played-threshold.
 - **ListenBrainz scrobble** (v0.24.1) — opt-in via Settings → Playback → ListenBrainz (paste user token). `playing_now` at start + `single` at the same threshold; runs in parallel with Subsonic scrobbling.
+- **Last.fm direct scrobble** (v0.30.0) — opt-in via Settings → Playback → Last.fm (2-step browser handshake: tap Connect → approve in browser → tap Finish). `track.updateNowPlaying` at start + `track.scrobble` at the same threshold; runs in parallel with Subsonic + ListenBrainz. Required because Navidrome's Last.fm integration is metadata-only (doesn't forward listens). Build needs `LASTFM_API_KEY` + `LASTFM_SHARED_SECRET` dart-defines; without them the card greys out.
 - **Admin library scan** (v0.28.0) — Settings → Servers → Edit → "Trigger scan" / "Check status". Admin-only endpoint; non-admin users see "Admin role required" inline. Shows live `scanning…` count then idle `N songs`.
 
 ## Theme & UI

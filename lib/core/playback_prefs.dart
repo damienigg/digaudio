@@ -18,6 +18,8 @@ class PlaybackPrefs {
   static const _kAutoPlayBt = 'pb.autoplay.bt';
   static const _kCacheRefreshDays = 'pb.cache.refresh_days';
   static const _kListenbrainzToken = 'pb.listenbrainz.token';
+  static const _kLastfmSessionKey = 'pb.lastfm.session_key';
+  static const _kLastfmUsername = 'pb.lastfm.username';
 
   /// Default cap for the auto-cache pool. Pinned downloads don't count against
   /// it. 2 GB matches what Spotify ships and survives a long road trip without
@@ -80,6 +82,17 @@ class PlaybackPrefs {
   /// non-destructive on leak).
   String listenbrainzToken = '';
 
+  /// Last.fm session key from the OAuth-style browser handshake (see
+  /// [LastfmScrobbleClient]). Long-lived; signed into every Now-Playing
+  /// + scrobble call alongside the build-time api_key/shared_secret.
+  /// Empty = not connected (engine skips Last.fm direct scrobble).
+  String lastfmSessionKey = '';
+
+  /// Display name returned by `auth.getSession` — purely informational,
+  /// shown next to the green check in the Settings card so the user
+  /// can tell which Last.fm account is bound.
+  String lastfmUsername = '';
+
   Future<void> load() async {
     final p = await SharedPreferences.getInstance();
     eqEnabled = p.getBool(_kEqEnabled) ?? false;
@@ -92,6 +105,8 @@ class PlaybackPrefs {
     autoPlayOnBtConnect = p.getBool(_kAutoPlayBt) ?? false;
     cacheRefreshDays = p.getInt(_kCacheRefreshDays) ?? 7;
     listenbrainzToken = p.getString(_kListenbrainzToken) ?? '';
+    lastfmSessionKey = p.getString(_kLastfmSessionKey) ?? '';
+    lastfmUsername = p.getString(_kLastfmUsername) ?? '';
     final raw = p.getString(_kEqGains);
     if (raw != null && raw.isNotEmpty) {
       eqGainsDb = (jsonDecode(raw) as List).map((e) => (e as num).toDouble()).toList();
@@ -110,6 +125,8 @@ class PlaybackPrefs {
     await p.setBool(_kAutoPlayBt, autoPlayOnBtConnect);
     await p.setInt(_kCacheRefreshDays, cacheRefreshDays);
     await p.setString(_kListenbrainzToken, listenbrainzToken);
+    await p.setString(_kLastfmSessionKey, lastfmSessionKey);
+    await p.setString(_kLastfmUsername, lastfmUsername);
     await p.setString(_kEqGains, jsonEncode(eqGainsDb));
   }
 }

@@ -1,8 +1,8 @@
-# TODO — digaudio (post-v0.29.0 audio routing info line)
+# TODO — digaudio (post-v0.30.0 Last.fm direct scrobble)
 
 What's left, organised by category + combo. Effort tags: **S** ≈ 30 min, **M** ≈ 1 h, **L** ≈ several hours (own session).
 
-**TL;DR (post 2026-05-27 audit)**: only **one** real code item left before v1.0.0 — **Last.fm scrobble direct** (Navidrome doesn't forward, confirmed). Everything else is non-code (TEST_PLAN.md real-device pass) or optional post-1.0 polish. Listening parties / waveform scrubber / BPM-match dropped to "not on roadmap" — niche items with no real use case relative to their cost.
+**TL;DR (post 2026-05-27 audit + v0.30.0 ship)**: **zero** required code items left before v1.0.0. The remaining gate is a real-device pass on `TEST_PLAN.md`. Optional post-1.0 polish: **i18n FR** (only if you actually want the app in French). Everything else has been shipped or dropped.
 
 ---
 
@@ -24,12 +24,11 @@ What's left, organised by category + combo. Effort tags: **S** ≈ 30 min, **M**
 - ~~**Wear OS companion**~~ — **COVERED (no code)** — Wear OS 3+ system mirror handles transport
 - ~~**Widget artwork (v2)**~~ — **DONE v0.28.0** (Dart `WidgetArtFetcher` writes 256 px JPEG to tmp; Kotlin `BitmapFactory.decodeFile` + `setImageViewBitmap`; falls back to launcher icon on null). Local-origin tracks still have no artwork (same hidden cost as MediaItem.artUri; deferred to a v3 only if a use case appears).
 
-### E · Social & external — 1/3 remaining
+### E · Social & external — 0/3 remaining ✓
 
 - ~~**ListenBrainz scrobble direct**~~ — **DONE v0.24.1** (token-based, parallel to Subsonic scrobble)
 - ~~**Now-Playing share**~~ — **DONE v0.24.0** (text card via share_plus)
-- **Last.fm scrobble direct** — *(M, next ship candidate v0.30.0)*  
-  Confirmed real value via 2026-05-27 audit: user is on Navidrome, whose Last.fm integration is metadata-only and does NOT forward user scrobbles. Needs: (1) `LASTFM_SHARED_SECRET` secret added to GH repo + CI; (2) `url_launcher` dep added; (3) OAuth-style flow — get request token → open browser to `last.fm/api/auth/?api_key=X&token=Y` → user approves → app calls `auth.getSession` → stores session key. All future scrobbles use that key. Not a huge piece of code but the UX flow (browser handoff + "I've approved" confirmation) wants careful walk-through.
+- ~~**Last.fm scrobble direct**~~ — **DONE v0.30.0** (`LastfmScrobbleClient` with the 2-step desktop OAuth handshake: `auth.getToken` → browser approve → `auth.getSession`; api_sig-signed `track.updateNowPlaying` + `track.scrobble` at the same threshold as Subsonic + LB; Settings → Playback → Last.fm card with Connect / Finish / Disconnect flow). User must add `LASTFM_SHARED_SECRET` to GH repo secrets to unlock release builds.
 
 ### F · Library management — 0/5 remaining ✓
 
@@ -77,8 +76,8 @@ What's left, organised by category + combo. Effort tags: **S** ≈ 30 min, **M**
 - ~~**v0.27.1** — Kotlin compile fix~~ DONE (voice search regression — v0.26/v0.27 CI both failed; v0.27.1 is first APK past it)
 - ~~**v0.28.0** — Widget artwork v2 + Subsonic admin scan~~ DONE
 - ~~**v0.29.0** — Audio routing info line on Now Playing~~ DONE (closes Combo 2 visually — no loop-back hardware required)
-- **v0.30.0** — Last.fm scrobble direct (only remaining real-value code item post-audit; Navidrome doesn't forward, confirmed 2026-05-27)
-- **v1.0.0** — first "release" milestone after a real-device validation pass on every section of `TEST_PLAN.md`. All required-for-1.0 features ship; i18n stays as a post-1.0 candidate if FR becomes wanted.
+- ~~**v0.30.0** — Last.fm scrobble direct~~ DONE (closes the Navidrome → Last.fm gap; runs in parallel with Subsonic + ListenBrainz scrobble paths)
+- **v1.0.0** — first "release" milestone. Pure real-device pass on `TEST_PLAN.md` — no required code remaining. i18n stays as a post-1.0 candidate if FR becomes wanted.
 
 ## Items deliberately not on the roadmap
 

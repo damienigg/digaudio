@@ -13,6 +13,7 @@ import '../library/download_queue.dart';
 import '../library/downloads.dart';
 import '../library/importer.dart';
 import '../library/lastfm.dart';
+import '../library/lastfm_scrobble.dart';
 import '../library/listenbrainz.dart';
 import '../library/local.dart';
 import '../library/play_history.dart';
@@ -184,7 +185,21 @@ final subsonicCacheProvider = Provider<SubsonicLibraryCache>((ref) =>
 /// (sourced from a GitHub repo secret in CI). With no key, [enabled]
 /// is false and the autoqueue silently falls back to pure metadata.
 const _lastfmKey = String.fromEnvironment('LASTFM_API_KEY', defaultValue: '');
+const _lastfmSecret =
+    String.fromEnvironment('LASTFM_SHARED_SECRET', defaultValue: '');
 final lastfmClientProvider = Provider<LastfmClient>((_) => LastfmClient(_lastfmKey));
+
+/// Last.fm direct scrobble client (v0.30.0). Build-time api_key and
+/// shared_secret come from dart-defines; the session key is persisted
+/// in [PlaybackPrefs] after the 2-step browser handshake. Watching
+/// prefs means a successful "Connect Last.fm" in Settings flips the
+/// client to [enabled] without an app restart.
+final lastfmScrobbleClientProvider =
+    Provider<LastfmScrobbleClient>((ref) => LastfmScrobbleClient(
+          apiKey: _lastfmKey,
+          sharedSecret: _lastfmSecret,
+          sessionKey: ref.watch(playbackPrefsProvider).lastfmSessionKey,
+        ));
 
 /// ListenBrainz client — reads the user token live from prefs so a
 /// change in Settings takes effect on the next track switch without

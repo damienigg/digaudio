@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../audio/providers.dart';
 import '../core/playback_prefs.dart';
@@ -816,6 +818,8 @@ class _PlaybackPageState extends ConsumerState<PlaybackPage> {
             },
           ),
           Divider(height: 32, color: context.dividerSoft),
+          const _LastfmCard(),
+          Divider(height: 32, color: context.dividerSoft),
           SwitchListTile.adaptive(
             contentPadding: EdgeInsets.zero,
             title: const Text('Auto-play when Bluetooth connects',
@@ -1288,6 +1292,223 @@ class _ListenBrainzCardState extends State<_ListenBrainzCard> {
           ),
           onChanged: widget.onChanged,
         ),
+      ],
+    );
+  }
+}
+
+/// Last.fm direct scrobble — runs in parallel to ListenBrainz +
+/// Subsonic-server scrobble. Needed because Navidrome's Last.fm
+/// integration only enriches metadata; it does NOT forward user
+/// listens to Last.fm. Auth is the classic 2-step desktop flow
+/// (request token → browser approval → exchange for session key);
+/// the session key is persisted in [PlaybackPrefs] and reused for
+/// every subsequent scrobble.
+///
+/// If the build was made without the `LASTFM_API_KEY` /
+/// `LASTFM_SHARED_SECRET` dart-defines (e.g. a debug local build),
+/// the card disables itself and explains why — there's nothing the
+/// user can do at runtime to fix that.
+class _LastfmCard extends ConsumerStatefulWidget {
+  const _LastfmCard();
+  @override
+  ConsumerState<_LastfmCard> createState() => _LastfmCardState();
+}
+
+class _LastfmCardState extends ConsumerState<_LastfmCard> {
+  /// Set after step 1 (requestToken). Null again after step 2
+  /// (exchangeToken) succeeds OR the user cancels.
+  String? _pendingToken;
+  String? _pendingBrowserUrl;
+  bool _busy = false;
+  String? _error;
+
+  Future<void> _connect() async {
+    final client = ref.read(lastfmScrobbleClientProvider);
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final r = await client.requestToken();
+      await launchUrl(Uri.parse(r.browserUrl), mode: LaunchMode.externalApplication);
+      if (!mounted) return;
+      setState(() {
+        _pendingToken = r.token;
+        _pendingBrowserUrl = r.browserUrl;
+      });
+    } catch (e) {
+      if (mounted) setState(() => _error = e.toString());
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _finish() async {
+    final token = _pendingToken;
+    if (token == null) return;
+    final client = ref.read(lastfmScrobbleClientProvider);
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final r = await client.exchangeToken(token);
+      final prefs = ref.read(playbackPrefsProvider);
+      prefs.lastfmSessionKey = r.sessionKey;
+      prefs.lastfmUsername = r.username;
+      await prefs.save();
+      if (!mounted) return;
+      setState(() {
+        _pendingToken = null;
+        _pendingBrowserUrl = null;
+      });
+    } catch (e) {
+      if (mounted) setState(() => _error = e.toString());
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _disconnect() async {
+    final prefs = ref.read(playbackPrefsProvider);
+    prefs.lastfmSessionKey = '';
+    prefs.lastfmUsername = '';
+    await prefs.save();
+    if (mounted) {
+      setState(() {
+        _pendingToken = null;
+        _pendingBrowserUrl = null;
+        _error = null;
+      });
+    }
+  }
+
+  void _cancelPending() {
+    setState(() {
+      _pendingToken = null;
+      _pendingBrowserUrl = null;
+      _error = null;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final prefs = ref.watch(playbackPrefsProvider);
+    final client = ref.watch(lastfmScrobbleClientProvider);
+    final connected = client.enabled;
+    final pending = _pendingToken != null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Text('Last.fm', style: TextStyle(fontWeight: FontWeight.w700)),
+            const SizedBox(width: 8),
+            if (connected)
+              const Icon(Icons.check_circle, size: 14, color: _accent),
+            if (connected) ...[
+              const SizedBox(width: 6),
+              Text(prefs.lastfmUsername,
+                  style: TextStyle(color: context.textMuted, fontSize: 12)),
+            ],
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Scrobble directly to Last.fm in parallel with Subsonic and '
+          'ListenBrainz. Navidrome\'s Last.fm integration only fetches '
+          'artist images / similar artists — it does NOT forward your '
+          'listens, so this is the only way to get your plays on '
+          'last.fm/user/<you> when running Navidrome.',
+          style: TextStyle(color: context.textMuted, fontSize: 12),
+        ),
+        const SizedBox(height: 8),
+        if (!client.configurable)
+          Text(
+            'This APK was built without LASTFM_API_KEY / '
+            'LASTFM_SHARED_SECRET dart-defines. Last.fm direct scrobble '
+            'is unavailable in this build.',
+            style: TextStyle(
+                color: Colors.amber.shade300,
+                fontStyle: FontStyle.italic,
+                fontSize: 12),
+          )
+        else if (connected)
+          OutlinedButton.icon(
+            onPressed: _busy ? null : _disconnect,
+            icon: const Icon(Icons.link_off, size: 16),
+            label: const Text('Disconnect Last.fm'),
+          )
+        else if (pending)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Step 2 of 2: in the browser tab that just opened, click '
+                '"Yes, allow access". When it shows "You can now close '
+                'this window", come back here and tap Finish.',
+                style: TextStyle(color: context.textMuted, fontSize: 12),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  FilledButton.icon(
+                    onPressed: _busy ? null : _finish,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: _accent,
+                      foregroundColor: Colors.black,
+                    ),
+                    icon: _busy
+                        ? const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.black))
+                        : const Icon(Icons.check, size: 16),
+                    label: const Text('I approved — finish'),
+                  ),
+                  const SizedBox(width: 8),
+                  TextButton(
+                    onPressed: _busy ? null : _cancelPending,
+                    child: const Text('Cancel'),
+                  ),
+                  const SizedBox(width: 8),
+                  if (_pendingBrowserUrl != null)
+                    IconButton(
+                      tooltip: 'Copy approval URL',
+                      icon: const Icon(Icons.copy, size: 18),
+                      onPressed: () => Clipboard.setData(
+                          ClipboardData(text: _pendingBrowserUrl!)),
+                    ),
+                ],
+              ),
+            ],
+          )
+        else
+          FilledButton.icon(
+            onPressed: _busy ? null : _connect,
+            style: FilledButton.styleFrom(
+              backgroundColor: _accent,
+              foregroundColor: Colors.black,
+            ),
+            icon: _busy
+                ? const SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.black))
+                : const Icon(Icons.link, size: 16),
+            label: const Text('Connect Last.fm'),
+          ),
+        if (_error != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            _error!,
+            style: TextStyle(color: Colors.redAccent.shade200, fontSize: 12),
+          ),
+        ],
       ],
     );
   }

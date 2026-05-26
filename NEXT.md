@@ -1,28 +1,43 @@
 # Resume — next session
 
-## Where we left off (morning of 2026-05-27)
+## Where we left off (morning of 2026-05-27, second pass)
 
-**Shipped this morning**: v0.29.0 — audio routing info line on Now
-Playing. Visual bit-transparency check: `FLAC · 24-bit/96 kHz · 938 kbps
-→ USB: FiiO Q3 · 96 kHz`, line goes amber + ⚠ when source sample rate
-≠ system output mix rate. Closes the two Combo 2 "verify-only" items
-without needing a loop-back DAC or trusting the ear.
+**Shipped this morning** (back-to-back): v0.29.0 (audio routing info
+line on Now Playing) → v0.30.0 (Last.fm direct scrobble — closes the
+Navidrome → Last.fm gap with a 2-step browser-handshake auth flow).
 
-**Roadmap state**: A/B/C/D/F/H **complete**. Combo 1 + Combo 2 + Combo 4
-all **complete**. Two real polish items deliberately deferred: **Last.fm
-direct scrobble** and **i18n**. The app is feature-complete vs
-Substreamer / Symfonium; what's left is genuinely optional.
+**Roadmap state**: A/B/C/D/E/F/H **complete**. Only G has one entry
+left (i18n FR — explicitly post-v1.0). All four combos
+(Recommendation engine / Pro-listener / Friend-share / Daily driver)
+are **complete**. The app is feature-complete vs Substreamer /
+Symfonium; what's left is pure real-device validation +
+optional FR translation.
 
-## First 5 minutes — install + smoke test v0.29.0
+## First 5 minutes — install + smoke test v0.30.0
 
 ```bash
-# Grab the latest signed APK from the v0.29.0 release
-gh release download v0.29.0 -p '*.apk' -O /tmp/digaudio-v0.29.0.apk
-adb install -r /tmp/digaudio-v0.29.0.apk
+# Grab the latest signed APK from the v0.30.0 release
+gh release download v0.30.0 -p '*.apk' -O /tmp/digaudio-v0.30.0.apk
+adb install -r /tmp/digaudio-v0.30.0.apk
 adb shell am start -n com.digaudio.digaudio/.MainActivity
 ```
 
-Smoke checks for what shipped this morning + carryover from v0.28.0:
+**Prerequisite for the Last.fm card to be usable**: add a new GH repo
+secret `LASTFM_SHARED_SECRET` (alongside the existing `LASTFM_API_KEY`).
+Grab the secret from your existing Last.fm API account at
+`last.fm/api/account/your` → Application details → Shared secret. Once
+added, push any commit (or re-run CI manually) to bake a new APK that
+includes the secret in the dart-defines.
+
+Smoke checks (v0.30.0 + carryover):
+
+-1. **Last.fm direct scrobble** (after `LASTFM_SHARED_SECRET` set) —
+   Settings → Playback → "Last.fm" card → tap "Connect Last.fm" →
+   browser tab opens at `last.fm/api/auth/?...` → tap "Yes, allow
+   access" → return to app → tap "I approved — finish" → green
+   check + your username appears. Play any track → check
+   `last.fm/user/<you>` shows it within ~1 s (Now-Playing) and ~1 min
+   after the 4-min threshold (definitive scrobble).
 
 0. **Audio routing line** — open Now Playing on any track. → A small
    line under the artist reads e.g. `FLAC · 24-bit/96 kHz · 938 kbps
@@ -55,29 +70,19 @@ Smoke checks for what shipped this morning + carryover from v0.28.0:
    TicWatch → play on phone → Media Controls tile on the watch
    shows transport. No app code on the watch — system handles it.
 
-## Open follow-ups (post 2026-05-27 audit)
+## Open follow-ups (post 2026-05-27 audit + v0.30.0 ship)
 
-After today's audit pass, the picture is crisp: exactly **one** real
-code item remains as a pre-v1.0.0 ship candidate, plus one optional
-post-1.0 polish. Three former L items were dropped (no real use case
-relative to cost) — see `TODO.md` § "Items deliberately not on the
-roadmap" for the rationale.
+Zero required code items remain before v1.0.0. The two open
+threads:
 
-### v0.30.0 candidate — Last.fm scrobble direct (M, ~1h session)
+### User-side prerequisite — add `LASTFM_SHARED_SECRET` to repo secrets
 
-Confirmed real value: user is on **Navidrome**, whose Last.fm
-integration is metadata-only (artist images / similar) and does
-NOT forward user scrobbles to Last.fm. So a direct scrobble path
-in digaudio adds genuine coverage, not duplication.
-
-Needs:
-- `LASTFM_SHARED_SECRET` secret added to GH repo + CI
-- `url_launcher` dep
-- Browser-roundtrip auth: request token → open
-  `last.fm/api/auth/?api_key=X&token=Y` → user approves →
-  `auth.getSession` → store session key
-- Future scrobbles use that key in parallel with the existing
-  Subsonic + ListenBrainz scrobblers
+The v0.30.0 build threads `LASTFM_SHARED_SECRET` (new GH repo
+secret) into the dart-defines. Without it, the Settings card greys
+out and the user can't connect to Last.fm. Add the secret once
+from `last.fm/api/account/your` → Application details → Shared
+secret. After that's added, any subsequent release build picks
+it up automatically.
 
 ### Post-v1.0 (optional) — i18n FR
 
@@ -98,12 +103,10 @@ or playing a 96 kHz FLAC is enough; no loop-back hardware needed.
 
 What gates v1.0.0 = a real-device pass on every section of
 `TEST_PLAN.md`. The TEST_PLAN now covers everything through
-v0.29.0 (widget, voice search, multi-server search, Wear OS mirror,
-admin scan, audio routing info line). The remaining decision is
-whether to ship Last.fm direct (v0.30.0) before or after the
-real-device validation pass — either order works. Post-v1.0:
-i18n is the only remaining open item, untaken until you actually
-want the app in French.
+v0.30.0 (widget, voice search, multi-server search, Wear OS mirror,
+admin scan, audio routing info line, Last.fm direct scrobble).
+**No code remaining**. Post-v1.0: i18n FR is the only remaining
+open item, untaken until you actually want the app in French.
 
 ## Environment reminders
 
@@ -113,8 +116,9 @@ want the app in French.
 - **Local creds for build-time URL injection**: `tool/run.sh` (gitignored).
 - **GitHub Actions secrets**: `SUBSONIC_URL`, `SUBSONIC_LABEL`,
   `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`,
-  `LASTFM_API_KEY` (read-only ranker; **not** the same as the
-  `LASTFM_SHARED_SECRET` that direct-scrobble would need).
+  `LASTFM_API_KEY` (read-only ranker), `LASTFM_SHARED_SECRET`
+  (v0.30.0 — unlocks direct scrobble; until you add this secret
+  the Settings → Last.fm card stays greyed out).
 
 ## Debug commands if something feels off
 

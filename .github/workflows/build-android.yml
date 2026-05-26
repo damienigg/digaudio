@@ -83,6 +83,13 @@ jobs:
           # signal into the metadata-similarity score. Without it, autoqueue
           # falls back to pure metadata (no functional regression).
           LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+          # Optional. When set alongside LASTFM_API_KEY, unlocks the
+          # v0.30.0 Last.fm direct scrobble path (Settings → Playback →
+          # Last.fm → Connect). Without it, the Settings card greys out
+          # with "this APK was built without LASTFM_API_KEY /
+          # LASTFM_SHARED_SECRET" — Subsonic + ListenBrainz scrobble
+          # paths keep working.
+          LASTFM_SHARED_SECRET: ${{ secrets.LASTFM_SHARED_SECRET }}
           # Signing config inputs — consumed by android/app/build.gradle.
           # KEYSTORE_FILE is exported by the decode step above when the
           # KEYSTORE_BASE64 secret exists.
@@ -99,6 +106,9 @@ jobs:
           fi
           if [ -n "$LASTFM_API_KEY" ]; then
             DEFINES+=(--dart-define=LASTFM_API_KEY="$LASTFM_API_KEY")
+          fi
+          if [ -n "$LASTFM_SHARED_SECRET" ]; then
+            DEFINES+=(--dart-define=LASTFM_SHARED_SECRET="$LASTFM_SHARED_SECRET")
           fi
           flutter build apk --release "${DEFINES[@]}"
 

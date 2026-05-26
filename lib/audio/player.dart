@@ -10,6 +10,7 @@ import '../core/playback_prefs.dart';
 import '../domain.dart';
 import '../library/collections.dart';
 import '../library/downloads.dart';
+import '../library/lastfm_scrobble.dart';
 import '../library/listenbrainz.dart';
 import '../library/local.dart';
 import '../library/play_history.dart';
@@ -54,6 +55,7 @@ class AudioEngine extends BaseAudioHandler {
   final PlayHistoryManager _history;
   final TrackPositionsManager _positions;
   final ListenBrainzClient Function() _listenbrainz;
+  final LastfmScrobbleClient Function() _lastfmScrobble;
 
   // Equalizers per player — kept in sync via [applyEqGains] and
   // [setEqEnabled] so swapping doesn't change perceived EQ.
@@ -128,6 +130,7 @@ class AudioEngine extends BaseAudioHandler {
     required PlayHistoryManager history,
     required TrackPositionsManager positions,
     required ListenBrainzClient Function() listenbrainz,
+    required LastfmScrobbleClient Function() lastfmScrobble,
   })  : _subsonicResolver = subsonicResolver,
         _resolver = resolver,
         _favorites = favorites,
@@ -135,7 +138,8 @@ class AudioEngine extends BaseAudioHandler {
         _prefs = prefs,
         _history = history,
         _positions = positions,
-        _listenbrainz = listenbrainz;
+        _listenbrainz = listenbrainz,
+        _lastfmScrobble = lastfmScrobble;
 
   // Compat with old callers that grabbed `raw` for ad-hoc operations.
   AudioPlayer get raw => _primary;
@@ -191,9 +195,10 @@ class AudioEngine extends BaseAudioHandler {
 
     // Definitive scrobble at the Last.fm threshold (≥ 4 min OR
     // ≥ 50 % of duration, whichever is shorter). Fires once per
-    // track via _scrobbledCurrent. Both Subsonic (server-side
-    // scrobble) and ListenBrainz fire from the same threshold so
-    // the user's external scrobble counters stay aligned.
+    // track via _scrobbledCurrent. Subsonic (server-side scrobble),
+    // ListenBrainz and Last.fm direct (v0.30.0) all fire from the
+    // same threshold so the user's external scrobble counters
+    // stay aligned.
     if (!_scrobbledCurrent) {
       final durSec = _primary.duration?.inSeconds ?? 0;
       final thresholdSec = durSec == 0 ? 240 : min(240, durSec ~/ 2);
@@ -206,6 +211,12 @@ class AudioEngine extends BaseAudioHandler {
           trackName: t.title,
           artistName: t.artist,
           releaseName: t.album,
+        );
+        _lastfmScrobble().scrobble(
+          track: t.title,
+          artist: t.artist,
+          album: t.album,
+          durationSec: t.duration?.inSeconds,
         );
       }
     }
@@ -383,6 +394,15 @@ class AudioEngine extends BaseAudioHandler {
       trackName: t.title,
       artistName: t.artist,
       releaseName: t.album,
+    );
+    // Last.fm direct Now-Playing (v0.30.0) — same origin-agnostic
+    // story; session-key gated inside the client. Runs in parallel
+    // with Subsonic + ListenBrainz.
+    _lastfmScrobble().updateNowPlaying(
+      track: t.title,
+      artist: t.artist,
+      album: t.album,
+      durationSec: t.duration?.inSeconds,
     );
     // Homescreen widget refresh. Carries over the previous track's
     // art for the brief window until the prefetch lands — slight

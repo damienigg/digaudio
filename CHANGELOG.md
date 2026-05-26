@@ -7,6 +7,42 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.30.0] — 2026-05-27
+
+### Added (Last.fm scrobble direct)
+- **Why it's not redundant**: user is on Navidrome, whose Last.fm
+  integration is metadata-only (artist images / similar artists) —
+  it does NOT forward user listens to Last.fm. So scrobbles never
+  reach `last.fm/user/<you>` without this path. Confirmed during
+  the 2026-05-27 audit.
+- **`LastfmScrobbleClient`** (Dart, parallel to `ListenBrainzClient`)
+  implements the classic 2-step desktop OAuth handshake:
+  `auth.getToken` (signed: api_key + shared_secret → api_sig) →
+  user approves in browser → `auth.getSession(token)` returns a
+  long-lived session key + username. Session key is then signed
+  into every `track.updateNowPlaying` (at track start) and
+  `track.scrobble` (at the ≥ 4 min OR ≥ 50 % threshold, same as
+  Subsonic + LB).
+- **Settings → Playback → Last.fm card** with a 3-state UI:
+  Disconnected (Connect button) → Pending approval (Finish +
+  Cancel + copy-URL) → Connected (green check + username +
+  Disconnect). Gracefully greys out on builds without the
+  `LASTFM_API_KEY` / `LASTFM_SHARED_SECRET` dart-defines.
+- **`url_launcher` dep** added (pubspec, `^6.3.1`) — opens the
+  Last.fm approval page in the system browser.
+- **`PlaybackPrefs`**: persists `lastfmSessionKey` + `lastfmUsername`.
+- **CI**: `build-android.yml` threads `LASTFM_SHARED_SECRET` (new
+  optional GH repo secret) into the build's dart-defines.
+- **No regression risk** for users not on Navidrome / not wanting
+  Last.fm: every call short-circuits to no-op when the session
+  key isn't set; Subsonic + LB scrobble paths untouched.
+
+### User action required to unlock
+- Add `LASTFM_SHARED_SECRET` to GitHub repo secrets (alongside the
+  existing `LASTFM_API_KEY`). Generate or retrieve it from
+  https://www.last.fm/api/account/your → "Application details".
+  Without it, the Settings card stays greyed out.
+
 ## [0.29.0] — 2026-05-27
 
 ### Added (Audio routing info line on Now Playing)
