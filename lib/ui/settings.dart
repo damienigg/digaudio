@@ -508,6 +508,21 @@ class DisplayPage extends ConsumerWidget {
               ref.invalidate(displayPrefsProvider);
             },
           ),
+          _DisplayToggle(
+            title: 'Display infos for audio geeks',
+            subtitle:
+                'Show the codec / bit-depth / sample-rate / device line '
+                'under the artist on Now Playing. Off by default — '
+                'Android always mixes built-in speakers at 48 kHz so the '
+                'resampling indicator fires for nearly every track.',
+            value: ref.watch(displayPrefsProvider).audioGeekInfoEnabled,
+            onChanged: (v) async {
+              final p = ref.read(displayPrefsProvider);
+              p.audioGeekInfoEnabled = v;
+              await p.save();
+              ref.invalidate(displayPrefsProvider);
+            },
+          ),
         ],
       ),
     );

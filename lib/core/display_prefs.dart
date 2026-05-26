@@ -10,6 +10,7 @@ class DisplayPrefs {
   static const _kLongPressPlays = 'display.long_press_plays';
   static const _kNowPlayingTint = 'display.now_playing_tint';
   static const _kMaterialYou = 'display.material_you';
+  static const _kAudioGeekInfo = 'display.audio_geek_info';
 
   ThemeMode themeMode = ThemeMode.dark;
 
@@ -31,6 +32,13 @@ class DisplayPrefs {
   /// see a surprise re-skin on update.
   bool materialYouEnabled = false;
 
+  /// Show the codec / bit-depth / sample-rate / device line on Now
+  /// Playing. Off by default — Android's audio mixer always runs at
+  /// 48 kHz on built-in speakers so the resampling indicator fires
+  /// for 99 % of tracks; the line ends up being visual noise for
+  /// non-audiophile users. Opt-in via Settings → Display.
+  bool audioGeekInfoEnabled = false;
+
   Future<void> load() async {
     final p = await SharedPreferences.getInstance();
     themeMode = switch (p.getString(_kThemeMode)) {
@@ -41,6 +49,7 @@ class DisplayPrefs {
     longPressPlays = p.getBool(_kLongPressPlays) ?? false;
     nowPlayingTint = p.getBool(_kNowPlayingTint) ?? true;
     materialYouEnabled = p.getBool(_kMaterialYou) ?? false;
+    audioGeekInfoEnabled = p.getBool(_kAudioGeekInfo) ?? false;
   }
 
   Future<void> save() async {
@@ -49,5 +58,6 @@ class DisplayPrefs {
     await p.setBool(_kLongPressPlays, longPressPlays);
     await p.setBool(_kNowPlayingTint, nowPlayingTint);
     await p.setBool(_kMaterialYou, materialYouEnabled);
+    await p.setBool(_kAudioGeekInfo, audioGeekInfoEnabled);
   }
 }

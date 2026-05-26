@@ -180,7 +180,10 @@ class _PlayerTab extends ConsumerWidget {
                           Text(track.displayArtist,
                               style: TextStyle(
                                   color: context.textTertiary, fontSize: 14)),
-                          _AudioInfoLine(track: track),
+                          if (ref
+                              .watch(displayPrefsProvider)
+                              .audioGeekInfoEnabled)
+                            _AudioInfoLine(track: track),
                         ],
                       ),
                     ),

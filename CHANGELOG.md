@@ -7,6 +7,26 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.30.10] — 2026-05-27
+
+### Changed (Audio info line is now opt-in)
+- The codec / bit-depth / sample-rate / device line under the artist
+  on Now Playing was visually noisy (multi-line wrap + a permanent
+  ⚠ glyph for the 44.1 → 48 kHz upsampling that Android does on
+  every built-in speaker — so it fired on 99 % of tracks for nothing
+  useful). Hidden by default.
+- New toggle: **Settings → Display → "Display infos for audio
+  geeks"**. Off by default. When on, the line renders as before
+  (still on 2 lines on narrow screens; the wrap is a separate
+  cosmetic issue tracked for a future pass).
+- The v0.29.0 design intent — visual bit-transparency proof for
+  audiophiles — is preserved for users who explicitly opt in via
+  the new toggle.
+
+### Carried over
+- All v0.30.9 debug instrumentation still active. Will be ripped
+  out in v0.30.11 once the mini-player race is pinned.
+
 ## [0.30.9] — 2026-05-27
 
 ### Fixed
