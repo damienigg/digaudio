@@ -22,7 +22,7 @@ class NowPlayingPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final track = ref.watch(currentTrackProvider).valueOrNull;
+    final track = ref.watch(currentTrackProvider);
     if (track == null) {
       return const Scaffold(body: Center(child: Text('Nothing playing.')));
     }
@@ -101,7 +101,7 @@ class _TintBackgroundState extends ConsumerState<_TintBackground> {
   @override
   Widget build(BuildContext context) {
     final enabled = ref.watch(displayPrefsProvider).nowPlayingTint;
-    final t = ref.watch(currentTrackProvider).valueOrNull;
+    final t = ref.watch(currentTrackProvider);
     if (enabled && t != null) _maybeComputeFor(t);
     return Stack(
       fit: StackFit.expand,
@@ -130,10 +130,10 @@ class _PlayerTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final engine = ref.watch(audioEngineProvider);
-    final state = ref.watch(playerStateProvider).valueOrNull;
-    final playing = state?.playing ?? false;
-    final shuffle = ref.watch(shuffleProvider).valueOrNull ?? false;
-    final loop = ref.watch(loopProvider).valueOrNull ?? LoopMode.off;
+    final state = ref.watch(playerStateProvider);
+    final playing = state.playing;
+    final shuffle = ref.watch(shuffleProvider);
+    final loop = ref.watch(loopProvider);
 
     // Position is NOT watched here — it ticks at ~10 Hz and would
     // rebuild the entire tab (including Artwork) every 100 ms.
@@ -570,7 +570,7 @@ class _ShareAction extends ConsumerWidget {
   const _ShareAction();
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final track = ref.watch(currentTrackProvider).valueOrNull;
+    final track = ref.watch(currentTrackProvider);
     return IconButton(
       tooltip: 'Share track',
       onPressed: track == null
@@ -652,9 +652,8 @@ class _ScrubberAndTimes extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final engine = ref.watch(audioEngineProvider);
     final position =
-        ref.watch(positionProvider).valueOrNull ?? Duration.zero;
-    final duration =
-        ref.watch(durationProvider).valueOrNull ?? Duration.zero;
+        ref.watch(positionProvider);
+    final duration = ref.watch(durationProvider) ?? Duration.zero;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [

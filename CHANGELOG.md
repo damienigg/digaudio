@@ -7,6 +7,28 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.30.7] — 2026-05-27
+
+### Fixed — Mini-player STILL invisible after v0.30.5 (race in `async*` seeding)
+- v0.30.5's seed-then-listen pattern using `async*`/`yield`+`yield*`
+  still had a microtask race: the `yield engine.currentTrack` returned
+  control to the event loop before the `yield*` subscribed to the
+  underlying broadcast stream. Any broadcast event arriving in that
+  window was lost. Symptom: tap a Search result → audio plays → mini-
+  player + Now Playing remain empty (`currentTrackProvider` stuck
+  on the initial seeded null).
+- **Definitive fix**: scrap `StreamProvider` + `async*` for these
+  six engine projections. Replace with `StateNotifierProvider`
+  backed by a `_StreamMirror<T>` notifier that:
+  1. Reads the engine's current synchronous state as `initial`
+     (no race possible — fully sync).
+  2. Subscribes to the broadcast stream (sync) and writes every
+     emission into `state`.
+  3. Cancels the subscription on dispose.
+- Widgets switch from `ref.watch(p).valueOrNull ?? default` to
+  `ref.watch(p)` since the value is now exposed directly (no
+  `AsyncValue` wrapper). Applied across mini-player + Now Playing.
+
 ## [0.30.6] — 2026-05-27
 
 ### Added (Custom EQ presets)

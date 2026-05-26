@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
@@ -323,56 +325,71 @@ final playlistImporterProvider = Provider<PlaylistImporter>((ref) => PlaylistImp
 
 // ---- Player streams (cheap projections for UI) -----------------------------
 //
-// All six engine projections share the same gotcha: the underlying
-// stream controllers are `broadcast()` (so multiple widgets can listen),
-// but broadcast streams do NOT replay past events to new subscribers.
-// If the engine emits a track-change event before a widget mounts
-// (typical on the first play of a session — the mini-player subscribes
-// after the user taps a Search result + setQueue + _onTrackChanged
-// already fired), the widget never sees the event → mini-player stays
-// hidden until the *next* track change. Symptom user reported:
-// "ca chante mais pas de mini-player… une fois que la première chanson
-//  se termine, tout marche comme prévu".
+// Each engine projection wraps an internal `StreamController.broadcast()`.
+// Broadcast streams do NOT replay past events to new subscribers, which
+// caused a long-running mystery: the very first track-change event fires
+// inside `setQueue()` synchronously — at that moment the mini-player /
+// Now Playing have already subscribed via `ref.watch(...)`, BUT the
+// previous attempt to seed via `async*` had a race (the seed-yield gave
+// control back to the event loop before `yield*` subscribed to the
+// underlying stream; events arriving in that window were dropped).
 //
-// Fix: each provider yields the engine's current synchronous state
-// first, then forwards the broadcast stream. Riverpod sees the seed
-// value immediately, so the UI renders correctly on first attach
-// even if the stream's prior events were missed.
+// Definitive fix: replace `StreamProvider` + `async*` with
+// `StateNotifierProvider`. The notifier reads the engine's current
+// synchronous state at construction (no race possible — sync read),
+// then subscribes to the broadcast stream and writes every event into
+// `state`. Riverpod listeners read `state` directly (no
+// `AsyncValue.valueOrNull` chain), which is always the latest known
+// value from the moment the provider was first watched.
 
-final playerStateProvider = StreamProvider<PlayerState>((ref) async* {
+class _StreamMirror<T> extends StateNotifier<T> {
+  late final StreamSubscription<T> _sub;
+  _StreamMirror(super.initial, Stream<T> source) {
+    _sub = source.listen((v) => state = v);
+  }
+  @override
+  void dispose() {
+    _sub.cancel();
+    super.dispose();
+  }
+}
+
+final currentTrackProvider =
+    StateNotifierProvider<_StreamMirror<Track?>, Track?>((ref) {
   final engine = ref.watch(audioEngineProvider);
-  yield engine.raw.playerState;
-  yield* engine.playerStateStream;
+  return _StreamMirror<Track?>(engine.currentTrack, engine.currentTrackStream);
 });
 
-final positionProvider = StreamProvider<Duration>((ref) async* {
+final playerStateProvider =
+    StateNotifierProvider<_StreamMirror<PlayerState>, PlayerState>((ref) {
   final engine = ref.watch(audioEngineProvider);
-  yield engine.raw.position;
-  yield* engine.positionStream;
+  return _StreamMirror<PlayerState>(
+      engine.raw.playerState, engine.playerStateStream);
 });
 
-final durationProvider = StreamProvider<Duration?>((ref) async* {
+final positionProvider =
+    StateNotifierProvider<_StreamMirror<Duration>, Duration>((ref) {
   final engine = ref.watch(audioEngineProvider);
-  yield engine.raw.duration;
-  yield* engine.durationStream;
+  return _StreamMirror<Duration>(engine.raw.position, engine.positionStream);
 });
 
-final currentTrackProvider = StreamProvider<Track?>((ref) async* {
+final durationProvider =
+    StateNotifierProvider<_StreamMirror<Duration?>, Duration?>((ref) {
   final engine = ref.watch(audioEngineProvider);
-  yield engine.currentTrack;
-  yield* engine.currentTrackStream;
+  return _StreamMirror<Duration?>(engine.raw.duration, engine.durationStream);
 });
 
-final shuffleProvider = StreamProvider<bool>((ref) async* {
+final shuffleProvider =
+    StateNotifierProvider<_StreamMirror<bool>, bool>((ref) {
   final engine = ref.watch(audioEngineProvider);
-  yield engine.raw.shuffleModeEnabled;
-  yield* engine.shuffleModeStream;
+  return _StreamMirror<bool>(
+      engine.raw.shuffleModeEnabled, engine.shuffleModeStream);
 });
 
-final loopProvider = StreamProvider<LoopMode>((ref) async* {
+final loopProvider =
+    StateNotifierProvider<_StreamMirror<LoopMode>, LoopMode>((ref) {
   final engine = ref.watch(audioEngineProvider);
-  yield engine.raw.loopMode;
-  yield* engine.loopModeStream;
+  return _StreamMirror<LoopMode>(engine.raw.loopMode, engine.loopModeStream);
 });
 
 // ---- Browse data (lazy) ----------------------------------------------------
