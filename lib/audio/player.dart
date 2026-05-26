@@ -18,6 +18,7 @@ import '../library/track_positions.dart';
 import '../subsonic/client.dart';
 import '../widget/widget_art.dart';
 import '../widget/widget_bridge.dart';
+import '../core/dbg.dart';
 
 /// digaudio's audio engine + AA bridge with **true crossfade** between
 /// consecutive tracks.
@@ -146,8 +147,7 @@ class AudioEngine extends BaseAudioHandler {
         _positions = positions,
         _listenbrainz = listenbrainz,
         _lastfmScrobble = lastfmScrobble {
-    // ignore: avoid_print
-    print('[digaudio.dbg] AudioEngine ctor: instance=${identityHashCode(this)}, '
+    dbg('AudioEngine ctor: instance=${identityHashCode(this)}, '
         'trackController=${identityHashCode(_trackController)}');
   }
 
@@ -419,8 +419,7 @@ class AudioEngine extends BaseAudioHandler {
   /// natural advance, user skip, or initial setQueue). Updates cache /
   /// history / mediaItem / scrobble + emits index + track streams.
   void _onTrackChanged(Track t) {
-    // ignore: avoid_print
-    print('[digaudio.dbg] _onTrackChanged: "${t.title}" '
+    dbg('_onTrackChanged: "${t.title}" '
         '(uniqueKey=${t.uniqueKey}, idx=$_currentIndex, '
         'engine=${identityHashCode(this)})');
     _cache.touch(t.uniqueKey);
@@ -428,8 +427,7 @@ class AudioEngine extends BaseAudioHandler {
     mediaItem.add(_toMediaItem(t));
     _indexController.add(_currentIndex);
     _trackController.add(t);
-    // ignore: avoid_print
-    print('[digaudio.dbg] _trackController.add fired '
+    dbg('_trackController.add fired '
         '(controller=${identityHashCode(_trackController)}, '
         'isClosed=${_trackController.isClosed})');
     _nowPlayingKey = t.uniqueKey;
@@ -586,8 +584,7 @@ class AudioEngine extends BaseAudioHandler {
   // ===========================================================================
 
   Future<void> setQueue(List<Track> tracks, {int initialIndex = 0}) async {
-    // ignore: avoid_print
-    print('[digaudio.dbg] setQueue: entering (${tracks.length} tracks, '
+    dbg('setQueue: entering (${tracks.length} tracks, '
         'idx=$initialIndex, hasListener=${_trackController.hasListener})');
     if (tracks.isEmpty) return;
     _transitionTimer?.cancel();
@@ -595,11 +592,9 @@ class AudioEngine extends BaseAudioHandler {
     // Stop secondary if anything was loaded — fresh queue invalidates
     // every preload.
     if (_secondary.processingState != ProcessingState.idle) {
-      // ignore: avoid_print
-      print('[digaudio.dbg] setQueue: stopping secondary…');
+      dbg('setQueue: stopping secondary…');
       await _secondary.stop();
-      // ignore: avoid_print
-      print('[digaudio.dbg] setQueue: secondary stopped');
+      dbg('setQueue: secondary stopped');
     }
     _tracks = List.unmodifiable(tracks);
     _originalOrder = _tracks;
@@ -619,24 +614,19 @@ class AudioEngine extends BaseAudioHandler {
 
     final t = _tracks[_currentIndex];
     _targetVolume = _rgVolumeFor(t);
-    // ignore: avoid_print
-    print('[digaudio.dbg] setQueue: about to setAudioSource (${t.title})');
+    dbg('setQueue: about to setAudioSource (${t.title})');
     final src = _sourceFor(t);
-    // ignore: avoid_print
-    print('[digaudio.dbg] setQueue: source built, awaiting setAudioSource…');
+    dbg('setQueue: source built, awaiting setAudioSource…');
     try {
       await _primary.setAudioSource(src);
     } catch (e, st) {
-      // ignore: avoid_print
-      print('[digaudio.dbg] setQueue: setAudioSource THREW: $e\n$st');
+      dbg('setQueue: setAudioSource THREW: $e\n$st');
       rethrow;
     }
-    // ignore: avoid_print
-    print('[digaudio.dbg] setQueue: setAudioSource returned, '
+    dbg('setQueue: setAudioSource returned, '
         'awaiting setVolume…');
     await _primary.setVolume(_targetVolume);
-    // ignore: avoid_print
-    print('[digaudio.dbg] setQueue: setVolume returned, firing play() '
+    dbg('setQueue: setVolume returned, firing play() '
         '(fire-and-forget) + _onTrackChanged…');
     // DO NOT await player.play(). just_audio's `play()` returns a
     // Future that completes when playback STOPS (paused/completed/
@@ -1093,7 +1083,7 @@ class AudioEngine extends BaseAudioHandler {
   /// shuffle toggle) updated audio_service but not the in-app
   /// widgets.
   void _publishQueue() {
-    _publishQueue();
+    queue.add(_tracks.map(_toMediaItem).toList());
     _queueController.add(_tracks);
   }
 }

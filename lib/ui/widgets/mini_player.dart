@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../audio/providers.dart';
 import 'artwork.dart';
 import 'theme_ext.dart';
+import '../../core/dbg.dart';
 
 /// Persistent mini player above the bottom nav. Disappears when no queue.
 class MiniPlayer extends ConsumerWidget {
@@ -13,8 +14,7 @@ class MiniPlayer extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final track = ref.watch(currentTrackProvider);
-    // ignore: avoid_print
-    print('[digaudio.dbg] MiniPlayer.build: track=${track?.title ?? "null"}');
+    dbg('MiniPlayer.build: track=${track?.title ?? "null"}');
     if (track == null) return const SizedBox.shrink();
 
     final state = ref.watch(playerStateProvider);

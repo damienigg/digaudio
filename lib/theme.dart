@@ -89,42 +89,6 @@ class AppTheme {
     );
   }
 
-  /// Build a Material You–coloured variant of either theme. Takes the
-  /// dynamic `ColorScheme` the OS exposes (Android 12+) and layers
-  /// our typography / surface treatment over it. The brand accent
-  /// (`#1ED760`) is no longer the primary in this mode — instead the
-  /// system's primary drives FilledButtons / chips / indicators.
-  /// Hardcoded accent literals in widgets (`_accent` const, `accent`
-  /// field) stay green though — those are deliberate brand splashes,
-  /// not theme-derived.
-  static ThemeData fromDynamic(ColorScheme dynamic_) {
-    final isDark = dynamic_.brightness == Brightness.dark;
-    final bg = isDark ? background : const Color(0xFFFAFAFA);
-    final surf = isDark ? surface : const Color(0xFFFFFFFF);
-    final base = isDark ? ThemeData.dark(useMaterial3: true) : ThemeData.light(useMaterial3: true);
-    return base.copyWith(
-      colorScheme: dynamic_,
-      scaffoldBackgroundColor: bg,
-      canvasColor: bg,
-      cardTheme: CardTheme(
-        color: surf,
-        elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-      appBarTheme: AppBarTheme(
-        backgroundColor: bg,
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-        centerTitle: false,
-        titleTextStyle: TextStyle(
-          fontSize: 20,
-          fontWeight: FontWeight.w700,
-          color: dynamic_.onSurface,
-        ),
-      ),
-    );
-  }
-
   /// Experimental light theme — exposes the same accent on a paper-white
   /// scaffold. Most digaudio widgets currently hardcode `Colors.white*`
   /// for foreground/dividers (artefact of the dark-only roots); they

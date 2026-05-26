@@ -7,6 +7,60 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.30.29] — 2026-05-27
+
+### Fixed (CRITICAL — nothing played from Random picks or Album view)
+- `_publishQueue()` extracted in v0.30.26 was calling itself
+  recursively instead of pushing to `audio_service`'s `queue` —
+  every `setQueue` blew the stack before reaching `setAudioSource`,
+  so taps on Random picks and the Album view's Play button just
+  silently no-op'd. Restored the missing
+  `queue.add(_tracks.map(_toMediaItem).toList())` line. As a side
+  effect, the EQ section in Settings → Playback also re-appears
+  on its own — its placeholder showed because
+  `AndroidEqualizer.parameters` only resolves once a track has
+  actually played in the process.
+
+### Removed (Material You toggle and all associated wiring)
+- "Use system colours (Material You)" was a one-line toggle whose
+  behaviour was never visibly different from the brand-accent
+  theme on the user's device. Dropped the toggle from
+  Settings → Display, the `materialYouEnabled` field from
+  `DisplayPrefs`, the `DynamicColorBuilder` wrap in `app.dart`,
+  the `AppTheme.fromDynamic` helper, and the `dynamic_color`
+  dependency from `pubspec.yaml`. Old SharedPreferences key stays
+  on disk silently — harmless.
+- "Tracks" tab from Library. The track list was a 5-figure scroll
+  on any real library; the user always reaches an individual
+  track through Search, Albums or Artists instead. Library now
+  shows Albums / Artists / Genres / Decades / Playlists.
+
+### Added (Debug-mode toggle now actually gates verbose logs)
+- The `[digaudio.dbg]` engine / provider / mini-player prints are
+  now routed through a tiny `dbg()` helper that no-ops when
+  `Settings → Display → Debug logs` is off. Toggling the switch
+  takes effect immediately — no app restart. Default off; flip it
+  on before reproducing any audio bug.
+
+### Performance (Search results render instantly, no longer block on slow Subsonic)
+- `searchResultsProvider` converted from a single `FutureProvider`
+  that `await`ed every server's `search3` call before yielding
+  anything, into a `StreamProvider` with two stages:
+  - **Stage 1 (sub-50ms typical)** — local in-memory filter +
+    each server's FTS5 library cache, parallel, no network.
+    UI shows tracks the moment the 280 ms keystroke debounce
+    fires.
+  - **Stage 2** — live `search3` per server in parallel, each
+    capped at a 2-second timeout. One unreachable Tailscale
+    link can no longer gate the others; albums and artists
+    arrive only here (FTS5 covers tracks only).
+
+### Changed (Now Playing AppBar — album icon instead of tappable name)
+- Top-left of Now Playing previously rendered the album name as
+  an `InkWell`. The text-as-link affordance was unclear; replaced
+  with a plain `Icons.album_outlined` button that routes to the
+  album page on tap (tooltip carries the album name).
+
 ## [0.30.28] — 2026-05-27
 
 ### Changed (App icon v3)

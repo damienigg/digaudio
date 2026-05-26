@@ -96,20 +96,17 @@ class NowPlayingPage extends ConsumerWidget {
       child: Scaffold(
         appBar: AppBar(
           leading: IconButton(tooltip: 'Close', icon: const Icon(Icons.keyboard_arrow_down), onPressed: () => Navigator.maybePop(context)),
-          // Album name is tappable when there's an albumId to route
-          // to — taking the user to the album page is the natural
-          // "where did this come from" affordance. Local tracks with
-          // no albumId, or tracks where album is null, just render
-          // as plain text (track title fallback).
-          title: (track.album != null && track.albumId != null)
-              ? InkWell(
-                  onTap: () => context.push(
+          // Album icon button (only when there's an albumId to route to).
+          // Replaces the previous tappable album name — the icon makes
+          // the affordance unambiguous ("this takes me to the album").
+          title: (track.albumId != null)
+              ? IconButton(
+                  tooltip: track.album ?? 'Album',
+                  icon: const Icon(Icons.album_outlined),
+                  onPressed: () => context.push(
                       '/album/${track.origin.name}/${track.albumId}'),
-                  child: Text(track.album!,
-                      style: const TextStyle(fontSize: 14)),
                 )
-              : Text(track.album ?? track.title,
-                  style: const TextStyle(fontSize: 14)),
+              : null,
           actions: const [
             // Album mode toggle removed from the AppBar — it now lives
             // as "Stop at end of album" inside the sleep-timer sheet

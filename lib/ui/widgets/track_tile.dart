@@ -6,6 +6,7 @@ import '../../domain.dart';
 import 'artwork.dart';
 import 'theme_ext.dart';
 import 'track_actions.dart';
+import '../../core/dbg.dart';
 
 /// One row in any list of tracks. Tapping plays from this index in the given
 /// queue (so playback context — album/playlist — is preserved). Long-press or
@@ -50,8 +51,7 @@ class TrackTile extends ConsumerWidget {
       onTap: selecting
           ? () => ref.read(selectionProvider.notifier).toggle(t)
           : () {
-              // ignore: avoid_print
-              print('[digaudio.dbg] TrackTile.onTap: index=$index, '
+              dbg('TrackTile.onTap: index=$index, '
                   'title="${t.title}", queue.length=${queue.length}');
               engine.setQueue(queue, initialIndex: index);
             },

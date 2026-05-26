@@ -536,18 +536,6 @@ class DisplayPage extends ConsumerWidget {
             },
           ),
           _DisplayToggle(
-            title: 'Use system colours (Material You)',
-            subtitle:
-                'Android 12+: app accent follows the wallpaper palette. '
-                'Older devices ignore this toggle.',
-            value: ref.watch(displayPrefsProvider).materialYouEnabled,
-            onChanged: (v) async {
-              final p = ref.read(displayPrefsProvider);
-              p.materialYouEnabled = v;
-              await p.save();
-            },
-          ),
-          _DisplayToggle(
             title: 'Display infos for audio geeks',
             subtitle:
                 'Show the codec / bit-depth / sample-rate / device line '

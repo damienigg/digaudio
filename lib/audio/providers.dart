@@ -32,6 +32,7 @@ import 'bt_eq.dart';
 import 'player.dart';
 import 'radio_mode.dart';
 import 'sleep_timer.dart';
+import '../core/dbg.dart';
 
 /// Central Riverpod wiring.
 ///
@@ -356,30 +357,25 @@ class _StreamMirror<T> extends StateNotifier<T> {
   // for debug logging. The use_super_parameters lint preference loses
   // to the instrumentation need this version.
   _StreamMirror(T initial, Stream<T> source) : super(initial) {
-    // ignore: avoid_print
-    print('[digaudio.dbg] _StreamMirror<$T> ctor: initial=$initial, '
+    dbg('_StreamMirror<$T> ctor: initial=$initial, '
         'stream=${identityHashCode(source)}, '
         'isBroadcast=${source.isBroadcast}');
     _sub = source.listen(
       (v) {
-        // ignore: avoid_print
-        print('[digaudio.dbg] _StreamMirror<$T> onData: $v');
+        dbg('_StreamMirror<$T> onData: $v');
         state = v;
       },
       onError: (e, st) {
-        // ignore: avoid_print
-        print('[digaudio.dbg] _StreamMirror<$T> onError: $e');
+        dbg('_StreamMirror<$T> onError: $e');
       },
       onDone: () {
-        // ignore: avoid_print
-        print('[digaudio.dbg] _StreamMirror<$T> onDone');
+        dbg('_StreamMirror<$T> onDone');
       },
     );
   }
   @override
   void dispose() {
-    // ignore: avoid_print
-    print('[digaudio.dbg] _StreamMirror<$T> dispose');
+    dbg('_StreamMirror<$T> dispose');
     _sub.cancel();
     super.dispose();
   }
@@ -538,23 +534,27 @@ final libraryArtistsProvider = FutureProvider<List<Artist>>((ref) async {
 
 final searchQueryProvider = StateProvider<String>((_) => '');
 
-/// Multi-server, multi-origin search (v0.27.0).
+/// Multi-server, multi-origin search (v0.27.0, two-stage streaming since v0.30.29).
 ///
-/// Fans out the query in parallel across:
-///   - the local MediaStore (one origin, no FTS — in-memory contains-match);
-///   - for every configured Subsonic server: its FTS5 library cache **and**
-///     a live `search3` call (the cache covers what's been synced, the live
-///     call catches anything added server-side since).
+/// Yields TWICE so the UI can render instantly off the local + FTS5 cache
+/// (sub-50ms) without waiting on Subsonic round-trips:
+///   1. **Fast yield** — local MediaStore in-memory filter + each server's
+///      FTS5 library cache (parallel). No network. Renders the moment the
+///      user stops typing past the debounce.
+///   2. **Enriched yield** — adds live `search3` per server in parallel, each
+///      capped at a 2s timeout so one unreachable Tailscale link can't gate
+///      the others. Albums + artists arrive only here (FTS5 covers tracks
+///      only); a slow server simply contributes nothing for this query.
 ///
-/// Results dedup by a server-aware key (`origin:serverId:id`) — track ids
-/// can collide across unrelated Subsonic servers, so the bare `uniqueKey`
-/// would mis-merge. Local first, then per-server bundles in `serversProvider`
-/// order. "Show more" pagination in [SearchPage] still targets the active
-/// server only (other servers contribute their initial 20 and plateau);
-/// rich per-server pagination would clutter the UI for a marginal gain.
-final searchResultsProvider = FutureProvider<SearchResults>((ref) async {
+/// Dedup uses a server-aware key (`origin:serverId:id`) — bare ids collide
+/// across unrelated Subsonic servers. Local first, then per-server bundles
+/// in `serversProvider` order.
+final searchResultsProvider = StreamProvider<SearchResults>((ref) async* {
   final q = ref.watch(searchQueryProvider).trim();
-  if (q.isEmpty) return const SearchResults();
+  if (q.isEmpty) {
+    yield const SearchResults();
+    return;
+  }
   final local = ref.watch(localLibraryProvider);
   final resolver = ref.watch(subsonicResolverProvider);
   final cache = ref.read(subsonicCacheProvider);
@@ -567,36 +567,48 @@ final searchResultsProvider = FutureProvider<SearchResults>((ref) async {
       (t.album?.toLowerCase().contains(lq) ?? false)).take(30).toList();
 
   final clients = resolver.all.toList();
-  if (clients.isEmpty) return SearchResults(tracks: localTracks);
-
-  // Two queries per server: cache FTS + live search3, both fail-soft so a
-  // single unreachable server can never block results from the others.
-  final perServerFutures = clients.map((c) async {
-    final sid = c.serverId;
-    final fts = sid == null
-        ? const <Track>[]
-        : await cache.searchFts(sid, q, limit: 30)
-            .catchError((_) => const <Track>[]);
-    final remote = await c.search(q).catchError((_) => const SearchResults());
-    return (sid: sid, fts: fts, remote: remote);
-  });
-  final perServer = await Future.wait(perServerFutures);
 
   String key(Track t) => '${t.origin.name}:${t.serverId ?? ''}:${t.id}';
   final seen = <String>{...localTracks.map(key)};
   final tracks = <Track>[...localTracks];
+
+  // Stage 1 — local + FTS5 cache per server, parallel, no network.
+  final ftsFutures = clients.map((c) async {
+    final sid = c.serverId;
+    if (sid == null) return const <Track>[];
+    return cache.searchFts(sid, q, limit: 30).catchError((_) => const <Track>[]);
+  });
+  final ftsPerServer = await Future.wait(ftsFutures);
+  for (final fts in ftsPerServer) {
+    for (final t in fts) {
+      if (seen.add(key(t))) tracks.add(t);
+    }
+  }
+  yield SearchResults(tracks: List.unmodifiable(tracks));
+
+  if (clients.isEmpty) return;
+
+  // Stage 2 — live search3 per server in parallel, 2s timeout each so the
+  // slowest server can never gate the others.
+  final remoteFutures = clients.map((c) => c
+      .search(q)
+      .timeout(const Duration(seconds: 2),
+          onTimeout: () => const SearchResults())
+      .catchError((_) => const SearchResults()));
+  final perServerRemote = await Future.wait(remoteFutures);
+
   final albums = <Album>[];
   final artists = <Artist>[];
-  for (final r in perServer) {
-    for (final t in r.fts) {
+  for (final r in perServerRemote) {
+    for (final t in r.tracks) {
       if (seen.add(key(t))) tracks.add(t);
     }
-    for (final t in r.remote.tracks) {
-      if (seen.add(key(t))) tracks.add(t);
-    }
-    albums.addAll(r.remote.albums);
-    artists.addAll(r.remote.artists);
+    albums.addAll(r.albums);
+    artists.addAll(r.artists);
   }
-
-  return SearchResults(tracks: tracks, albums: albums, artists: artists);
+  yield SearchResults(
+    tracks: List.unmodifiable(tracks),
+    albums: List.unmodifiable(albums),
+    artists: List.unmodifiable(artists),
+  );
 });

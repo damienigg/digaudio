@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -78,49 +77,31 @@ class _DigaudioAppState extends ConsumerState<DigaudioApp> {
   @override
   Widget build(BuildContext context) {
     final mode = ref.watch(themeModeProvider);
-    final useMaterialYou = ref.watch(displayPrefsProvider).materialYouEnabled;
-    return DynamicColorBuilder(
-      builder: (lightDynamic, darkDynamic) {
-        // When the toggle is on AND the OS exposes a palette (Android
-        // 12+), wrap our theme with the dynamic scheme. Otherwise
-        // fall back to the brand-accent themes so existing devices
-        // (and pre-Android 12) keep their look.
-        // scaffoldBackgroundColor: Colors.transparent lets the global
-        // AppBackground (rendered via builder below) bleed through
-        // every page — Home / Search / Library, Album / Artist /
-        // Playlist, Settings, etc. Now Playing draws its own opaque
-        // _BgArtwork on top so the global bg is irrelevant there.
-        final lightTheme = (useMaterialYou && lightDynamic != null
-                ? AppTheme.fromDynamic(lightDynamic)
-                : AppTheme.light())
-            .copyWith(scaffoldBackgroundColor: Colors.transparent);
-        final darkTheme = (useMaterialYou && darkDynamic != null
-                ? AppTheme.fromDynamic(darkDynamic)
-                : AppTheme.dark())
-            .copyWith(scaffoldBackgroundColor: Colors.transparent);
-        return MaterialApp.router(
-          title: 'DIGaudio',
-          debugShowCheckedModeBanner: false,
-          theme: lightTheme,
-          darkTheme: darkTheme,
-          themeMode: mode,
-          routerConfig: _router,
-          builder: (context, child) {
-            if (child == null) return const SizedBox.shrink();
-            // Wrap every route with a Stack: solid theme-surface
-            // base + optional AppBackground (artwork or icon) + the
-            // active page on top. Scaffolds are transparent (theme
-            // override above) so the bg reads through their bodies.
-            return Consumer(builder: (ctx, ref, _) {
-              final enabled =
-                  ref.watch(displayPrefsProvider).appBackgroundEnabled;
-              return Stack(fit: StackFit.expand, children: [
-                if (enabled) const AppBackground(),
-                child,
-              ]);
-            });
-          },
-        );
+    // scaffoldBackgroundColor: Colors.transparent lets the global
+    // AppBackground (rendered via builder below) bleed through every
+    // page. Now Playing draws its own opaque _BgArtwork on top so the
+    // global bg is irrelevant there.
+    final lightTheme =
+        AppTheme.light().copyWith(scaffoldBackgroundColor: Colors.transparent);
+    final darkTheme =
+        AppTheme.dark().copyWith(scaffoldBackgroundColor: Colors.transparent);
+    return MaterialApp.router(
+      title: 'DIGaudio',
+      debugShowCheckedModeBanner: false,
+      theme: lightTheme,
+      darkTheme: darkTheme,
+      themeMode: mode,
+      routerConfig: _router,
+      builder: (context, child) {
+        if (child == null) return const SizedBox.shrink();
+        return Consumer(builder: (ctx, ref, _) {
+          final enabled =
+              ref.watch(displayPrefsProvider).appBackgroundEnabled;
+          return Stack(fit: StackFit.expand, children: [
+            if (enabled) const AppBackground(),
+            child,
+          ]);
+        });
       },
     );
   }

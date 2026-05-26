@@ -10,7 +10,6 @@ import 'widgets/album_card.dart';
 import 'widgets/alpha_scroll.dart';
 import 'widgets/artwork.dart';
 import 'widgets/theme_ext.dart';
-import 'widgets/track_tile.dart';
 
 class LibraryPage extends ConsumerStatefulWidget {
   const LibraryPage({super.key});
@@ -37,7 +36,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 6,
+      length: 5,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Library'),
@@ -46,7 +45,6 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
             isScrollable: true,
             indicatorColor: Color(0xFF1ED760),
             tabs: [
-              Tab(text: 'Tracks'),
               Tab(text: 'Albums'),
               Tab(text: 'Artists'),
               Tab(text: 'Genres'),
@@ -56,7 +54,6 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
           ),
         ),
         body: const TabBarView(children: [
-          _TracksTab(),
           _AlbumsTab(),
           _ArtistsTab(),
           _GenresTab(),
@@ -146,24 +143,6 @@ class _DecadesTab extends ConsumerWidget {
           ),
         );
       },
-    );
-  }
-}
-
-class _TracksTab extends ConsumerWidget {
-  const _TracksTab();
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(libraryTracksProvider);
-    return state.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('$e', style: const TextStyle(color: Colors.redAccent))),
-      data: (tracks) => tracks.isEmpty
-          ? const _Empty('No tracks. (Sync the Subsonic library cache via Settings → Playback.)')
-          : ListView.builder(
-              itemCount: tracks.length,
-              itemBuilder: (_, i) => TrackTile(queue: tracks, index: i),
-            ),
     );
   }
 }
