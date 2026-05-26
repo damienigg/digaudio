@@ -14,6 +14,7 @@ import '../audio/providers.dart';
 import '../domain.dart';
 import '../subsonic/client.dart';
 import 'widgets/artwork.dart';
+import 'widgets/mini_player.dart';
 import 'widgets/theme_ext.dart';
 import 'widgets/track_tile.dart';
 
@@ -117,6 +118,11 @@ class NowPlayingPage extends ConsumerWidget {
             _LyricsTab(track: track),
           ]),
         ),
+        // Mini-player at the bottom of Now Playing too — gives quick
+        // transport access from the Queue + Lyrics tabs where the
+        // FAB isn't visible. Slightly redundant on the Player tab
+        // (transport is right above) but harmless.
+        bottomNavigationBar: const MiniPlayer(),
       ),
     );
   }

@@ -7,6 +7,23 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.30.23] — 2026-05-27
+
+### Added (Mini-player on Now Playing too)
+- Now Playing's Queue + Lyrics tabs had no transport visible — once
+  inside, the only way to pause/skip was to swipe back to the Player
+  tab. Added `bottomNavigationBar: const MiniPlayer()` to the
+  Now Playing Scaffold so transport is always one tap away,
+  regardless of which tab you're on. Slightly redundant on the
+  Player tab (the FAB is right above) but harmless.
+
+### Bundled
+- All v0.30.22 contents (shuffle setQueue fix, prev/next transport
+  accents, album AppBar → clickable link, TrackTile.onTap debug
+  print). v0.30.22's tag CI was cancelled by concurrency dedup
+  with the simultaneous main-push run, so the release APK never
+  shipped — folded those changes into this release.
+
 ## [0.30.22] — 2026-05-27
 
 ### Fixed (Shuffle-on + tap song = plays a random different song)
