@@ -290,6 +290,75 @@ final smartPlaylistsListProvider = StreamProvider<List<SmartPlaylist>>((ref) =>
 final playHistoryProvider = Provider<PlayHistoryManager>((ref) =>
     PlayHistoryManager(ref.watch(dbProvider)));
 
+/// Compact 30-day snapshot for the Home dashboard tile. Pulls only what
+/// the high-level summary needs (4 counters + top track + top artist) —
+/// the full StatsPage owns the heatmap, monthly tops, year-by-year etc.
+/// Kept light so Home rendering isn't gated on the 365-day heatmap query.
+final homeStatsProvider = FutureProvider<HomeStats>((ref) async {
+  final h = ref.watch(playHistoryProvider);
+  final r = ref.watch(trackResolverProvider);
+  const window = 30;
+  final total = await h.totalPlays(sinceDays: window);
+  final unique = await h.uniqueTracks(sinceDays: window);
+  final days = await h.listeningDays(sinceDays: window);
+  final streaks = await h.streaks();
+  final tops = await h.topTracks(sinceDays: window, limit: 20);
+  Track? topTrack;
+  for (final e in tops) {
+    final t = await r.resolve(e.trackKey);
+    if (t != null) {
+      topTrack = t;
+      break;
+    }
+  }
+  // Top artist derived from the same top-20 set so a single resolve loop
+  // covers both surfaces. Falls back to null when the window is empty.
+  final artistCounts = <String, int>{};
+  for (final e in tops) {
+    final t = await r.resolve(e.trackKey);
+    if (t == null) continue;
+    final a = t.displayArtist;
+    artistCounts[a] = (artistCounts[a] ?? 0) + e.count;
+  }
+  String? topArtist;
+  int topArtistCount = 0;
+  for (final e in artistCounts.entries) {
+    if (e.value > topArtistCount) {
+      topArtistCount = e.value;
+      topArtist = e.key;
+    }
+  }
+  return HomeStats(
+    plays: total,
+    uniqueTracks: unique,
+    listeningDays: days,
+    currentStreak: streaks.current,
+    topTrack: topTrack,
+    topArtist: topArtist,
+    topArtistPlays: topArtistCount,
+  );
+});
+
+class HomeStats {
+  final int plays;
+  final int uniqueTracks;
+  final int listeningDays;
+  final int currentStreak;
+  final Track? topTrack;
+  final String? topArtist;
+  final int topArtistPlays;
+  const HomeStats({
+    required this.plays,
+    required this.uniqueTracks,
+    required this.listeningDays,
+    required this.currentStreak,
+    required this.topTrack,
+    required this.topArtist,
+    required this.topArtistPlays,
+  });
+  bool get isEmpty => plays == 0;
+}
+
 final trackPositionsProvider = Provider<TrackPositionsManager>((ref) =>
     TrackPositionsManager(ref.watch(dbProvider)));
 

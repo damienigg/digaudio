@@ -5,8 +5,10 @@ import 'package:go_router/go_router.dart';
 import '../audio/providers.dart';
 import '../domain.dart';
 import 'widgets/album_card.dart';
+import 'widgets/artwork.dart';
 import 'widgets/theme_ext.dart';
-import 'widgets/track_tile.dart';
+
+const _accent = Color(0xFF1ED760);
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
@@ -48,6 +50,7 @@ class HomePage extends ConsumerWidget {
                 padding: const EdgeInsets.only(bottom: 24),
                 children: [
                   const _HomeHero(),
+                  const _StatsDashboard(),
                   _Section(title: 'Newest releases', child: _AlbumRow(state: newestAlbums)),
                   // Section hides itself when there's no recent-play data
                   // (fresh install / fresh server) — avoids an empty row.
@@ -62,7 +65,7 @@ class HomePage extends ConsumerWidget {
                             title: 'Recently played',
                             child: _AlbumRow(state: recentAlbums)),
                   ),
-                  _Section(title: 'Random picks', child: _TracksColumn(state: random)),
+                  _Section(title: 'Random picks', child: _TracksRow(state: random)),
                 ],
               ),
             ),
@@ -180,17 +183,236 @@ class _AlbumRow extends StatelessWidget {
       );
 }
 
-class _TracksColumn extends StatelessWidget {
+class _TracksRow extends ConsumerWidget {
   final AsyncValue<List<Track>> state;
-  const _TracksColumn({required this.state});
+  const _TracksRow({required this.state});
   @override
-  Widget build(BuildContext context) => state.when(
-        loading: () => const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator())),
-        error: (e, _) => Text('$e', style: const TextStyle(color: Colors.redAccent)),
-        data: (tracks) => Column(
+  Widget build(BuildContext context, WidgetRef ref) => SizedBox(
+        height: 200,
+        child: state.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => Text('$e', style: const TextStyle(color: Colors.redAccent)),
+          data: (tracks) => tracks.isEmpty
+              ? Text('Nothing here yet.', style: TextStyle(color: context.textMuted))
+              : ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: tracks.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 12),
+                  itemBuilder: (_, i) => _TrackCard(queue: tracks, index: i),
+                ),
+        ),
+      );
+}
+
+class _TrackCard extends ConsumerWidget {
+  final List<Track> queue;
+  final int index;
+  const _TrackCard({required this.queue, required this.index});
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = queue[index];
+    return InkWell(
+      onTap: () =>
+          ref.read(audioEngineProvider).setQueue(queue, initialIndex: index),
+      borderRadius: BorderRadius.circular(8),
+      child: SizedBox(
+        width: 140,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            for (var i = 0; i < tracks.length; i++) TrackTile(queue: tracks, index: i),
+            Artwork(coverArt: t.coverArt, origin: t.origin, size: 140),
+            const SizedBox(height: 8),
+            Text(t.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                    fontWeight: FontWeight.w600, fontSize: 13)),
+            Text(t.displayArtist,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: context.textTertiary, fontSize: 11)),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// High-level "play habits" dashboard surfaced on Home. Pulls from
+/// [homeStatsProvider] (sub-100ms typical) — a compact subset of what
+/// the full StatsPage offers, scoped to the last 30 days. Tap anywhere
+/// in the card to deep-link into the full page. Hides itself entirely
+/// while history is still empty so a fresh-install Home doesn't render
+/// a "0 / 0 / 0" eyesore.
+class _StatsDashboard extends ConsumerWidget {
+  const _StatsDashboard();
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final stats = ref.watch(homeStatsProvider);
+    return stats.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (s) {
+        if (s.isEmpty) return const SizedBox.shrink();
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
+          child: InkWell(
+            onTap: () => context.push('/stats'),
+            borderRadius: BorderRadius.circular(14),
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
+              decoration: BoxDecoration(
+                color: context.dividerSoft,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                    color: _accent.withOpacity(0.18), width: 1),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.insights, size: 18, color: _accent),
+                      const SizedBox(width: 6),
+                      const Text('Your 30-day stats',
+                          style: TextStyle(
+                              fontSize: 14, fontWeight: FontWeight.w800)),
+                      const Spacer(),
+                      Icon(Icons.chevron_right,
+                          color: context.textTertiary, size: 20),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      _StatTile(value: '${s.plays}', label: 'plays'),
+                      _StatTile(value: '${s.uniqueTracks}', label: 'tracks'),
+                      _StatTile(value: '${s.listeningDays}', label: 'days'),
+                      _StatTile(
+                          value: '${s.currentStreak}',
+                          label: 'streak',
+                          icon: Icons.local_fire_department),
+                    ],
+                  ),
+                  if (s.topTrack != null || s.topArtist != null) ...[
+                    const SizedBox(height: 12),
+                    Divider(color: context.outlineStrong.withOpacity(0.3), height: 1),
+                    const SizedBox(height: 12),
+                  ],
+                  if (s.topTrack != null)
+                    _TopRow(
+                      label: 'TOP TRACK',
+                      title: s.topTrack!.title,
+                      subtitle: s.topTrack!.displayArtist,
+                      artwork: Artwork(
+                        coverArt: s.topTrack!.coverArt,
+                        origin: s.topTrack!.origin,
+                        size: 40,
+                      ),
+                    ),
+                  if (s.topArtist != null) ...[
+                    const SizedBox(height: 8),
+                    _TopRow(
+                      label: 'TOP ARTIST',
+                      title: s.topArtist!,
+                      subtitle: '${s.topArtistPlays} plays',
+                      artwork: CircleAvatar(
+                        radius: 20,
+                        backgroundColor: const Color(0xFF1E1E22),
+                        child: Text(
+                          s.topArtist!.isNotEmpty
+                              ? s.topArtist![0].toUpperCase()
+                              : '?',
+                          style: const TextStyle(fontWeight: FontWeight.w800),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _StatTile extends StatelessWidget {
+  final String value;
+  final String label;
+  final IconData? icon;
+  const _StatTile({required this.value, required this.label, this.icon});
+  @override
+  Widget build(BuildContext context) => Expanded(
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (icon != null) ...[
+                  Icon(icon, size: 18, color: _accent),
+                  const SizedBox(width: 2),
+                ],
+                Text(value,
+                    style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                        color: _accent,
+                        fontFeatures: [FontFeature.tabularFigures()])),
+              ],
+            ),
+            Text(label,
+                style: TextStyle(
+                    color: context.textTertiary,
+                    fontSize: 10,
+                    letterSpacing: 0.5)),
+          ],
+        ),
+      );
+}
+
+class _TopRow extends StatelessWidget {
+  final String label;
+  final String title;
+  final String subtitle;
+  final Widget artwork;
+  const _TopRow({
+    required this.label,
+    required this.title,
+    required this.subtitle,
+    required this.artwork,
+  });
+  @override
+  Widget build(BuildContext context) => Row(
+        children: [
+          artwork,
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(label,
+                    style: TextStyle(
+                        color: context.textTertiary,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1.2)),
+                const SizedBox(height: 2),
+                Text(title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        fontSize: 13, fontWeight: FontWeight.w700)),
+                Text(subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        color: context.textTertiary, fontSize: 11)),
+              ],
+            ),
+          ),
+        ],
       );
 }

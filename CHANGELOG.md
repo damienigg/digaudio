@@ -7,6 +7,24 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.30.30] — 2026-05-27
+
+### Changed (Home — Random picks horizontal + stats dashboard)
+- "Random picks" was a 20-row vertical column that pushed every other
+  section off-screen. Re-shaped to match "Newest releases" /
+  "Recently played" — a horizontal `ListView` of 140-wide cards
+  (artwork + title + artist), tap → engine.setQueue at the right
+  index so the whole row plays back as the queue.
+- New `_StatsDashboard` card surfaces the high-level 30-day play
+  habits inline on Home: 4 counters (plays / unique tracks /
+  listening days / current streak) plus the top track and top
+  artist of the window. Tap anywhere on the card to deep-link
+  into the full `/stats` page. Hidden entirely when history is
+  empty so a fresh install doesn't show "0 / 0 / 0 / 0".
+- Backed by the new lightweight `homeStatsProvider` — pulls only
+  the dashboard subset (no 365-day heatmap, no monthly / yearly
+  tops) so Home rendering isn't gated on the full Stats query.
+
 ## [0.30.29] — 2026-05-27
 
 ### Fixed (CRITICAL — nothing played from Random picks or Album view)
