@@ -102,7 +102,10 @@ class NowPlayingPage extends ConsumerWidget {
               : Text(track.album ?? track.title,
                   style: const TextStyle(fontSize: 14)),
           actions: const [
-            _AlbumModeAction(),
+            // Album mode toggle removed from the AppBar — it now lives
+            // as "Stop at end of album" inside the sleep-timer sheet
+            // (the round album icon was ambiguous on its own; users
+            // didn't recognise it as a stop-after affordance).
             _ShareAction(),
             _SpeedAction(),
             _SleepAction(),
@@ -726,31 +729,11 @@ class _ShareAction extends ConsumerWidget {
   }
 }
 
-/// AppBar action: "Stop after this album". When armed, the engine
-/// pauses as soon as the next track switch leaves the current album.
-/// One-tap toggle; the chip turns accent when armed.
-class _AlbumModeAction extends ConsumerWidget {
-  const _AlbumModeAction();
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final armed = ref.watch(albumModeArmedProvider).valueOrNull ?? false;
-    return IconButton(
-      tooltip: armed ? 'Cancel album-end stop' : 'Stop after this album',
-      onPressed: () {
-        final svc = ref.read(albumModeProvider);
-        if (armed) {
-          svc.disarm();
-        } else {
-          svc.armForCurrent();
-        }
-      },
-      icon: Icon(
-        armed ? Icons.album : Icons.album_outlined,
-        color: armed ? _accent : context.textSecondary,
-      ),
-    );
-  }
-}
+// `_AlbumModeAction` removed in v0.30.25 — the round album icon was
+// ambiguous on its own. The feature lives under
+// "Stop at end of album" inside the sleep-timer sheet
+// ([_SleepAction._show]). The underlying `AlbumModeService` is still
+// the implementation.
 
 /// Direct favorite toggle on Now Playing — no need to dive into the
 /// actions sheet. Reads [favoriteKeysProvider] so it lights up the
@@ -978,7 +961,8 @@ class _SleepAction extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final remaining = ref.watch(sleepRemainingProvider).valueOrNull;
     final endOfTrack = ref.watch(sleepEndOfTrackProvider).valueOrNull ?? false;
-    final active = remaining != null || endOfTrack;
+    final albumArmed = ref.watch(albumModeArmedProvider).valueOrNull ?? false;
+    final active = remaining != null || endOfTrack || albumArmed;
     return TextButton(
       onPressed: () => _show(context, ref),
       style: TextButton.styleFrom(
@@ -992,7 +976,9 @@ class _SleepAction extends ConsumerWidget {
           if (active) ...[
             const SizedBox(width: 4),
             Text(
-              remaining != null ? _fmt(remaining) : 'EOT',
+              remaining != null
+                  ? _fmt(remaining)
+                  : (albumArmed ? 'EOA' : 'EOT'),
               style: const TextStyle(
                   fontSize: 12, fontFeatures: [FontFeature.tabularFigures()]),
             ),
@@ -1004,6 +990,9 @@ class _SleepAction extends ConsumerWidget {
 
   Future<void> _show(BuildContext context, WidgetRef ref) {
     final timer = ref.read(sleepTimerProvider);
+    final albumMode = ref.read(albumModeProvider);
+    final albumArmed = ref.read(albumModeArmedProvider).valueOrNull ?? false;
+    final anyActive = timer.active || albumArmed;
     return showModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xFF18181B),
@@ -1022,7 +1011,18 @@ class _SleepAction extends ConsumerWidget {
               title: const Text('Stop at end of current track'),
               onTap: () {
                 Navigator.pop(context);
+                // Cancel any other sleep mode first.
+                albumMode.disarm();
                 timer.startAtEndOfTrack();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.album_outlined),
+              title: const Text('Stop at end of album'),
+              onTap: () {
+                Navigator.pop(context);
+                timer.cancel();
+                albumMode.armForCurrent();
               },
             ),
             Divider(height: 1, color: context.dividerSoft),
@@ -1032,17 +1032,20 @@ class _SleepAction extends ConsumerWidget {
                 title: Text('$mins minutes'),
                 onTap: () {
                   Navigator.pop(context);
+                  albumMode.disarm();
                   timer.start(Duration(minutes: mins));
                 },
               ),
-            if (timer.active) ...[
+            if (anyActive) ...[
               Divider(height: 1, color: context.dividerSoft),
               ListTile(
                 leading: const Icon(Icons.cancel_outlined, color: Colors.redAccent),
-                title: const Text('Cancel timer', style: TextStyle(color: Colors.redAccent)),
+                title: const Text('Cancel timer',
+                    style: TextStyle(color: Colors.redAccent)),
                 onTap: () {
                   Navigator.pop(context);
                   timer.cancel();
+                  albumMode.disarm();
                 },
               ),
             ],

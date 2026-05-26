@@ -234,8 +234,13 @@ class AudioEngine extends BaseAudioHandler {
 
     // Crossfade trigger: enter the overlap window when we're inside the
     // last [crossfadeMs] of the current track. Suppressed when looping
-    // a single track (we want the natural loop, not a transition).
+    // a single track (we want the natural loop, not a transition), and
+    // when [pauseAtEndOfTrack] is armed (sleep-timer EOT / album mode
+    // — we want the track to end naturally so `_onProcessingState`
+    // can honour the gate; otherwise crossfade swaps to the next
+    // track and the `completed` event never fires for the gated one).
     if (_inTransition || _loopMode == LoopMode.one) return;
+    if (pauseAtEndOfTrack) return;
     final fadeMs = _prefs.crossfadeMs;
     if (fadeMs <= 0) return;
     final dur = _primary.duration;

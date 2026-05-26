@@ -7,6 +7,32 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.30.25] — 2026-05-27
+
+### Changed (Album mode moved into the sleep-timer sheet)
+- The standalone round album icon in the Now Playing AppBar was
+  ambiguous — users didn't read it as a "stop after this album"
+  affordance ("a quoi sert l'icone ronde a cote du share ?").
+  Removed the icon entirely. Added a "Stop at end of album" entry
+  inside the sleep-timer sheet alongside "Stop at end of current
+  track" + duration options. The bedtime icon now shows `EOA` when
+  album mode is armed (alongside the existing `EOT` and countdown
+  labels).
+- All three sleep modes are mutually exclusive in the sheet —
+  picking one cancels the others. Single "Cancel timer" entry
+  clears whichever is active.
+
+### Fixed (Crossfade + sleep EOT conflict)
+- With both crossfade enabled and "Stop at end of current track"
+  armed, the crossfade trigger (`_onPosition` swap to secondary
+  when within the fade window) ended the current track via
+  `_primary.stop()` instead of letting it complete naturally — so
+  `_onProcessingState(completed)` never fired for the gated track
+  and the sleep timer didn't pause. Fix: also guard the crossfade
+  trigger behind `pauseAtEndOfTrack`. When the gate is armed, the
+  track ends naturally (no crossfade), the completed event fires,
+  the gate is honoured.
+
 ## [0.30.24] — 2026-05-27
 
 ### Changed (Real music sharing instead of a text card)
