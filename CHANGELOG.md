@@ -7,6 +7,30 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.30.14] — 2026-05-27
+
+### Fixed (Notification rich actions never rendered)
+- v0.23.1 declared `MediaAction.fastForward` + `MediaAction.rewind`
+  in `systemActions` (so external surfaces like Bluetooth media
+  buttons and Android Auto could call into the handlers), but
+  forgot to put them in the `controls` list — which is what
+  actually renders icons on the notification. The 10-second skip
+  arrows were never visible to users since v0.23.1.
+- Fix: 5-control podcast layout — `rewind / prev / play-pause /
+  next / fastForward`. `MediaControl.stop` dropped (max 5 controls
+  on Android; swipe-to-dismiss already handles "close"). Compact
+  view indices `[1, 2, 3]` = prev / play-pause / next, so the
+  rewind / fastForward arrows show only when the user expands the
+  notification (standard placement).
+
+### Added (Debug mode toggle)
+- Settings → Display → "Debug mode" — toggles whether the
+  `[digaudio.dbg]` engine + provider + mini-player prints fire in
+  logcat. Default OFF; prints currently still fire unconditionally
+  in the engine (legacy from the bug hunt). A follow-up release
+  will gate the prints on this flag — for now the toggle is the
+  user-visible affordance, the wiring lands later.
+
 ## [0.30.13] — 2026-05-27
 
 ### Fixed (THE mini-player race — for real this time, with proof)

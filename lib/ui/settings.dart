@@ -564,6 +564,21 @@ class DisplayPage extends ConsumerWidget {
               ref.invalidate(displayPrefsProvider);
             },
           ),
+          _DisplayToggle(
+            title: 'Debug mode',
+            subtitle:
+                'Stream verbose [digaudio.dbg] engine / provider / '
+                'mini-player events to logcat (adb logcat | grep digaudio.dbg). '
+                'Off by default — turn on when reproducing a bug so the '
+                'maintainer can read the chain.',
+            value: ref.watch(displayPrefsProvider).debugLogsEnabled,
+            onChanged: (v) async {
+              final p = ref.read(displayPrefsProvider);
+              p.debugLogsEnabled = v;
+              await p.save();
+              ref.invalidate(displayPrefsProvider);
+            },
+          ),
         ],
       ),
     );

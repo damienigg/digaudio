@@ -914,11 +914,20 @@ class AudioEngine extends BaseAudioHandler {
   void _broadcastState() {
     final playing = _primary.playing;
     playbackState.add(playbackState.value.copyWith(
+      // 5 controls is the Android max. Notification shows rewind / prev
+      // / play-pause / next / fastForward — same shape as podcast apps.
+      // Stop is no longer in the list (user swipes the notification to
+      // dismiss when paused via `androidStopForegroundOnPause: true`).
+      // androidCompactActionIndices [1, 2, 3] picks prev/play-pause/next
+      // for the collapsed view; rewind + fastForward only appear when
+      // the user expands the notification, which is the standard place
+      // for them.
       controls: [
+        MediaControl.rewind,
         MediaControl.skipToPrevious,
         if (playing) MediaControl.pause else MediaControl.play,
         MediaControl.skipToNext,
-        MediaControl.stop,
+        MediaControl.fastForward,
       ],
       systemActions: const {
         MediaAction.seek,
@@ -930,7 +939,7 @@ class AudioEngine extends BaseAudioHandler {
         MediaAction.setRepeatMode,
         MediaAction.setSpeed,
       },
-      androidCompactActionIndices: const [0, 1, 2],
+      androidCompactActionIndices: const [1, 2, 3],
       processingState: const {
         ProcessingState.idle: AudioProcessingState.idle,
         ProcessingState.loading: AudioProcessingState.loading,

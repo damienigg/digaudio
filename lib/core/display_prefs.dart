@@ -14,6 +14,7 @@ class DisplayPrefs {
   static const _kMaterialYou = 'display.material_you';
   static const _kAudioGeekInfo = 'display.audio_geek_info';
   static const _kRecentSearches = 'display.recent_searches';
+  static const _kDebugLogsEnabled = 'display.debug_logs';
 
   /// Cap on persisted recent searches — anything past this is the
   /// LRU tail and gets evicted. 10 fits comfortably in the empty
@@ -46,6 +47,14 @@ class DisplayPrefs {
   /// for 99 % of tracks; the line ends up being visual noise for
   /// non-audiophile users. Opt-in via Settings → Display.
   bool audioGeekInfoEnabled = false;
+
+  /// Whether the `[digaudio.dbg]` verbose engine + provider +
+  /// mini-player prints fire in logcat. Default off so production
+  /// users don't get spammed. Currently *not* wired — the prints
+  /// fire unconditionally until a follow-up release switches them
+  /// to gate on this flag. Surfaced now so the toggle exists when
+  /// we flip the wiring.
+  bool debugLogsEnabled = false;
 
   /// LRU-ordered list of recent search queries (most recent first).
   /// Surfaced as tappable chips on the Search empty-state so the user
@@ -93,6 +102,7 @@ class DisplayPrefs {
     nowPlayingTint = p.getBool(_kNowPlayingTint) ?? true;
     materialYouEnabled = p.getBool(_kMaterialYou) ?? false;
     audioGeekInfoEnabled = p.getBool(_kAudioGeekInfo) ?? false;
+    debugLogsEnabled = p.getBool(_kDebugLogsEnabled) ?? false;
     final raw = p.getString(_kRecentSearches);
     if (raw != null && raw.isNotEmpty) {
       recentSearches =
@@ -107,6 +117,7 @@ class DisplayPrefs {
     await p.setBool(_kNowPlayingTint, nowPlayingTint);
     await p.setBool(_kMaterialYou, materialYouEnabled);
     await p.setBool(_kAudioGeekInfo, audioGeekInfoEnabled);
+    await p.setBool(_kDebugLogsEnabled, debugLogsEnabled);
     await p.setString(_kRecentSearches, jsonEncode(recentSearches));
   }
 }
