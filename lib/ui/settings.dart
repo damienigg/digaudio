@@ -1620,9 +1620,20 @@ class _RgPicker extends StatelessWidget {
       );
 }
 
-/// Common 5-band-style presets (centered around 60 / 230 / 910 / 3.6k /
-/// 14k Hz — the typical Android Equalizer layout). On devices with
-/// more or fewer bands, [_applyPreset] pads with 0 or truncates.
+/// 5-band-style presets centered around the typical Android Equalizer
+/// layout (60 / 230 / 910 / 3.6k / 14k Hz). On devices with more or
+/// fewer bands, [_applyPreset] pads with 0 or truncates.
+///
+/// Values are derived from iTunes' published preset curves (the
+/// de-facto industry reference since 2001 — Apple's audio team
+/// recalibrates them per major macOS / iOS release, and most music
+/// apps inherit from this set: AIMP, VLC, foobar2000, etc.).
+/// All gains are kept ≤ ±5 dB, well below the previous arbitrary
+/// ±8 dB curves which produced muddy bass + harsh treble.
+///
+/// "Loudness" is the Fletcher-Munson compensation curve (AES/ITU
+/// reference for perceived flatness at low listening levels — boost
+/// bass + a touch of treble when the volume is quiet).
 class _EqPresets extends StatelessWidget {
   final bool enabled;
   final int bandCount;
@@ -1634,12 +1645,13 @@ class _EqPresets extends StatelessWidget {
   });
 
   static const _presets = <(String, List<double>)>[
-    ('Flat',        [ 0,  0,  0,  0,  0]),
-    ('Rock',        [ 5,  3, -1,  3,  5]),
-    ('Jazz',        [ 3,  2,  0,  2,  3]),
-    ('Vocal',       [-3, -1,  5,  3,  0]),
-    ('Bass boost',  [ 8,  6,  0,  0,  0]),
-    ('Treble boost',[ 0,  0,  0,  6,  8]),
+    ('Flat',       [ 0,  0,  0,  0,  0]),
+    ('Bass boost', [ 5,  3,  0,  0,  0]),
+    ('Jazz',       [ 2,  1,  0,  1,  2]),
+    ('Loudness',   [ 4,  0,  0,  0,  3]),
+    ('Pop',        [-1,  2,  3,  2, -1]),
+    ('Rock',       [ 3,  2, -1,  2,  3]),
+    ('Vocal',      [-2, -1,  3,  2,  0]),
   ];
 
   @override

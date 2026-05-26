@@ -7,6 +7,47 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.30.4] — 2026-05-27
+
+### Fixed (Subsonic artwork never loaded on Now Playing)
+- **Root cause**: `_PlayerTab` watched `positionProvider` at the tab
+  level. That stream emits ~10 Hz; the entire tab — including the
+  `Artwork` widget — rebuilt every 100 ms. Each rebuild called
+  `SubsonicClient.coverUri(coverArt)`, which mints a fresh
+  salt+token per call, so the signed URL changed every frame.
+  `CachedNetworkImage` saw a "new" URL every 100 ms, cancelled the
+  in-flight fetch, and restarted — the cover never had time to
+  land. Up Next thumbnails were unaffected because they're inside a
+  separate widget below; the main artwork was the visible casualty.
+- **Fix**: extracted scrubber + time labels into a `_ScrubberAndTimes`
+  ConsumerWidget that owns the position watch. The parent tab no
+  longer rebuilds on tick — Artwork, title, transport, audio-info
+  line all stay stable across the entire track. Cover loads once
+  per `_onTrackChanged` and stays put.
+
+### Fixed (Audio routing line truncated past the device name)
+- v0.29.0 set `maxLines: 1` on the routing line; phones with normal
+  411 dp width clipped everything past the device name, hiding the
+  output sample rate + the resampling ⚠ glyph (the whole point of
+  the line). Bumped to `maxLines: 2`.
+
+### Changed (EQ presets — softer, industry-grounded curves)
+- Old presets were arbitrary internet-rule-of-thumb values capping
+  at +8 dB (muddy bass, harsh treble — user-reported as "tres
+  extremes"). Replaced with a curated 7-preset set derived from
+  iTunes (Apple's audio team has been refining these since 2001;
+  AIMP / VLC / foobar2000 inherit from this lineage). Max gain
+  capped at ±5 dB.
+  - Kept: **Flat**, **Rock** (softened), **Jazz** (softened),
+    **Bass boost** (softened), **Vocal** (softened).
+  - Added: **Pop** (vocal-forward V-flip), **Loudness**
+    (Fletcher-Munson curve — AES/ITU reference for low-volume
+    listening, boosts bass + a touch of treble).
+  - Dropped: Treble boost (rarely used; the lighter Loudness curve
+    covers the "add some sparkle" use case).
+- Existing custom user gains are untouched — only the labelled
+  presets changed.
+
 ## [0.30.3] — 2026-05-27
 
 ### Fixed

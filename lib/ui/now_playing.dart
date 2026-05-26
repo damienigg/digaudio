@@ -131,10 +131,16 @@ class _PlayerTab extends ConsumerWidget {
     final engine = ref.watch(audioEngineProvider);
     final state = ref.watch(playerStateProvider).valueOrNull;
     final playing = state?.playing ?? false;
-    final position = ref.watch(positionProvider).valueOrNull ?? Duration.zero;
-    final duration = ref.watch(durationProvider).valueOrNull ?? Duration.zero;
     final shuffle = ref.watch(shuffleProvider).valueOrNull ?? false;
     final loop = ref.watch(loopProvider).valueOrNull ?? LoopMode.off;
+
+    // Position is NOT watched here — it ticks at ~10 Hz and would
+    // rebuild the entire tab (including Artwork) every 100 ms.
+    // [Artwork] then re-builds the signed Subsonic cover URL each
+    // time (fresh salt+token per call) → CachedNetworkImage cancels
+    // the in-flight fetch and restarts, infinitely → cover never
+    // renders. Position lives inside [_ScrubberAndTimes] which is
+    // the only widget that actually needs to rebuild on tick.
 
     return SafeArea(
       child: Padding(
@@ -149,6 +155,7 @@ class _PlayerTab extends ConsumerWidget {
                   child: Artwork(
                     coverArt: track.coverArt,
                     origin: track.origin,
+                    serverId: track.serverId,
                     size: 600,
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -179,21 +186,7 @@ class _PlayerTab extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: 12),
-            Slider(
-              value: position.inMilliseconds.toDouble().clamp(0, duration.inMilliseconds.toDouble()),
-              max: duration.inMilliseconds.toDouble().clamp(1, double.maxFinite),
-              onChanged: (v) => engine.seek(Duration(milliseconds: v.toInt())),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(_fmt(position), style: TextStyle(color: context.textTertiary, fontSize: 11)),
-                  Text(_fmt(duration), style: TextStyle(color: context.textTertiary, fontSize: 11)),
-                ],
-              ),
-            ),
+            const _ScrubberAndTimes(),
             const SizedBox(height: 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -583,6 +576,49 @@ String _fmt(Duration d) {
   return '$m:${s.toString().padLeft(2, '0')}';
 }
 
+/// Scrubber + start/end time labels. Isolated so the ~10 Hz position
+/// stream only rebuilds these tiny widgets — keeping the artwork +
+/// transport + audio-info line out of the rebuild path. Critical for
+/// the Subsonic cover: a rebuild calls [SubsonicClient.coverUri]
+/// which generates a fresh salt+token URL each time, and
+/// CachedNetworkImage would cancel + restart the fetch on every URL
+/// change, never letting the cover land.
+class _ScrubberAndTimes extends ConsumerWidget {
+  const _ScrubberAndTimes();
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final engine = ref.watch(audioEngineProvider);
+    final position =
+        ref.watch(positionProvider).valueOrNull ?? Duration.zero;
+    final duration =
+        ref.watch(durationProvider).valueOrNull ?? Duration.zero;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Slider(
+          value: position.inMilliseconds
+              .toDouble()
+              .clamp(0, duration.inMilliseconds.toDouble()),
+          max: duration.inMilliseconds.toDouble().clamp(1, double.maxFinite),
+          onChanged: (v) => engine.seek(Duration(milliseconds: v.toInt())),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(_fmt(position),
+                  style: TextStyle(color: context.textTertiary, fontSize: 11)),
+              Text(_fmt(duration),
+                  style: TextStyle(color: context.textTertiary, fontSize: 11)),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 /// Codec · bit-depth/sample-rate · bitrate  →  device · output-rate
 ///
 /// The whole point is *visual* verification of bit-transparent playback:
@@ -625,7 +661,11 @@ class _AudioInfoLine extends ConsumerWidget {
       padding: const EdgeInsets.only(top: 4),
       child: Text(
         body,
-        maxLines: 1,
+        // Allow wrapping — single line was clipping device name +
+        // output kHz + ⚠ on phones with default 411 dp width. Two
+        // lines fit `FLAC · 24-bit/96 kHz · 938 kbps  →  USB:
+        // <device>` cleanly even with longer brand names.
+        maxLines: 2,
         overflow: TextOverflow.ellipsis,
         style: TextStyle(
           color: resampling ? Colors.amber : context.textTertiary,
