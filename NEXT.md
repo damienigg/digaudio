@@ -55,62 +55,55 @@ Smoke checks for what shipped this morning + carryover from v0.28.0:
    TicWatch → play on phone → Media Controls tile on the watch
    shows transport. No app code on the watch — system handles it.
 
-## Open follow-ups (deferred, ordered by impact)
+## Open follow-ups (post 2026-05-27 audit)
 
-### Genuinely useful next sessions (own-session items)
+After today's audit pass, the picture is crisp: exactly **one** real
+code item remains as a pre-v1.0.0 ship candidate, plus one optional
+post-1.0 polish. Three former L items were dropped (no real use case
+relative to cost) — see `TODO.md` § "Items deliberately not on the
+roadmap" for the rationale.
 
-1. **Last.fm direct scrobble** (M, deferred from v0.28 bundle)
-   - Why deferred: needs `LASTFM_SHARED_SECRET` added to GH repo
-     secrets + `url_launcher` dep + browser-roundtrip auth flow
-     (request token → open `last.fm/api/auth/?api_key=X&token=Y` in
-     browser → user approves → app calls `auth.getSession` → stores
-     session key). Not big code-wise but UX flow wants careful walk.
-   - Today: Subsonic-side scrobble already forwards to Last.fm when
-     the server is configured, so this is only useful if your
-     Subsonic doesn't have LFM integration.
-   - First step tomorrow: decide whether you want it at all (the
-     existing Subsonic→LFM path may already cover you).
+### v0.30.0 candidate — Last.fm scrobble direct (M, ~1h session)
 
-2. **i18n (FR translation)** (hours of focused work)
-   - Bootstrap is mechanical (~15 min): add `flutter_localizations`
-     + `intl` deps, `l10n.yaml` config, ARB scaffold.
-   - Then: every `'...'` literal across ~30-40 UI files becomes
-     `AppLocalizations.of(context)!.someString`. Probably ~2-3 h of
-     mechanical work + a translation pass.
-   - Triggers: if you actually want the app in French. Otherwise
-     skip — the codebase already works in English for any English
-     speaker.
+Confirmed real value: user is on **Navidrome**, whose Last.fm
+integration is metadata-only (artist images / similar) and does
+NOT forward user scrobbles to Last.fm. So a direct scrobble path
+in digaudio adds genuine coverage, not duplication.
 
-### Optional ambitious chunks (no commitment)
+Needs:
+- `LASTFM_SHARED_SECRET` secret added to GH repo + CI
+- `url_launcher` dep
+- Browser-roundtrip auth: request token → open
+  `last.fm/api/auth/?api_key=X&token=Y` → user approves →
+  `auth.getSession` → store session key
+- Future scrobbles use that key in parallel with the existing
+  Subsonic + ListenBrainz scrobblers
 
-3. **Album-art waveform scrubber** (L) — precomputed PCM peaks from
-   FLAC/MP3 headers, cached alongside the audio file. Visual upgrade
-   + faster scrubbing reference. Niche but slick.
-4. **BPM-matched crossfade** (L) — detect BPM (Subsonic metadata or
-   in-app FFT estimate), skip the crossfade if next track has a
-   wildly different tempo. Niche but unique.
-5. **Listening parties / shared queue** (L) — real-time playback-state
-   sync across multiple devices (WebSocket relay or Tailscale-local
-   mesh). Deferred indefinitely — no real use case yet.
+### Post-v1.0 (optional) — i18n FR
 
-### Verify-only (no code — needs hardware)
+Bootstrap is mechanical (~15 min): `flutter_localizations` + `intl`
+deps, `l10n.yaml`, ARB scaffold. Then every `'...'` UI literal
+becomes `AppLocalizations.of(context)!.someString` (~2-3 h
+mechanical work). Trigger: if you actually want the app in FR.
+Otherwise skip — English works fine for a French speaker today.
 
-6. **FLAC end-to-end** — play a FLAC on real device, confirm
-   bit-perfect through Android's audio routing.
-7. **Wired USB DAC** — plug one in, confirm Android routes to it.
+### Verify-only (no code — covered visually by v0.29.0 line)
+
+FLAC end-to-end and wired-DAC routing are now both checkable at
+a glance via the Now Playing audio info line (codec · bit-depth/sr
++ device · output sr, amber + ⚠ on resampling). Plugging in a DAC
+or playing a 96 kHz FLAC is enough; no loop-back hardware needed.
 
 ## Path to v1.0.0
 
 What gates v1.0.0 = a real-device pass on every section of
-`TEST_PLAN.md`. The TEST_PLAN already covers everything that shipped
-in v0.22.x → v0.28.0 (widget, voice search, multi-server search,
-Wear OS mirror, admin scan). No code change required for v1.0.0 —
-just walking through `TEST_PLAN.md` on the phone and fixing whatever
-shows real-world quirks.
-
-After v1.0.0, the deferred items (Last.fm direct, i18n, waveform,
-BPM-match, parties) become "post-1.0 nice-to-haves" without a
-roadmap commitment.
+`TEST_PLAN.md`. The TEST_PLAN now covers everything through
+v0.29.0 (widget, voice search, multi-server search, Wear OS mirror,
+admin scan, audio routing info line). The remaining decision is
+whether to ship Last.fm direct (v0.30.0) before or after the
+real-device validation pass — either order works. Post-v1.0:
+i18n is the only remaining open item, untaken until you actually
+want the app in French.
 
 ## Environment reminders
 

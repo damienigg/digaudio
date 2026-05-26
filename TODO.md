@@ -2,7 +2,7 @@
 
 What's left, organised by category + combo. Effort tags: **S** ≈ 30 min, **M** ≈ 1 h, **L** ≈ several hours (own session).
 
-**TL;DR**: the app is feature-complete vs the Substreamer / Symfonium baseline. Every "killer" feature (incl. homescreen widget, voice search, Wear OS mirror) is shipped or proven free. What follows is polish + ambitious standalone L items.
+**TL;DR (post 2026-05-27 audit)**: only **one** real code item left before v1.0.0 — **Last.fm scrobble direct** (Navidrome doesn't forward, confirmed). Everything else is non-code (TEST_PLAN.md real-device pass) or optional post-1.0 polish. Listening parties / waveform scrubber / BPM-match dropped to "not on roadmap" — niche items with no real use case relative to their cost.
 
 ---
 
@@ -24,14 +24,12 @@ What's left, organised by category + combo. Effort tags: **S** ≈ 30 min, **M**
 - ~~**Wear OS companion**~~ — **COVERED (no code)** — Wear OS 3+ system mirror handles transport
 - ~~**Widget artwork (v2)**~~ — **DONE v0.28.0** (Dart `WidgetArtFetcher` writes 256 px JPEG to tmp; Kotlin `BitmapFactory.decodeFile` + `setImageViewBitmap`; falls back to launcher icon on null). Local-origin tracks still have no artwork (same hidden cost as MediaItem.artUri; deferred to a v3 only if a use case appears).
 
-### E · Social & external — 2/4 remaining
+### E · Social & external — 1/3 remaining
 
 - ~~**ListenBrainz scrobble direct**~~ — **DONE v0.24.1** (token-based, parallel to Subsonic scrobble)
 - ~~**Now-Playing share**~~ — **DONE v0.24.0** (text card via share_plus)
-- **Last.fm scrobble direct** — *(M, deferred from v0.28 bundle)*  
-  Needs: (1) `LASTFM_SHARED_SECRET` secret added to GH repo + CI; (2) `url_launcher` dep added; (3) OAuth-style flow — get request token → open browser to `last.fm/api/auth/?api_key=X&token=Y` → user approves → app calls `auth.getSession` → stores session key. All future scrobbles use that key. Not a huge piece of code but the UX flow (browser handoff + "I've approved" confirmation) wants careful walk-through. Realistic session item, not a bundle drop-in.
-- **Listening parties / shared queue** — *(L)*  
-  Real-time playback-state sync across multiple devices (WebSocket relay or Tailscale-local mesh). Still deferred until there's a real use case.
+- **Last.fm scrobble direct** — *(M, next ship candidate v0.30.0)*  
+  Confirmed real value via 2026-05-27 audit: user is on Navidrome, whose Last.fm integration is metadata-only and does NOT forward user scrobbles. Needs: (1) `LASTFM_SHARED_SECRET` secret added to GH repo + CI; (2) `url_launcher` dep added; (3) OAuth-style flow — get request token → open browser to `last.fm/api/auth/?api_key=X&token=Y` → user approves → app calls `auth.getSession` → stores session key. All future scrobbles use that key. Not a huge piece of code but the UX flow (browser handoff + "I've approved" confirmation) wants careful walk-through.
 
 ### F · Library management — 0/5 remaining ✓
 
@@ -40,18 +38,14 @@ What's left, organised by category + combo. Effort tags: **S** ≈ 30 min, **M**
 - ~~**Background download queue**~~ — **DONE v0.22.2** with in-app progress banner
 - ~~**Multi-server unified search**~~ — **DONE v0.27.0** (`Track.serverId` + `SubsonicResolver` per-track routing; fan-out FTS+search3 per server; `· <label>` chip when ≥2 servers). v1 limitations documented in CHANGELOG: "Show more" still active-server only; ratings/scrobble/cache routing still active-server (degrades silently for non-active-server tracks)
 
-### G · Long-tail polish — 3/7 remaining
+### G · Long-tail polish — 1/5 remaining (post-1.0 candidate only)
 
 - ~~**Accessibility audit**~~ — **DONE v0.23.2** (12 tooltips + alpha-scroll Semantics + heatmap Semantics wrapper)
 - ~~**Sleep-timer fade-out**~~ — **DONE v0.23.0** (10 s 1-second-stepped ramp; snapshot+restore on cancel)
 - ~~**Notification rich actions**~~ — **DONE v0.23.1** (skip 10 s back / forward via MediaAction.fastForward / .rewind)
 - ~~**Subsonic admin actions**~~ — **DONE v0.28.0** (`startScan` + `getScanStatus` + "Library scan (admin)" section on the server edit page; non-admin users see "Admin role required" inline). User mgmt deferred — admin scan covers the realistic "I just added music server-side" workflow; user CRUD is admin-console territory.
-- **Internationalisation** — *(M scaffold, hours of FR translation pass)*  
-  Everything is English today. Externalise strings via Flutter's `intl` package; ship a French translation first. Bootstrap is mechanical (l10n.yaml + ARB scaffold), translation pass itself is several hours of focus — own session.
-- **Album-art waveform scrubber** — *(L)*  
-  Replace the linear slider with a precomputed waveform (decode FLAC/MP3 header → PCM peaks → cached image alongside the cached audio file). Visual + faster scrubbing reference.
-- **BPM-matched crossfade** — *(L)*  
-  Detect BPM (either via Subsonic metadata or in-app FFT estimate), skip the crossfade if next track has a wildly different tempo. Niche but unique.
+- **Internationalisation (FR)** — *(M scaffold, hours of FR translation pass — deferred post-v1.0)*  
+  Everything is English today. Externalise strings via Flutter's `intl` package; ship a French translation first. Bootstrap is mechanical (l10n.yaml + ARB scaffold), translation pass itself is several hours of focus — own session. Not gating 1.0: app works in English for a French speaker today.
 
 ### Combo 2 — Pro-listener — 6/6 ✓
 
@@ -66,7 +60,7 @@ What's left, organised by category + combo. Effort tags: **S** ≈ 30 min, **M**
 |---|---|
 | 1 · Recommendation engine (Last.fm × FTS × smart playlists × Subsonic radio) | **4/4 ✓** |
 | 2 · Pro-listener (RG × crossfade × EQ presets × per-BT EQ × FLAC × wired-DAC) | **6/6 ✓** (FLAC + wired-DAC closed visually via v0.29.0 routing info line) |
-| 3 · Friend-share (ListenBrainz × Now-Playing share × listening parties × webhook) | **2/4** (ListenBrainz v0.24.1 + Now-Playing share v0.24.0; listening parties + webhook gateway deferred indefinitely — no use case) |
+| 3 · Friend-share (ListenBrainz × Now-Playing share × ~~listening parties × webhook~~) | **2/2 effective** (ListenBrainz v0.24.1 + Now-Playing share v0.24.0; listening parties + webhook gateway dropped 2026-05-27 audit — see "not on roadmap") |
 | 4 · Daily driver (Quick Settings tile × widget × Wear OS × Auto-play BT × Per-track resume) | **5/5 ✓** (Wear OS covered via system MediaSession mirror) |
 
 ---
@@ -74,8 +68,8 @@ What's left, organised by category + combo. Effort tags: **S** ≈ 30 min, **M**
 ## Suggested versioning sequence
 
 - ~~**v0.22.x** — F batch~~ DONE (cache auto-refresh / Recently played / DL queue)
-- ~~**v0.23.x** — G batch (partial)~~ DONE (sleep fade / notif rich actions / accessibility); i18n + waveform + BPM-match + admin remain
-- ~~**v0.24.x** — E batch (partial)~~ DONE (Now-Playing share / ListenBrainz); Last.fm direct (M) + listening parties (L) remain
+- ~~**v0.23.x** — G batch (partial)~~ DONE (sleep fade / notif rich actions / accessibility); i18n is the only remaining G item (deferred post-1.0; waveform + BPM-match dropped 2026-05-27 audit; admin shipped v0.28.0)
+- ~~**v0.24.x** — E batch (partial)~~ DONE (Now-Playing share / ListenBrainz); Last.fm direct is the only remaining E item — slated for v0.30.0 (listening parties dropped 2026-05-27 audit)
 - ~~**v0.25.x** — Homescreen widget~~ DONE (v1 without artwork)
 - ~~**v0.26.x** — Voice search in-app~~ DONE (ACTION_RECOGNIZE_SPEECH intent)
 - ~~**Wear OS**~~ COVERED — no code release, Wear OS 3+ system mirror is sufficient
@@ -83,15 +77,18 @@ What's left, organised by category + combo. Effort tags: **S** ≈ 30 min, **M**
 - ~~**v0.27.1** — Kotlin compile fix~~ DONE (voice search regression — v0.26/v0.27 CI both failed; v0.27.1 is first APK past it)
 - ~~**v0.28.0** — Widget artwork v2 + Subsonic admin scan~~ DONE
 - ~~**v0.29.0** — Audio routing info line on Now Playing~~ DONE (closes Combo 2 visually — no loop-back hardware required)
-- **v0.30.x** (optional) — Last.fm direct scrobble OR i18n; pick whichever you actually need next
-- **v1.0.0** — first "release" milestone after a real-device validation pass on every section of `TEST_PLAN.md`. All required-for-1.0 features ship; what's left is genuinely optional
+- **v0.30.0** — Last.fm scrobble direct (only remaining real-value code item post-audit; Navidrome doesn't forward, confirmed 2026-05-27)
+- **v1.0.0** — first "release" milestone after a real-device validation pass on every section of `TEST_PLAN.md`. All required-for-1.0 features ship; i18n stays as a post-1.0 candidate if FR becomes wanted.
 
 ## Items deliberately not on the roadmap
 
 - **Chromecast** — user explicitly dropped during planning ("c'est inutile")
 - **iOS support** — Android-only target since v0.8.3 (scaffold removed)
 - **Lidarr direct push** — user opted for "just a dashboard, I'll handle Lidarr manually" instead (see chat history; wishlist already covers it)
-- **Listening parties / wishlist webhook gateway** — design discussed but no real use case yet; kept on the back burner
+- **Listening parties / shared queue** — *(dropped 2026-05-27 audit)* real-time playback sync across devices via WebSocket relay or Tailscale mesh. No real use case → not worth the L effort. Could be revived if a friend pair-listening becomes a thing.
+- **Wishlist webhook gateway** — designed alongside listening parties; same conclusion (no use case relative to cost).
+- **Album-art waveform scrubber** — *(dropped 2026-05-27 audit)* pre-decoded PCM peaks rendered behind the position slider. Pure cosmetic — no functional gap. L effort for a niche visual.
+- **BPM-matched crossfade** — *(dropped 2026-05-27 audit)* skip crossfade between tracks with wildly different tempos. Needs BPM detection (Subsonic field usually empty, in-app FFT is heavy). Niche corner case.
 
 ## User actions (non-code) outstanding
 
