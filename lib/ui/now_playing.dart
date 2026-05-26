@@ -17,6 +17,43 @@ import 'widgets/track_tile.dart';
 
 const _accent = Color(0xFF1ED760);
 
+/// Now-Playing tint colour extracted from the current artwork — used as
+/// the dynamic accent for slider, play/pause FAB and heart toggle so
+/// those controls inherit a hue from the cover instead of staying
+/// fixed-brand green. Falls back to null when:
+///   - the "Now Playing colour tint" toggle is off (user pref);
+///   - the track has no Subsonic cover (local track / no coverArt);
+///   - the palette extraction fails (network glitch, decode error).
+/// Call sites use `??  _accent` to fall back to brand green cleanly.
+///
+/// Prefers `lightVibrantColor` because the Now Playing surface is
+/// dark and a saturated-but-bright accent reads best against the
+/// full-bleed artwork + dark scrim. Falls through to `vibrantColor`
+/// and `dominantColor` if the palette doesn't expose the preferred
+/// shade.
+final nowPlayingTintProvider = FutureProvider.autoDispose<Color?>((ref) async {
+  final track = ref.watch(currentTrackProvider);
+  final enabled = ref.watch(displayPrefsProvider).nowPlayingTint;
+  if (!enabled || track == null) return null;
+  if (track.origin != MediaOrigin.subsonic || track.coverArt == null) {
+    return null;
+  }
+  final s = ref.watch(subsonicResolverProvider).forId(track.serverId);
+  if (s == null) return null;
+  try {
+    final palette = await PaletteGenerator.fromImageProvider(
+      NetworkImage(s.coverUri(track.coverArt!).toString()),
+      size: const Size(80, 80),
+      maximumColorCount: 8,
+    );
+    return palette.lightVibrantColor?.color ??
+        palette.vibrantColor?.color ??
+        palette.dominantColor?.color;
+  } catch (_) {
+    return null;
+  }
+});
+
 class NowPlayingPage extends ConsumerWidget {
   const NowPlayingPage({super.key});
 
@@ -60,64 +97,33 @@ class NowPlayingPage extends ConsumerWidget {
 /// scaffold. Computed once per track via palette_generator and cached
 /// in state. Disabled when the user turns off the toggle or the track
 /// has no fetchable artwork (local files without a URI).
-class _TintBackground extends ConsumerStatefulWidget {
+class _TintBackground extends ConsumerWidget {
   final Widget child;
   const _TintBackground({required this.child});
-  @override
-  ConsumerState<_TintBackground> createState() => _TintBackgroundState();
-}
-
-class _TintBackgroundState extends ConsumerState<_TintBackground> {
-  Color? _tint;
-  String? _forKey;
-
-  Future<void> _maybeComputeFor(Track t) async {
-    if (_forKey == t.uniqueKey) return;
-    _forKey = t.uniqueKey;
-    final s = ref.read(subsonicProvider);
-    final uri = (t.origin == MediaOrigin.subsonic &&
-            t.coverArt != null &&
-            s != null)
-        ? s.coverUri(t.coverArt!)
-        : null;
-    if (uri == null) {
-      if (mounted) setState(() => _tint = null);
-      return;
-    }
-    try {
-      final palette = await PaletteGenerator.fromImageProvider(
-        NetworkImage(uri.toString()),
-        size: const Size(80, 80),
-        maximumColorCount: 8,
-      );
-      if (!mounted || _forKey != t.uniqueKey) return;
-      setState(() =>
-          _tint = palette.dominantColor?.color ?? palette.vibrantColor?.color);
-    } catch (_) {
-      // Best-effort — bad image / no network → no tint, no error.
-    }
-  }
 
   @override
-  Widget build(BuildContext context) {
-    final enabled = ref.watch(displayPrefsProvider).nowPlayingTint;
-    final t = ref.watch(currentTrackProvider);
-    if (enabled && t != null) _maybeComputeFor(t);
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Single source of truth for the tint colour lives in
+    // [nowPlayingTintProvider]; this widget just renders the
+    // soft top-down gradient when the provider yields a non-null
+    // colour. The same provider feeds slider / FAB / heart accents,
+    // so the visual stays consistent across the screen.
+    final tint = ref.watch(nowPlayingTintProvider).valueOrNull;
     return Stack(
       fit: StackFit.expand,
       children: [
-        if (enabled && _tint != null)
+        if (tint != null)
           AnimatedContainer(
             duration: const Duration(milliseconds: 400),
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [_tint!.withOpacity(0.30), Colors.transparent],
+                colors: [tint.withOpacity(0.30), Colors.transparent],
               ),
             ),
           ),
-        widget.child,
+        child,
       ],
     );
   }
@@ -204,7 +210,8 @@ class _PlayerTab extends ConsumerWidget {
                     IconButton(tooltip: 'Previous track', iconSize: 40, icon: const Icon(Icons.skip_previous), onPressed: engine.previous),
                     FloatingActionButton(
                       onPressed: () => playing ? engine.pause() : engine.play(),
-                      backgroundColor: _accent,
+                      backgroundColor:
+                          ref.watch(nowPlayingTintProvider).valueOrNull ?? _accent,
                       foregroundColor: Colors.black,
                       child: Icon(playing ? Icons.pause : Icons.play_arrow, size: 32),
                     ),
@@ -624,12 +631,13 @@ class _FavoriteToggle extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final favKeys = ref.watch(favoriteKeysProvider).valueOrNull ?? const [];
     final isFav = favKeys.contains(track.uniqueKey);
+    final accent = ref.watch(nowPlayingTintProvider).valueOrNull ?? _accent;
     return IconButton(
       tooltip: isFav ? 'Remove from favorites' : 'Add to favorites',
       iconSize: 28,
       icon: Icon(
         isFav ? Icons.favorite : Icons.favorite_border,
-        color: isFav ? _accent : context.textSecondary,
+        color: isFav ? accent : context.textSecondary,
       ),
       onPressed: () => ref.read(favoritesProvider).toggle(track.uniqueKey),
     );
@@ -654,18 +662,25 @@ class _ScrubberAndTimes extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final engine = ref.watch(audioEngineProvider);
-    final position =
-        ref.watch(positionProvider);
+    final position = ref.watch(positionProvider);
     final duration = ref.watch(durationProvider) ?? Duration.zero;
+    final accent = ref.watch(nowPlayingTintProvider).valueOrNull ?? _accent;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Slider(
-          value: position.inMilliseconds
-              .toDouble()
-              .clamp(0, duration.inMilliseconds.toDouble()),
-          max: duration.inMilliseconds.toDouble().clamp(1, double.maxFinite),
-          onChanged: (v) => engine.seek(Duration(milliseconds: v.toInt())),
+        SliderTheme(
+          data: SliderTheme.of(context).copyWith(
+            activeTrackColor: accent,
+            thumbColor: accent,
+            overlayColor: accent.withOpacity(0.25),
+          ),
+          child: Slider(
+            value: position.inMilliseconds
+                .toDouble()
+                .clamp(0, duration.inMilliseconds.toDouble()),
+            max: duration.inMilliseconds.toDouble().clamp(1, double.maxFinite),
+            onChanged: (v) => engine.seek(Duration(milliseconds: v.toInt())),
+          ),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8),

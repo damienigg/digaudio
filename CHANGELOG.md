@@ -7,6 +7,26 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.30.15] — 2026-05-27
+
+### Changed (Now Playing accents follow the artwork palette)
+- Slider track + thumb, play/pause FAB, and heart toggle now use a
+  colour pulled from the current artwork's palette
+  (`lightVibrantColor` preferred, falling back to `vibrantColor`
+  then `dominantColor`). When the palette is unavailable (local
+  track, network glitch, palette extraction failed, or the user
+  turned off "Now Playing colour tint" in Settings → Display),
+  these controls fall back to brand-accent green `#1ED760`.
+- Single source of truth: new `nowPlayingTintProvider`
+  (`FutureProvider.autoDispose<Color?>`) computes the tint once
+  per track and feeds both the top-down gradient
+  (`_TintBackground`) and the control accents. Palette extraction
+  no longer happens twice.
+- Brand green still applies to: shuffle / repeat icons (when
+  active), Speed and Sleep labels (when active), synced lyrics
+  active line, EQ enable accents. Those weren't part of the
+  request.
+
 ## [0.30.14] — 2026-05-27
 
 ### Fixed (Notification rich actions never rendered)
