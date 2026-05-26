@@ -13,6 +13,8 @@ class MiniPlayer extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final track = ref.watch(currentTrackProvider);
+    // ignore: avoid_print
+    print('[digaudio.dbg] MiniPlayer.build: track=${track?.title ?? "null"}');
     if (track == null) return const SizedBox.shrink();
 
     final state = ref.watch(playerStateProvider);

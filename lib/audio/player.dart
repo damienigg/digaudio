@@ -139,7 +139,11 @@ class AudioEngine extends BaseAudioHandler {
         _history = history,
         _positions = positions,
         _listenbrainz = listenbrainz,
-        _lastfmScrobble = lastfmScrobble;
+        _lastfmScrobble = lastfmScrobble {
+    // ignore: avoid_print
+    print('[digaudio.dbg] AudioEngine ctor: instance=${identityHashCode(this)}, '
+        'trackController=${identityHashCode(_trackController)}');
+  }
 
   // Compat with old callers that grabbed `raw` for ad-hoc operations.
   AudioPlayer get raw => _primary;

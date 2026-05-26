@@ -7,6 +7,17 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.30.11] — 2026-05-27
+
+### Debug
+- Adds two more `[digaudio.dbg]` prints to nail down the mini-player
+  race: `AudioEngine` constructor (confirms a single instance +
+  ties controller hash to engine hash) and `MiniPlayer.build`
+  (track value visible from inside the widget on every build).
+- Combined with v0.30.9's existing setQueue / _onTrackChanged /
+  _trackController.add / _StreamMirror lifecycle prints, the full
+  chain is now traceable in logcat.
+
 ## [0.30.10] — 2026-05-27
 
 ### Changed (Audio info line is now opt-in)
