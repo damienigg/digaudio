@@ -319,6 +319,24 @@ class SubsonicClient {
 
   // --- Parsers -------------------------------------------------------------
 
+  /// Resolves a song's genre from either the legacy `genre` string field
+  /// (Subsonic <1.10.2) or the OpenSubsonic `genres: [{name: ...}]` array
+  /// — recent Navidrome omits the legacy field, which used to leave the
+  /// Library → Genres tab empty even after a full sync.
+  static String? _firstGenre(Map<String, dynamic> j) {
+    final legacy = j['genre'] as String?;
+    if (legacy != null && legacy.isNotEmpty) return legacy;
+    final list = j['genres'];
+    if (list is List && list.isNotEmpty) {
+      final first = list.first;
+      if (first is Map) {
+        final name = first['name'];
+        if (name is String && name.isNotEmpty) return name;
+      }
+    }
+    return null;
+  }
+
   Track _parseSong(Map<String, dynamic> j) => Track(
         id: j['id'] as String,
         title: (j['title'] as String?) ?? 'Unknown',
@@ -336,7 +354,11 @@ class SubsonicClient {
         // Null → Now Playing falls back to codec + bit-rate only.
         samplingRate: j['samplingRate'] as int?,
         bitDepth: j['bitDepth'] as int?,
-        genre: j['genre'] as String?,
+        // Subsonic <1.10.2 returns `genre` (singular string). OpenSubsonic /
+        // recent Navidrome returns `genres: [{name: ...}]` instead and may
+        // omit the legacy singular field — without the fallback, the
+        // Library → Genres tab stayed empty post-sync.
+        genre: _firstGenre(j),
         userRating: (j['userRating'] as num?)?.toInt(),
         // OpenSubsonic extension — newer servers expose Replay Gain.
         // Falls through to null on stock Subsonic ≤ 1.16 → engine

@@ -7,6 +7,38 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.30.31] — 2026-05-27
+
+### Fixed (Library → Genres stayed empty even after a fresh sync)
+- `_parseSong` only read the legacy Subsonic `genre` field (singular
+  string). Recent Navidrome / OpenSubsonic servers return
+  `genres: [{name: ...}]` (plural array) and may omit the legacy
+  field entirely — so every song landed in the cache with `genre
+  IS NULL` and the GROUP BY genre query returned zero rows. Added
+  a `_firstGenre` helper that prefers the legacy string, falls back
+  to `genres[0].name`. Takes effect on the **next** library sync —
+  run Settings → Playback → Sync library after the upgrade.
+
+### Fixed (Home stats card not appearing)
+- Empty / loading / error branches of `_StatsDashboard` returned
+  `SizedBox.shrink()` — when there was no play history yet (e.g.
+  right after a fresh install / reinstall wiped the Drift DB),
+  the section was invisible and the user had no clue stats lived
+  there. Now renders the same shell + a "Play a few tracks and
+  your top picks + streak will land here" hint, tap → /stats.
+- Same edit fixed a malformed `Row > Row` nesting introduced
+  mid-refactor in 0.30.30 that prevented the populated card from
+  laying out correctly.
+
+### Fixed (Local builds shipped without Last.fm credentials)
+- `tool/run.sh` only baked `SUBSONIC_URL` + `SUBSONIC_LABEL` —
+  the Last.fm `--dart-define`s lived only in `.github/workflows/
+  build-android.yml`. Local debug installs therefore reported
+  "this app was built without API key" in Settings → Playback.
+  `tool/run.sh` now reads `LASTFM_API_KEY` /
+  `LASTFM_SHARED_SECRET` from the environment and conditionally
+  adds the dart-defines. Empty values stay empty (no regression).
+
 ## [0.30.30] — 2026-05-27
 
 ### Changed (Home — Random picks horizontal + stats dashboard)

@@ -241,96 +241,127 @@ class _TrackCard extends ConsumerWidget {
 /// High-level "play habits" dashboard surfaced on Home. Pulls from
 /// [homeStatsProvider] (sub-100ms typical) — a compact subset of what
 /// the full StatsPage offers, scoped to the last 30 days. Tap anywhere
-/// in the card to deep-link into the full page. Hides itself entirely
-/// while history is still empty so a fresh-install Home doesn't render
-/// a "0 / 0 / 0" eyesore.
+/// in the card to deep-link into the full page. Empty / loading / error
+/// states render the same shell with a hint instead of hiding, so the
+/// section is always discoverable from Home.
 class _StatsDashboard extends ConsumerWidget {
   const _StatsDashboard();
+
+  Widget _shell(BuildContext context, {required Widget body, VoidCallback? onTap}) =>
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(14),
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
+            decoration: BoxDecoration(
+              color: context.dividerSoft,
+              borderRadius: BorderRadius.circular(14),
+              border:
+                  Border.all(color: _accent.withOpacity(0.18), width: 1),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.insights, size: 18, color: _accent),
+                    const SizedBox(width: 6),
+                    const Text('Your 30-day stats',
+                        style: TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.w800)),
+                    const Spacer(),
+                    if (onTap != null)
+                      Icon(Icons.chevron_right,
+                          color: context.textTertiary, size: 20),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                body,
+              ],
+            ),
+          ),
+        ),
+      );
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final stats = ref.watch(homeStatsProvider);
     return stats.when(
-      loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
+      loading: () => _shell(context,
+          body: SizedBox(
+            height: 32,
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text('Loading…',
+                  style: TextStyle(color: context.textTertiary, fontSize: 12)),
+            ),
+          )),
+      error: (e, _) => _shell(context,
+          body: Text('Stats unavailable: $e',
+              style: const TextStyle(color: Colors.redAccent, fontSize: 12))),
       data: (s) {
-        if (s.isEmpty) return const SizedBox.shrink();
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
-          child: InkWell(
-            onTap: () => context.push('/stats'),
-            borderRadius: BorderRadius.circular(14),
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
-              decoration: BoxDecoration(
-                color: context.dividerSoft,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                    color: _accent.withOpacity(0.18), width: 1),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        if (s.isEmpty) {
+          return _shell(context,
+              onTap: () => context.push('/stats'),
+              body: Text(
+                'Play a few tracks and your top picks + streak will land here.',
+                style: TextStyle(color: context.textTertiary, fontSize: 12),
+              ));
+        }
+        return _shell(context,
+          onTap: () => context.push('/stats'),
+          body: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
                 children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.insights, size: 18, color: _accent),
-                      const SizedBox(width: 6),
-                      const Text('Your 30-day stats',
-                          style: TextStyle(
-                              fontSize: 14, fontWeight: FontWeight.w800)),
-                      const Spacer(),
-                      Icon(Icons.chevron_right,
-                          color: context.textTertiary, size: 20),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      _StatTile(value: '${s.plays}', label: 'plays'),
-                      _StatTile(value: '${s.uniqueTracks}', label: 'tracks'),
-                      _StatTile(value: '${s.listeningDays}', label: 'days'),
-                      _StatTile(
-                          value: '${s.currentStreak}',
-                          label: 'streak',
-                          icon: Icons.local_fire_department),
-                    ],
-                  ),
-                  if (s.topTrack != null || s.topArtist != null) ...[
-                    const SizedBox(height: 12),
-                    Divider(color: context.outlineStrong.withOpacity(0.3), height: 1),
-                    const SizedBox(height: 12),
-                  ],
-                  if (s.topTrack != null)
-                    _TopRow(
-                      label: 'TOP TRACK',
-                      title: s.topTrack!.title,
-                      subtitle: s.topTrack!.displayArtist,
-                      artwork: Artwork(
-                        coverArt: s.topTrack!.coverArt,
-                        origin: s.topTrack!.origin,
-                        size: 40,
-                      ),
-                    ),
-                  if (s.topArtist != null) ...[
-                    const SizedBox(height: 8),
-                    _TopRow(
-                      label: 'TOP ARTIST',
-                      title: s.topArtist!,
-                      subtitle: '${s.topArtistPlays} plays',
-                      artwork: CircleAvatar(
-                        radius: 20,
-                        backgroundColor: const Color(0xFF1E1E22),
-                        child: Text(
-                          s.topArtist!.isNotEmpty
-                              ? s.topArtist![0].toUpperCase()
-                              : '?',
-                          style: const TextStyle(fontWeight: FontWeight.w800),
-                        ),
-                      ),
-                    ),
-                  ],
+                  _StatTile(value: '${s.plays}', label: 'plays'),
+                  _StatTile(value: '${s.uniqueTracks}', label: 'tracks'),
+                  _StatTile(value: '${s.listeningDays}', label: 'days'),
+                  _StatTile(
+                      value: '${s.currentStreak}',
+                      label: 'streak',
+                      icon: Icons.local_fire_department),
                 ],
               ),
-            ),
+              if (s.topTrack != null || s.topArtist != null) ...[
+                const SizedBox(height: 12),
+                Divider(
+                    color: context.outlineStrong.withOpacity(0.3), height: 1),
+                const SizedBox(height: 12),
+              ],
+              if (s.topTrack != null)
+                _TopRow(
+                  label: 'TOP TRACK',
+                  title: s.topTrack!.title,
+                  subtitle: s.topTrack!.displayArtist,
+                  artwork: Artwork(
+                    coverArt: s.topTrack!.coverArt,
+                    origin: s.topTrack!.origin,
+                    size: 40,
+                  ),
+                ),
+              if (s.topArtist != null) ...[
+                const SizedBox(height: 8),
+                _TopRow(
+                  label: 'TOP ARTIST',
+                  title: s.topArtist!,
+                  subtitle: '${s.topArtistPlays} plays',
+                  artwork: CircleAvatar(
+                    radius: 20,
+                    backgroundColor: const Color(0xFF1E1E22),
+                    child: Text(
+                      s.topArtist!.isNotEmpty
+                          ? s.topArtist![0].toUpperCase()
+                          : '?',
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                  ),
+                ),
+              ],
+            ],
           ),
         );
       },
