@@ -21,10 +21,11 @@ import '../domain.dart';
 /// }
 /// ```
 ///
-/// **v1 scope**: filters only on [CachedSubsonicSongs] columns. Joins
-/// against favourites / play counts / pinned downloads are deliberately
-/// deferred so the engine is small + bug-free; they'll come in a v2
-/// once the basic version proves itself.
+/// **v2 (current)**: cached-song filters PLUS joins against favourites,
+/// pinned/cached downloads, and computed play-count windows
+/// (`playCount30d`, `playCountAll`, `lastPlayedDaysAgo`). The query
+/// builder emits a single SQL statement with the appropriate subqueries
+/// — no per-row N+1 lookups.
 class SmartPlaylistsManager {
   final AppDb _db;
   SmartPlaylistsManager(this._db);

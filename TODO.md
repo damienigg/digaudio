@@ -66,7 +66,7 @@ What's left, organised by category + combo. Effort tags: **S** ≈ 30 min, **M**
 |---|---|
 | 1 · Recommendation engine (Last.fm × FTS × smart playlists × Subsonic radio) | **4/4 ✓** |
 | 2 · Pro-listener (RG × crossfade × EQ presets × per-BT EQ × FLAC × wired-DAC) | **6/6 ✓** (FLAC + wired-DAC closed visually via v0.29.0 routing info line) |
-| 3 · Friend-share (ListenBrainz × Now-Playing share × listening parties × webhook) | 0/4 |
+| 3 · Friend-share (ListenBrainz × Now-Playing share × listening parties × webhook) | **2/4** (ListenBrainz v0.24.1 + Now-Playing share v0.24.0; listening parties + webhook gateway deferred indefinitely — no use case) |
 | 4 · Daily driver (Quick Settings tile × widget × Wear OS × Auto-play BT × Per-track resume) | **5/5 ✓** (Wear OS covered via system MediaSession mirror) |
 
 ---

@@ -173,6 +173,16 @@ Phone-side acceptance checklist. Run through each section; tick the box when ver
 - [ ] **Local track fallback**. Play a track from local MediaStore. → Widget falls back to launcher icon (local artwork prefetch is deliberately deferred; same as MediaItem.artUri)
 - [ ] **Cross-track flicker is brief**. Skip rapidly between Subsonic tracks. → Each fetch takes ~200-500 ms; previous track's art may persist briefly until new one lands. Acceptable v2 behaviour.
 
+## Audio routing info line (v0.29.0)
+
+- [ ] **Built-in speaker, Subsonic FLAC**. Play a FLAC track on a server that exposes OpenSubsonic `samplingRate`/`bitDepth` (Navidrome ≥ 0.50). → Under the artist on Now Playing → Player, a small line reads `FLAC · 24-bit/96 kHz · 938 kbps  →  Speaker · 48 kHz ⚠` (amber + ⚠ when source ≠ output mix rate)
+- [ ] **Matched rates**. Play a 48 kHz track on a system mixing at 48 kHz. → Line is neutral grey, no `⚠`, no arrow colour
+- [ ] **USB DAC plugged in**. Plug a USB DAC, skip to the next track. → Line updates to `… → USB: <DAC product name> · <output kHz>` (priority chain pick: USB > BT > wired > built-in)
+- [ ] **Bluetooth headphones**. Connect BT A2DP, skip to the next track. → `… → Bluetooth: <device name> · 48 kHz`
+- [ ] **Wired 3.5 mm**. Plug wired headphones, skip. → `… → Wired · …`
+- [ ] **Stock Subsonic (no samplingRate)**. Play a track on a server without OpenSubsonic extensions. → Source segment shows codec + bit-rate only (no sample rate / bit depth); resampling can't be detected → line stays neutral. Acceptable degradation.
+- [ ] **Local file**. Play a local MediaStore track. → Source segment is just the codec (`MP3`, `FLAC`, etc.); output device + rate still render.
+
 ## Admin library scan (v0.28.0)
 
 - [ ] **Admin user**. Settings → Servers → Edit (admin server) → "Library scan (admin)" section → "Check status". → Shows "Idle — N songs in the library" or "Scanning…"
