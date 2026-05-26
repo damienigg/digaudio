@@ -20,7 +20,14 @@ permissions:
 # context — refs/tags/v*) kills the just-started main-triggered run, and a
 # single build proceeds. main-only pushes (no tag) still build normally.
 concurrency:
-  group: build-android-${{ github.sha }}
+  # Group by ref (branch or tag), NOT SHA — so tag-push and main-push
+  # that share the same SHA can run in parallel (they have different
+  # refs). The old SHA grouping caused v0.30.22 + v0.30.26 tag runs
+  # to be cancelled by their simultaneous main pushes, blocking the
+  # release APK upload (which is gated on `ref/tags/v*`). Same-branch
+  # superseding still works because the ref is identical for
+  # consecutive main pushes.
+  group: build-android-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:

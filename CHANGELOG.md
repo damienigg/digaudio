@@ -7,6 +7,26 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.30.27] — 2026-05-27
+
+### Fixed (CI concurrency cancelling tag-push runs)
+- The workflow's concurrency group was keyed on `github.sha` —
+  meaning the simultaneous main-push and tag-push (same commit
+  reaches both refs) ended up in the same group and one cancelled
+  the other. v0.30.22 + v0.30.26's tag CI runs were cancelled this
+  way, blocking the release APK upload (which is gated on
+  `refs/tags/v*`). Switched the group to
+  `${{ github.workflow }}-${{ github.ref }}` so tag-pushes and
+  branch-pushes can run in parallel. v0.30.26's main run will
+  complete on its own; this release is the first one to ship with
+  the new policy.
+
+### Bundled
+- All v0.30.26 contents (DIGaudio rename, library source toggle,
+  Up Next ↔ Queue sync, palette cache reuse) are present here too
+  — v0.30.26's release didn't receive an APK so this version is
+  the first to actually ship those changes to the phone.
+
 ## [0.30.26] — 2026-05-27
 
 ### Changed (App name: DIGaudio)
