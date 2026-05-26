@@ -7,6 +7,21 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.30.12] — 2026-05-27
+
+### Debug
+- v0.30.11 logcat smoking gun: `setQueue` entry log fires with
+  `hasListener=true`, but `_onTrackChanged` log NEVER appears (no
+  `_trackController.add fired`, no `MiniPlayer.build` with
+  non-null track). So the function freezes between its entry and
+  the line that updates the broadcast stream — strongly suggesting
+  one of the `await` calls in the middle (`setAudioSource`,
+  `setVolume`, `play`) hangs and never resolves.
+- This build adds per-step prints between every `await` in
+  `setQueue` (entry, secondary.stop, setAudioSource entry +
+  return + catch, setVolume return, play return, _onTrackChanged).
+  The next logcat capture will pinpoint the exact frozen call.
+
 ## [0.30.11] — 2026-05-27
 
 ### Debug

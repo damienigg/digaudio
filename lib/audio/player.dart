@@ -537,17 +537,19 @@ class AudioEngine extends BaseAudioHandler {
 
   Future<void> setQueue(List<Track> tracks, {int initialIndex = 0}) async {
     // ignore: avoid_print
-    print('[digaudio.dbg] setQueue called: ${tracks.length} tracks, '
-        'initialIndex=$initialIndex, engine=${identityHashCode(this)}, '
-        'trackController=${identityHashCode(_trackController)}, '
-        'hasListener=${_trackController.hasListener}');
+    print('[digaudio.dbg] setQueue: entering (${tracks.length} tracks, '
+        'idx=$initialIndex, hasListener=${_trackController.hasListener})');
     if (tracks.isEmpty) return;
     _transitionTimer?.cancel();
     _inTransition = false;
     // Stop secondary if anything was loaded — fresh queue invalidates
     // every preload.
     if (_secondary.processingState != ProcessingState.idle) {
+      // ignore: avoid_print
+      print('[digaudio.dbg] setQueue: stopping secondary…');
       await _secondary.stop();
+      // ignore: avoid_print
+      print('[digaudio.dbg] setQueue: secondary stopped');
     }
     _tracks = List.unmodifiable(tracks);
     _originalOrder = _tracks;
@@ -558,9 +560,27 @@ class AudioEngine extends BaseAudioHandler {
 
     final t = _tracks[_currentIndex];
     _targetVolume = _rgVolumeFor(t);
-    await _primary.setAudioSource(_sourceFor(t));
+    // ignore: avoid_print
+    print('[digaudio.dbg] setQueue: about to setAudioSource (${t.title})');
+    final src = _sourceFor(t);
+    // ignore: avoid_print
+    print('[digaudio.dbg] setQueue: source built, awaiting setAudioSource…');
+    try {
+      await _primary.setAudioSource(src);
+    } catch (e, st) {
+      // ignore: avoid_print
+      print('[digaudio.dbg] setQueue: setAudioSource THREW: $e\n$st');
+      rethrow;
+    }
+    // ignore: avoid_print
+    print('[digaudio.dbg] setQueue: setAudioSource returned, '
+        'awaiting setVolume…');
     await _primary.setVolume(_targetVolume);
+    // ignore: avoid_print
+    print('[digaudio.dbg] setQueue: setVolume returned, awaiting play…');
     await _primary.play();
+    // ignore: avoid_print
+    print('[digaudio.dbg] setQueue: play returned, firing _onTrackChanged…');
     _onTrackChanged(t);
     unawaited(_preloadNextIfNeeded());
     _maybeResume(t);
