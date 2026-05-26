@@ -60,6 +60,11 @@ class Artwork extends ConsumerWidget {
               width: size,
               height: size,
               fit: BoxFit.cover,
+              // Sleek transition placeholder → loaded: a 180 ms fade
+              // reads as polished without feeling sluggish. Without
+              // it the swap reads as an abrupt "pop".
+              fadeInDuration: const Duration(milliseconds: 180),
+              fadeOutDuration: const Duration(milliseconds: 80),
               placeholder: (c, __) => _placeholder(c),
               errorWidget: (c, __, ___) => _placeholder(c),
             );

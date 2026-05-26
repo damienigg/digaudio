@@ -15,6 +15,12 @@ import 'audio/providers.dart';
 /// Riverpod graph via [registerAudioEngine].
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Flutter's default image cache holds ~100 entries / ~100 MB.
+  // For a music app that scrolls through hundreds of album covers in
+  // a single session, evictions thrash and force re-decodes. Bump
+  // both dimensions so covers stay warm across navigation.
+  PaintingBinding.instance.imageCache.maximumSize = 500;
+  PaintingBinding.instance.imageCache.maximumSizeBytes = 256 * 1024 * 1024;
   final container = ProviderContainer();
 
   // Pre-hydrate the state the handler reads on its first source build.

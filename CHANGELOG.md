@@ -7,6 +7,29 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.30.20] — 2026-05-27
+
+### Changed (Artwork is snappier + sleeker)
+- **In-memory image cache bumped** from Flutter's defaults
+  (~100 entries / ~100 MB) to 500 entries / 256 MB at app boot.
+  For a music app that scrolls through hundreds of album covers
+  in a single session, the previous limits caused thrashing —
+  evictions forced re-decodes (sometimes re-fetches) when the
+  user scrolled back. New limits keep most covers warm across
+  navigation.
+- **Fade-in transition** on every `CachedNetworkImage` placeholder
+  → loaded swap. Was the abrupt default; now 180 ms fade for
+  tile-sized art, 220 ms for the full-bleed Now Playing
+  background. Reads polished without feeling sluggish.
+
+### Note (Background should now be screen-fixed)
+- v0.30.19's restructure puts the `AppBackground` at
+  `MaterialApp.builder` — outside the Navigator + outside any
+  Scaffold. It sits on its own layer behind the active route, so
+  page scrolling never moves it. (Earlier builds had bg inside
+  AppShell's body Stack, which still wasn't scrollable but the
+  user reported scroll-coupling; confirm post-install.)
+
 ## [0.30.19] — 2026-05-27
 
 ### Fixed (Display settings toggles silently destroying other prefs)

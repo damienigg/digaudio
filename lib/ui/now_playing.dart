@@ -271,6 +271,8 @@ class _BgArtwork extends ConsumerWidget {
         imageUrl: s.coverUri(track.coverArt!, size: 1024).toString(),
         cacheKey: '${track.uniqueKey}:bg',
         fit: BoxFit.cover,
+        fadeInDuration: const Duration(milliseconds: 220),
+        fadeOutDuration: const Duration(milliseconds: 120),
         placeholder: (c, __) => fallback,
         errorWidget: (c, __, ___) => fallback,
       );
