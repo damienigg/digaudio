@@ -7,6 +7,21 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.30.6] — 2026-05-27
+
+### Added (Custom EQ presets)
+- Settings → Playback → Equalizer now exposes a "**Save…**" chip
+  alongside the 7 built-in presets. Tap it → naming dialog → the
+  current band curve is persisted under that name. Custom presets
+  render as InputChips next to the built-ins (visually peers, not a
+  separate section) and carry a trailing X to delete.
+- Storage: new `customEqPresets` field on `PlaybackPrefs`, encoded
+  as a JSON array `[{name, gains[]}]`. Survives app restarts. No
+  cap on count — the Wrap layout handles it naturally.
+- Apply semantics match the built-ins: `_applyPreset` pads or
+  truncates the gains list to fit the current device's band count
+  (so a 5-band preset works on a 10-band device and vice-versa).
+
 ## [0.30.5] — 2026-05-27
 
 ### Fixed (Mini-player invisible on first play)

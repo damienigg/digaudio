@@ -20,6 +20,7 @@ class PlaybackPrefs {
   static const _kListenbrainzToken = 'pb.listenbrainz.token';
   static const _kLastfmSessionKey = 'pb.lastfm.session_key';
   static const _kLastfmUsername = 'pb.lastfm.username';
+  static const _kCustomEqPresets = 'pb.eq.custom_presets.json';
 
   /// Default cap for the auto-cache pool. Pinned downloads don't count against
   /// it. 2 GB matches what Spotify ships and survives a long road trip without
@@ -93,6 +94,13 @@ class PlaybackPrefs {
   /// can tell which Last.fm account is bound.
   String lastfmUsername = '';
 
+  /// User-defined EQ presets (in addition to the 7 hard-coded ones).
+  /// Each entry stores a display name and a per-band gain list (dB).
+  /// Sized at save time to match the device's band count — same
+  /// pad-or-truncate semantics as the built-in presets when applied
+  /// on a different device. Stored as a JSON array.
+  List<({String name, List<double> gains})> customEqPresets = const [];
+
   Future<void> load() async {
     final p = await SharedPreferences.getInstance();
     eqEnabled = p.getBool(_kEqEnabled) ?? false;
@@ -111,6 +119,16 @@ class PlaybackPrefs {
     if (raw != null && raw.isNotEmpty) {
       eqGainsDb = (jsonDecode(raw) as List).map((e) => (e as num).toDouble()).toList();
     }
+    final rawCustom = p.getString(_kCustomEqPresets);
+    if (rawCustom != null && rawCustom.isNotEmpty) {
+      customEqPresets = (jsonDecode(rawCustom) as List).map((e) {
+        final m = e as Map<String, dynamic>;
+        return (
+          name: m['name'] as String,
+          gains: (m['gains'] as List).map((g) => (g as num).toDouble()).toList(),
+        );
+      }).toList();
+    }
   }
 
   Future<void> save() async {
@@ -128,5 +146,11 @@ class PlaybackPrefs {
     await p.setString(_kLastfmSessionKey, lastfmSessionKey);
     await p.setString(_kLastfmUsername, lastfmUsername);
     await p.setString(_kEqGains, jsonEncode(eqGainsDb));
+    await p.setString(
+      _kCustomEqPresets,
+      jsonEncode(customEqPresets
+          .map((p) => {'name': p.name, 'gains': p.gains})
+          .toList()),
+    );
   }
 }

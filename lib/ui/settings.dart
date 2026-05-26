@@ -876,6 +876,53 @@ class _EqualizerSectionState extends ConsumerState<_EqualizerSection> {
     await ref.read(audioEngineProvider).applyEqGains(flat);
   }
 
+  /// Persist the current band curve under a user-provided name.
+  /// Name conflicts simply append — no de-dup (user can delete the
+  /// stale one if they want a clean slate).
+  Future<void> _saveCustomPreset() async {
+    if (_params == null) return;
+    final nameCtrl = TextEditingController();
+    final name = await showDialog<String?>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Save EQ preset'),
+        content: TextField(
+          controller: nameCtrl,
+          autofocus: true,
+          decoration: const InputDecoration(hintText: 'My custom curve'),
+          onSubmitted: (v) => Navigator.pop(ctx, v.trim()),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, nameCtrl.text.trim()),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    if (name == null || name.isEmpty) return;
+    final prefs = ref.read(playbackPrefsProvider);
+    prefs.customEqPresets = [
+      ...prefs.customEqPresets,
+      (name: name, gains: List<double>.from(_gainsDb)),
+    ];
+    await prefs.save();
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _deleteCustomPreset(
+      ({String name, List<double> gains}) p) async {
+    final prefs = ref.read(playbackPrefsProvider);
+    prefs.customEqPresets =
+        prefs.customEqPresets.where((x) => x.name != p.name).toList();
+    await prefs.save();
+    if (mounted) setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     final params = _params;
@@ -927,6 +974,9 @@ class _EqualizerSectionState extends ConsumerState<_EqualizerSection> {
             enabled: _enabled,
             bandCount: params.bands.length,
             onApply: _applyPreset,
+            customPresets: ref.watch(playbackPrefsProvider).customEqPresets,
+            onDelete: _deleteCustomPreset,
+            onSave: _saveCustomPreset,
           ),
         ],
         const SizedBox(height: 8),
@@ -1638,10 +1688,16 @@ class _EqPresets extends StatelessWidget {
   final bool enabled;
   final int bandCount;
   final ValueChanged<List<double>> onApply;
+  final List<({String name, List<double> gains})> customPresets;
+  final ValueChanged<({String name, List<double> gains})> onDelete;
+  final VoidCallback onSave;
   const _EqPresets({
     required this.enabled,
     required this.bandCount,
     required this.onApply,
+    required this.customPresets,
+    required this.onDelete,
+    required this.onSave,
   });
 
   static const _presets = <(String, List<double>)>[
@@ -1662,8 +1718,30 @@ class _EqPresets extends StatelessWidget {
           for (final p in _presets)
             ActionChip(
               label: Text(p.$1, style: const TextStyle(fontSize: 12)),
-              onPressed: enabled ? () => onApply(p.$2.map((e) => e.toDouble()).toList()) : null,
+              onPressed: enabled
+                  ? () => onApply(p.$2.map((e) => e.toDouble()).toList())
+                  : null,
             ),
+          // User-saved presets render as InputChips so the user can
+          // delete them via the trailing X. The label rounds to the
+          // same chip look so they read as peers of the built-ins,
+          // not as a separate type of thing.
+          for (final p in customPresets)
+            InputChip(
+              label: Text(p.name, style: const TextStyle(fontSize: 12)),
+              onPressed: enabled ? () => onApply(p.gains) : null,
+              onDeleted: () => onDelete(p),
+              deleteIconColor: const Color(0xFF1ED760),
+            ),
+          // "Save current curve as preset" — always tappable while
+          // the eq is configured (params resolved), even when the
+          // user has the eq toggle off. Saving the gains shouldn't
+          // require the eq to be live.
+          ActionChip(
+            avatar: const Icon(Icons.add, size: 16),
+            label: const Text('Save…', style: TextStyle(fontSize: 12)),
+            onPressed: onSave,
+          ),
         ],
       );
 }
