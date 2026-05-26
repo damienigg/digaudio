@@ -247,9 +247,30 @@ class AudioEngine extends BaseAudioHandler {
     _startTransition(nextIdx);
   }
 
+  /// When true, the next end-of-track event pauses the engine instead
+  /// of auto-advancing to the next queued track. Used by the sleep
+  /// timer's "Stop at end of current track" + the album-mode
+  /// "Stop after this album". Both features previously listened to
+  /// the engine's playerStateStream and called `pause()` themselves,
+  /// but lost a race with the auto-advance which already fired on
+  /// the same `completed` event — net effect: the next track started
+  /// playing anyway. The flag is read inside [_onProcessingState]
+  /// before any advance, so the gate is honoured deterministically.
+  /// Auto-resets on consumption (single-shot).
+  bool pauseAtEndOfTrack = false;
+
   void _onProcessingState(ProcessingState state) {
     if (state != ProcessingState.completed) return;
     if (_inTransition) return;
+    if (pauseAtEndOfTrack) {
+      pauseAtEndOfTrack = false;
+      // Don't auto-advance. Keep mediaItem on the current track so
+      // the lockscreen / widget continue to show what was playing
+      // (looks like a paused state, which is exactly the intent).
+      // Sleep / album-mode listeners will tidy their own UI from
+      // their own playerState subscription.
+      return;
+    }
     // LoopMode.one: just_audio's loop-one on the source handles it; we
     // shouldn't have hit `completed` here, but bail just in case.
     if (_loopMode == LoopMode.one) return;

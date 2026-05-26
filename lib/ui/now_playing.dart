@@ -12,6 +12,7 @@ import 'package:share_plus/share_plus.dart';
 import '../audio/audio_info.dart';
 import '../audio/providers.dart';
 import '../domain.dart';
+import '../library/local.dart' show LocalTrackUri;
 import '../subsonic/client.dart';
 import 'widgets/artwork.dart';
 import 'widgets/mini_player.dart';
@@ -673,14 +674,55 @@ class _ShareAction extends ConsumerWidget {
     final track = ref.watch(currentTrackProvider);
     return IconButton(
       tooltip: 'Share track',
-      onPressed: track == null
-          ? null
-          : () => Share.share(
-                'Listening to ${track.title} — ${track.displayArtist}  ·  via digaudio',
-                subject: track.title,
-              ),
+      onPressed:
+          track == null ? null : () => _shareTrack(context, ref, track),
       icon: const Icon(Icons.share_outlined),
     );
+  }
+
+  /// Real music share — not the old text card.
+  ///
+  /// **Subsonic**: calls `createShare` on the originating server,
+  /// which returns a public URL anyone can use without auth (server
+  /// streams to the recipient, no app required). Subject to the
+  /// server's share permissions (Navidrome restricts to admins by
+  /// default → surfaces error 50).
+  ///
+  /// **Local**: shares the file via Android's content URI. The
+  /// system share sheet hands the file over to whichever app the
+  /// user picks (Messages, Telegram, Drive, etc.).
+  Future<void> _shareTrack(
+      BuildContext context, WidgetRef ref, Track track) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final subject = '${track.title} — ${track.displayArtist}';
+    try {
+      if (track.origin == MediaOrigin.subsonic) {
+        final s = ref.read(subsonicResolverProvider).forTrack(track);
+        if (s == null) {
+          messenger.showSnackBar(
+              const SnackBar(content: Text('No Subsonic server available.')));
+          return;
+        }
+        final url = await s.createShare(track.id, description: subject);
+        await Share.share(url, subject: subject);
+      } else {
+        // Local: hand the Android content URI to share_plus, which
+        // wraps it through FileProvider so the recipient app gets a
+        // proper attachable file.
+        await Share.shareXFiles(
+          [XFile(track.localContentUri)],
+          subject: subject,
+        );
+      }
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(
+        content: Text(
+          e.toString().contains('error 50')
+              ? 'Server requires admin role to create shares.'
+              : 'Share failed: $e',
+        ),
+      ));
+    }
   }
 }
 

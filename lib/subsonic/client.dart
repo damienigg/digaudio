@@ -281,6 +281,29 @@ class SubsonicClient {
     return ScanStatus._parse(r);
   }
 
+  /// Creates a public share for a single song. Returns the public URL
+  /// the server hands out. Admin role usually required on Navidrome
+  /// (error 50 otherwise) — caller surfaces that to the user.
+  ///
+  /// Server uses its configured default expiration when `expires` is
+  /// null (Navidrome ≈ 30 days by default).
+  Future<String> createShare(String songId, {String? description}) async {
+    final r = await _get('createShare', {
+      'id': songId,
+      if (description != null && description.isNotEmpty)
+        'description': description,
+    });
+    final shares = (r['shares'] as Map?)?['share'] as List?;
+    if (shares == null || shares.isEmpty) {
+      throw StateError('Server returned no share');
+    }
+    final url = (shares.first as Map)['url'] as String?;
+    if (url == null || url.isEmpty) {
+      throw StateError('Server returned empty share URL');
+    }
+    return url;
+  }
+
   // --- URL builders (no auth side-effects beyond a fresh salt) -------------
 
   Uri streamUri(String songId, {int? maxBitRate, String? format}) => _url('stream', {

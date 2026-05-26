@@ -66,9 +66,16 @@ class SleepTimerService {
 
   void startAtEndOfTrack() {
     cancel();
+    // Arm the engine-level gate so the auto-advance is suppressed
+    // for the next end-of-track. Without this we lost a race with
+    // `_onProcessingState` (it fired the swap before our listener
+    // could pause) and the user heard the next track despite the
+    // sleep timer.
+    _engine.pauseAtEndOfTrack = true;
     _endOfTrackSub = _engine.playerStateStream.listen((s) {
       if (s.processingState == ProcessingState.completed) {
-        _engine.pause();
+        // Engine already gated the advance — we only tidy our own UI
+        // state (badge / `_endOfTrackActive`).
         cancel();
       }
     });
@@ -81,6 +88,9 @@ class SleepTimerService {
     _timer = null;
     _endOfTrackSub = null;
     _endsAt = null;
+    // Disarm the engine gate so a future natural end-of-track resumes
+    // auto-advance behaviour.
+    _engine.pauseAtEndOfTrack = false;
     _restoreVolume();
     _remaining.add(null);
     _endOfTrackActive.add(false);

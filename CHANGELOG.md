@@ -7,6 +7,35 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.30.24] — 2026-05-27
+
+### Changed (Real music sharing instead of a text card)
+- The Share icon on Now Playing used to send a dumb text card
+  ("Listening to X — Y · via digaudio"). Now actually shares the
+  music:
+  - **Subsonic track**: calls `createShare(songId)` on the
+    originating server, which returns a public URL anyone can use
+    to stream the song without auth or the digaudio app. URL goes
+    through the system share sheet (Messages, Telegram, email,
+    etc.). Server-side share permissions apply — Navidrome
+    restricts to admin users by default and the error is surfaced
+    inline as a snack.
+  - **Local track**: shares the file via Android's content URI
+    through `share_plus`'s `shareXFiles`. The recipient app gets a
+    real attachable file (Telegram → audio file, email →
+    attachment, Drive → upload, etc.).
+
+### Fixed (Sleep timer "Stop at end of current track")
+- The "Stop at end" feature was racing the engine's auto-advance:
+  both listened to `processingState == completed` on the same
+  stream, and the auto-advance (subscribed first) consistently
+  fired before the sleep timer could pause — so the next track
+  started playing anyway.
+- Fix: added a one-shot `pauseAtEndOfTrack` gate on the engine.
+  When `SleepTimerService.startAtEndOfTrack()` arms it, the engine's
+  `_onProcessingState` honours the gate and skips the advance.
+  The sleep timer's own listener still fires to tidy its UI state.
+
 ## [0.30.23] — 2026-05-27
 
 ### Added (Mini-player on Now Playing too)
