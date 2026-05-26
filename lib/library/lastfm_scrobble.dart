@@ -37,18 +37,31 @@ class LastfmScrobbleClient {
 
   final String? apiKey;
   final String? sharedSecret;
-  final String? sessionKey;
+  /// Live getter so the client always sees the **current** session key
+  /// from [PlaybackPrefs] without the provider having to rebuild. The
+  /// `PlaybackPrefs` singleton mutates in place on save — Riverpod
+  /// can't tell that mutation happened, so a cached `String?` would
+  /// stay empty forever after the OAuth handshake. Reading via a
+  /// closure dodges the problem entirely (and `disconnect` likewise
+  /// flips `enabled` back to false on the next call).
+  final String? Function() sessionKey;
   final Dio _dio = Dio(BaseOptions(
     connectTimeout: const Duration(seconds: 5),
     receiveTimeout: const Duration(seconds: 10),
   ));
 
-  LastfmScrobbleClient({this.apiKey, this.sharedSecret, this.sessionKey});
+  LastfmScrobbleClient({
+    this.apiKey,
+    this.sharedSecret,
+    required this.sessionKey,
+  });
 
   /// True once we have everything needed to scrobble: build-time creds
   /// AND a session key from a completed auth handshake.
-  bool get enabled =>
-      _hasBuildCreds && sessionKey != null && sessionKey!.isNotEmpty;
+  bool get enabled {
+    final sk = sessionKey();
+    return _hasBuildCreds && sk != null && sk.isNotEmpty;
+  }
 
   bool get _hasBuildCreds =>
       apiKey != null &&
@@ -139,7 +152,7 @@ class LastfmScrobbleClient {
       'track': track,
       'artist': artist,
       'api_key': apiKey!,
-      'sk': sessionKey!,
+      'sk': sessionKey()!,
       if (album != null && album.isNotEmpty) 'album': album,
       if (durationSec != null && durationSec > 0)
         'duration': durationSec.toString(),
@@ -166,7 +179,7 @@ class LastfmScrobbleClient {
       'artist': artist,
       'timestamp': ts,
       'api_key': apiKey!,
-      'sk': sessionKey!,
+      'sk': sessionKey()!,
       if (album != null && album.isNotEmpty) 'album': album,
       if (durationSec != null && durationSec > 0)
         'duration': durationSec.toString(),

@@ -7,6 +7,26 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.30.2] — 2026-05-27
+
+### Fixed
+- **Last.fm "Connect" handshake silently reset to "Connect Last.fm"
+  after the user tapped "I approved — finish".** `LastfmScrobbleClient`
+  captured the session key as a `final String?` at construction time;
+  the provider read it from `PlaybackPrefs` via `ref.watch(...).lastfmSessionKey`.
+  Problem: `PlaybackPrefs` is a mutable singleton — Riverpod can't
+  tell when a field mutates inside it, so the provider never
+  rebuilt, the client kept its empty cached session key, and
+  `client.enabled` stayed false even though prefs had the key. The
+  card's setState rebuilt local widget state but read the stale
+  client and fell through to the "Connect Last.fm" branch.
+  Root-cause fix: `LastfmScrobbleClient.sessionKey` is now
+  `String? Function()` (a live closure). The provider passes
+  `() => prefs.lastfmSessionKey`, so every `enabled` / `scrobble` /
+  `updateNowPlaying` reads the current value. No provider rebuild
+  needed, no version-counter plumbing, no extra `ref.invalidate`.
+  Same model applies to disconnect (next read sees empty).
+
 ## [0.30.1] — 2026-05-27
 
 ### Fixed

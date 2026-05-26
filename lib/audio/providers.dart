@@ -190,15 +190,18 @@ const _lastfmSecret =
 final lastfmClientProvider = Provider<LastfmClient>((_) => LastfmClient(_lastfmKey));
 
 /// Last.fm direct scrobble client (v0.30.0). Build-time api_key and
-/// shared_secret come from dart-defines; the session key is persisted
-/// in [PlaybackPrefs] after the 2-step browser handshake. Watching
-/// prefs means a successful "Connect Last.fm" in Settings flips the
-/// client to [enabled] without an app restart.
+/// shared_secret come from dart-defines; the session key is read
+/// **live** from [PlaybackPrefs] via a closure so a successful
+/// "Connect Last.fm" in Settings flips `client.enabled` to true on
+/// the next read — without an app restart and without depending on
+/// Riverpod noticing a mutation inside the prefs singleton (which it
+/// can't, because PlaybackPrefs is the same instance before/after
+/// save).
 final lastfmScrobbleClientProvider =
     Provider<LastfmScrobbleClient>((ref) => LastfmScrobbleClient(
           apiKey: _lastfmKey,
           sharedSecret: _lastfmSecret,
-          sessionKey: ref.watch(playbackPrefsProvider).lastfmSessionKey,
+          sessionKey: () => ref.read(playbackPrefsProvider).lastfmSessionKey,
         ));
 
 /// ListenBrainz client — reads the user token live from prefs so a
