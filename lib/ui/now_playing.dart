@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:palette_generator/palette_generator.dart';
 import 'package:share_plus/share_plus.dart';
@@ -84,7 +85,20 @@ class NowPlayingPage extends ConsumerWidget {
       child: Scaffold(
         appBar: AppBar(
           leading: IconButton(tooltip: 'Close', icon: const Icon(Icons.keyboard_arrow_down), onPressed: () => Navigator.maybePop(context)),
-          title: Text(track.album ?? track.title, style: const TextStyle(fontSize: 14)),
+          // Album name is tappable when there's an albumId to route
+          // to — taking the user to the album page is the natural
+          // "where did this come from" affordance. Local tracks with
+          // no albumId, or tracks where album is null, just render
+          // as plain text (track title fallback).
+          title: (track.album != null && track.albumId != null)
+              ? InkWell(
+                  onTap: () => context.push(
+                      '/album/${track.origin.name}/${track.albumId}'),
+                  child: Text(track.album!,
+                      style: const TextStyle(fontSize: 14)),
+                )
+              : Text(track.album ?? track.title,
+                  style: const TextStyle(fontSize: 14)),
           actions: const [
             _AlbumModeAction(),
             _ShareAction(),
@@ -154,6 +168,7 @@ class _PlayerTab extends ConsumerWidget {
     final engine = ref.watch(audioEngineProvider);
     final state = ref.watch(playerStateProvider);
     final playing = state.playing;
+    final accent = ref.watch(nowPlayingTintProvider).valueOrNull ?? _accent;
     final shuffle = ref.watch(shuffleProvider);
     final loop = ref.watch(loopProvider);
 
@@ -223,15 +238,24 @@ class _PlayerTab extends ConsumerWidget {
                       icon: Icon(Icons.shuffle, color: shuffle ? _accent : context.textSecondary),
                       onPressed: () => engine.setShuffle(!shuffle),
                     ),
-                    IconButton(tooltip: 'Previous track', iconSize: 40, icon: const Icon(Icons.skip_previous), onPressed: engine.previous),
+                    IconButton(
+                      tooltip: 'Previous track',
+                      iconSize: 40,
+                      icon: Icon(Icons.skip_previous, color: accent),
+                      onPressed: engine.previous,
+                    ),
                     FloatingActionButton(
                       onPressed: () => playing ? engine.pause() : engine.play(),
-                      backgroundColor:
-                          ref.watch(nowPlayingTintProvider).valueOrNull ?? _accent,
+                      backgroundColor: accent,
                       foregroundColor: Colors.black,
                       child: Icon(playing ? Icons.pause : Icons.play_arrow, size: 32),
                     ),
-                    IconButton(tooltip: 'Next track', iconSize: 40, icon: const Icon(Icons.skip_next), onPressed: engine.next),
+                    IconButton(
+                      tooltip: 'Next track',
+                      iconSize: 40,
+                      icon: Icon(Icons.skip_next, color: accent),
+                      onPressed: engine.next,
+                    ),
                     IconButton(
                       tooltip: loop == LoopMode.one
                           ? 'Repeat one'

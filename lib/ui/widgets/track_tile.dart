@@ -49,7 +49,12 @@ class TrackTile extends ConsumerWidget {
     return InkWell(
       onTap: selecting
           ? () => ref.read(selectionProvider.notifier).toggle(t)
-          : () => engine.setQueue(queue, initialIndex: index),
+          : () {
+              // ignore: avoid_print
+              print('[digaudio.dbg] TrackTile.onTap: index=$index, '
+                  'title="${t.title}", queue.length=${queue.length}');
+              engine.setQueue(queue, initialIndex: index);
+            },
       onLongPress: () => ref.read(selectionProvider.notifier).toggle(t),
       child: Container(
         color: isSelected ? const Color(0x331ED760) : null,

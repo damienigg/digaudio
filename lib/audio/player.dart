@@ -571,8 +571,17 @@ class AudioEngine extends BaseAudioHandler {
     }
     _tracks = List.unmodifiable(tracks);
     _originalOrder = _tracks;
-    if (_shuffleEnabled) _applyShuffle(initialIndex);
-    _currentIndex = initialIndex.clamp(0, _tracks.length - 1);
+    if (_shuffleEnabled) {
+      // _applyShuffle pins `tracks[initialIndex]` at position 0 and
+      // sets _currentIndex = 0. Previously we then *overwrote*
+      // _currentIndex with initialIndex.clamp(...), which pointed at
+      // some random shuffled track instead of the user's pick — net
+      // effect: shuffle on + tap song → played a different (random)
+      // song. Skip the post-shuffle reassignment.
+      _applyShuffle(initialIndex);
+    } else {
+      _currentIndex = initialIndex.clamp(0, _tracks.length - 1);
+    }
     _preloadedIndex = null;
     queue.add(_tracks.map(_toMediaItem).toList());
 

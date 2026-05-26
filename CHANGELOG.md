@@ -7,6 +7,37 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.30.22] — 2026-05-27
+
+### Fixed (Shuffle-on + tap song = plays a random different song)
+- `setQueue` called `_applyShuffle(initialIndex)` (which pins
+  `tracks[initialIndex]` at position 0 + sets `_currentIndex = 0`)
+  but then *overwrote* `_currentIndex = initialIndex.clamp(...)` on
+  the next line — pointing at some random shuffled track instead of
+  the user's pick. Now only the non-shuffle branch reassigns
+  `_currentIndex`; the shuffle branch trusts `_applyShuffle`'s own
+  bookkeeping. Tap-to-play now respects the user's selection
+  regardless of shuffle state.
+
+### Added (Prev / next icons follow the same artwork tint)
+- The transport row on Now Playing had a tinted play FAB but
+  prev / next stayed un-coloured. Now both inherit the same accent
+  from the cover palette (with brand-green fallback), so the trio
+  reads as a cohesive group.
+
+### Added (Now Playing AppBar album title → tappable)
+- The truncated album name top-left of Now Playing now navigates to
+  the album page when tapped (when an albumId is available — typical
+  Subsonic case). Local tracks without an albumId stay as plain text.
+
+### Debug
+- Added `[digaudio.dbg] TrackTile.onTap: index=X, title=Y` print on
+  every track-tile tap so the user's off-by-one report
+  ("playing the song just before the one I tapped") can be confirmed
+  in logcat. If `setQueue` follows up with `idx=X` and
+  `setAudioSource (title=Y)`, the chain matches. If not, the gap is
+  visible.
+
 ## [0.30.21] — 2026-05-27
 
 ### Changed (Background visible through the blur)
