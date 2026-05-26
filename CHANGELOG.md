@@ -7,6 +7,28 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.30.17] — 2026-05-27
+
+### Added (Fancy app background on Home / Search / Library)
+- The bottom-nav tabs used to render on a flat dark (or white)
+  scaffold which read as bland for a music app. New `_AppBackground`
+  widget sits behind the shell body and renders:
+  - **Nothing playing** — app launcher icon (`assets/icon/digaudio_icon.png`)
+    centred at 6 % opacity. Subtle brand presence on either theme.
+  - **Track playing with artwork** — current cover blurred via
+    `ImageFiltered(ImageFilter.blur(40, 40))` at 22 % opacity,
+    `BoxFit.cover` over the full viewport. Cross-fades on track
+    change via `AnimatedSwitcher` (350 ms).
+- Works for Subsonic AND local tracks (uses the same Artwork
+  fetch paths — `CachedNetworkImageProvider` for Subsonic,
+  `LocalLibrary.getArtwork` for local with the v0.30.16 APIC
+  fallback).
+- Toggle: **Settings → Display → "App background"**, default ON.
+  Off → flat scaffold (previous behaviour).
+- Now Playing keeps its own `_BgArtwork` (full-bleed at higher
+  opacity); this background only shows behind the navigation
+  branches.
+
 ## [0.30.16] — 2026-05-27
 
 ### Fixed (Local MP3 artwork on Now Playing full-bleed background)

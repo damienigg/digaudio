@@ -565,6 +565,21 @@ class DisplayPage extends ConsumerWidget {
             },
           ),
           _DisplayToggle(
+            title: 'App background',
+            subtitle:
+                'Show a soft full-screen background on Home / Search / '
+                'Library: app icon at low opacity when nothing is '
+                'playing, blurred current-track artwork when a queue '
+                'is loaded. On by default — turn off for a flat scaffold.',
+            value: ref.watch(displayPrefsProvider).appBackgroundEnabled,
+            onChanged: (v) async {
+              final p = ref.read(displayPrefsProvider);
+              p.appBackgroundEnabled = v;
+              await p.save();
+              ref.invalidate(displayPrefsProvider);
+            },
+          ),
+          _DisplayToggle(
             title: 'Debug mode',
             subtitle:
                 'Stream verbose [digaudio.dbg] engine / provider / '

@@ -15,6 +15,7 @@ class DisplayPrefs {
   static const _kAudioGeekInfo = 'display.audio_geek_info';
   static const _kRecentSearches = 'display.recent_searches';
   static const _kDebugLogsEnabled = 'display.debug_logs';
+  static const _kAppBackground = 'display.app_background';
 
   /// Cap on persisted recent searches — anything past this is the
   /// LRU tail and gets evicted. 10 fits comfortably in the empty
@@ -55,6 +56,13 @@ class DisplayPrefs {
   /// to gate on this flag. Surfaced now so the toggle exists when
   /// we flip the wiring.
   bool debugLogsEnabled = false;
+
+  /// Show a "fancy" full-screen background behind Home / Search /
+  /// Library: app launcher icon at low opacity when nothing is
+  /// playing, blurred current-track artwork when there is a queue.
+  /// Default ON — the empty flat dark/light scaffold without it
+  /// reads as bland for a music app.
+  bool appBackgroundEnabled = true;
 
   /// LRU-ordered list of recent search queries (most recent first).
   /// Surfaced as tappable chips on the Search empty-state so the user
@@ -103,6 +111,7 @@ class DisplayPrefs {
     materialYouEnabled = p.getBool(_kMaterialYou) ?? false;
     audioGeekInfoEnabled = p.getBool(_kAudioGeekInfo) ?? false;
     debugLogsEnabled = p.getBool(_kDebugLogsEnabled) ?? false;
+    appBackgroundEnabled = p.getBool(_kAppBackground) ?? true;
     final raw = p.getString(_kRecentSearches);
     if (raw != null && raw.isNotEmpty) {
       recentSearches =
@@ -118,6 +127,7 @@ class DisplayPrefs {
     await p.setBool(_kMaterialYou, materialYouEnabled);
     await p.setBool(_kAudioGeekInfo, audioGeekInfoEnabled);
     await p.setBool(_kDebugLogsEnabled, debugLogsEnabled);
+    await p.setBool(_kAppBackground, appBackgroundEnabled);
     await p.setString(_kRecentSearches, jsonEncode(recentSearches));
   }
 }
