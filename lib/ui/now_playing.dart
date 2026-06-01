@@ -57,6 +57,7 @@ class NowPlayingPage extends ConsumerWidget {
           ],
           bottom: TabBar(
             indicatorColor: accent,
+            labelColor: accent,
             tabs: const [Tab(text: 'Player'), Tab(text: 'Queue'), Tab(text: 'Lyrics')],
           ),
         ),

@@ -7,6 +7,16 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.30.46] — 2026-06-01
+
+### Fixed (TabBar labels still rendered in brand green)
+- `TabBar` only had `indicatorColor` overridden in v0.30.44's accent
+  migration. The selected-tab **label** colour was still inherited
+  from `theme.colorScheme.primary` (brand `#1ED760`), so the active
+  tab name flashed green even when the rest of the screen used the
+  cover tint. Set `labelColor: accent` on the Library and Now
+  Playing TabBars too.
+
 ## [0.30.45] — 2026-06-01
 
 ### Fixed (Smart playlists landed on a blank gray screen)

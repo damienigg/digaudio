@@ -47,6 +47,9 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
           bottom: TabBar(
             isScrollable: true,
             indicatorColor: accent,
+            // labelColor would otherwise inherit theme.colorScheme.primary
+            // (= brand green), defeating the tint override.
+            labelColor: accent,
             tabs: const [
               Tab(text: 'Albums'),
               Tab(text: 'Artists'),
