@@ -391,6 +391,7 @@ class _QueueTab extends ConsumerWidget {
     // could drift apart whenever a mutation happened between tracks.
     final queue = ref.watch(currentQueueProvider);
     final engine = ref.watch(audioEngineProvider);
+    final currentIndex = engine.currentIndex;
     if (queue.isEmpty) return const Center(child: Text('Empty queue'));
     return ReorderableListView.builder(
       itemCount: queue.length,
@@ -414,7 +415,9 @@ class _QueueTab extends ConsumerWidget {
         onDismissed: (_) => engine.removeFromQueue(i),
         child: Row(
           children: [
-            Expanded(child: TrackTile(queue: queue, index: i)),
+            Expanded(
+                child: TrackTile(
+                    queue: queue, index: i, isPlaying: i == currentIndex)),
             ReorderableDragStartListener(
               index: i,
               child: Padding(

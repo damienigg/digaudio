@@ -21,12 +21,19 @@ class TrackTile extends ConsumerWidget {
   /// Null elsewhere = subtitle stays clean.
   final String? serverLabel;
 
+  /// When true, the title renders in bold accent-green and a play-arrow
+  /// is overlaid on the artwork — used by the Now Playing queue tab to
+  /// signal which row is the current track. Defaults to false so every
+  /// other caller (search, album, playlist…) renders unchanged.
+  final bool isPlaying;
+
   const TrackTile({
     super.key,
     required this.queue,
     required this.index,
     this.onMore,
     this.serverLabel,
+    this.isPlaying = false,
   });
 
   @override
@@ -81,11 +88,33 @@ class TrackTile extends ConsumerWidget {
                 ),
               )
             else
-              Artwork(
-                coverArt: t.coverArt,
-                origin: t.origin,
-                size: 48,
-                serverId: t.serverId,
+              SizedBox(
+                width: 48,
+                height: 48,
+                child: Stack(
+                  children: [
+                    Artwork(
+                      coverArt: t.coverArt,
+                      origin: t.origin,
+                      size: 48,
+                      serverId: t.serverId,
+                    ),
+                    if (isPlaying)
+                      Positioned.fill(
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.45),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Icon(
+                            Icons.play_arrow_rounded,
+                            color: Colors.white,
+                            size: 30,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ),
             const SizedBox(width: 12),
             Expanded(
@@ -105,8 +134,18 @@ class TrackTile extends ConsumerWidget {
                         const SizedBox(width: 4),
                       ],
                       Expanded(
-                        child: Text(t.title, maxLines: 1, overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                        child: Text(t.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontWeight: isPlaying
+                                  ? FontWeight.w800
+                                  : FontWeight.w600,
+                              fontSize: 15,
+                              color: isPlaying
+                                  ? const Color(0xFF1ED760)
+                                  : null,
+                            )),
                       ),
                     ],
                   ),

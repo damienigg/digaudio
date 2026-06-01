@@ -7,6 +7,60 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.30.32] — 2026-06-01
+
+### Changed (Home — every pixel earns its keep)
+- Dropped the `_HomeHero` strip (large icon + DIGaudio title + tagline).
+  Replaced with a permanent search affordance sitting in the AppBar
+  title slot — a fake search bar (Material + InkWell + hint text)
+  that taps through to `/search` and focuses its real input. Settings
+  gear stays as the AppBar action. Saves ~110 px of vertical real
+  estate on every Home build.
+
+### Changed (Search — keyboard only on tap, recents only on submit)
+- The keyboard now appears **only** when the user explicitly asks
+  for it: tap the home search bar, tap the bottom-nav search icon,
+  or tap directly inside the search TextField. New
+  `searchFocusRequestProvider` (counter) is bumped by those two
+  entry points; SearchPage's `ref.listen` requests focus on bump.
+  A `_firstBuild` guard handles the cold-start case where the
+  counter was bumped *before* SearchPage mounted (`ref.listen`
+  only fires on subsequent changes). Coming back to /search from
+  a child route, or cold-starting on /search, no longer raises
+  the keyboard.
+- Recent searches now only persist on **submit** — Enter key, voice
+  input, or recent-chip reuse. The previous per-keystroke debounced
+  persistence polluted history with half-typed garbage ("a", "ab",
+  "abc"…); only the final intent matters.
+
+### Changed (Now Playing — currently-playing track highlighted in queue)
+- The Queue tab now flags the current track with a bold accent-green
+  title and a centered `play_arrow_rounded` icon overlaid on the
+  artwork (45 % black scrim). Highlight follows `engine.currentIndex`
+  via the existing `currentTrackProvider` watch. Opt-in
+  `isPlaying` param on `TrackTile`, defaults to false, so search /
+  library / album lists render unchanged.
+
+### Fixed (code review on v0.30.31 — 11 findings)
+- `subsonic/client.dart` — `_firstGenre` now scans the whole `genres`
+  list (instead of stopping at `list.first`), handles both
+  `[{name: ...}]` and `[String]` shapes, and uses an `is String`
+  check instead of a blind `as String?` cast (no TypeError if a
+  server returns the legacy field as the wrong type).
+- `ui/home.dart` — Stats card error branch is now tappable
+  (→ `/stats`) and renders a safe generic message instead of
+  leaking raw `$e` (Drift schema / column names). Container →
+  `Ink` so the InkWell splash isn't occluded by the background.
+  Padding made symmetric so non-chevron states aren't off-center.
+- `_StatTile` value Row wrapped in `FittedBox(scaleDown)` —
+  5-digit play counts no longer overflow narrow Expanded slots
+  on ≤360 dp phones.
+- Top-artist avatar indexes by `runes.first` instead of `[0]` —
+  emoji-prefixed artist names no longer render as a tofu glyph.
+- `tool/run.example.sh` — mirrors the gitignored `run.sh` LFM
+  passthrough so fresh contributors don't ship APKs without
+  Last.fm support.
+
 ## [0.30.31] — 2026-05-27
 
 ### Fixed (Library → Genres stayed empty even after a fresh sync)
