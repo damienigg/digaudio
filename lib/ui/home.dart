@@ -286,6 +286,92 @@ class _StatsDashboard extends ConsumerWidget {
         ),
       );
 
+  /// Builds the four "top" rows as a 2×2 grid (one column was too tall
+  /// once we added genre + album). Returns the divider + zero, one or
+  /// two `Row` widgets depending on how many of the tops are available
+  /// — null tops (e.g. genre on a freshly-installed library) are
+  /// skipped, and an odd count leaves a blank Expanded so the grid
+  /// stays aligned to the left column.
+  List<Widget> _topGrid(BuildContext context, HomeStats s) {
+    final cells = <Widget>[
+      if (s.topTrack != null)
+        _TopRow(
+          label: 'TOP TRACK',
+          title: s.topTrack!.title,
+          subtitle: s.topTrack!.displayArtist,
+          artwork: Artwork(
+            coverArt: s.topTrack!.coverArt,
+            origin: s.topTrack!.origin,
+            size: 40,
+          ),
+        ),
+      if (s.topArtist != null)
+        _TopRow(
+          label: 'TOP ARTIST',
+          title: s.topArtist!,
+          subtitle: '${s.topArtistPlays} plays',
+          artwork: CircleAvatar(
+            radius: 20,
+            backgroundColor: const Color(0xFF1E1E22),
+            child: Text(
+              // Index by rune so artists whose name begins with an emoji
+              // or other astral-plane character don't render as a lone-
+              // surrogate tofu glyph.
+              s.topArtist!.isNotEmpty
+                  ? String.fromCharCode(s.topArtist!.runes.first)
+                      .toUpperCase()
+                  : '?',
+              style: const TextStyle(fontWeight: FontWeight.w800),
+            ),
+          ),
+        ),
+      if (s.topGenre != null)
+        _TopRow(
+          label: 'TOP GENRE',
+          title: s.topGenre!,
+          subtitle: '${s.topGenrePlays} plays',
+          artwork: const CircleAvatar(
+            radius: 20,
+            backgroundColor: Color(0xFF1E1E22),
+            child: Icon(Icons.label_outline, size: 20, color: _accent),
+          ),
+        ),
+      if (s.topAlbum != null)
+        _TopRow(
+          label: 'TOP ALBUM',
+          title: s.topAlbum!.name,
+          subtitle: '${s.topAlbum!.count} plays',
+          artwork: Artwork(
+            coverArt: s.topAlbum!.sample.coverArt,
+            origin: s.topAlbum!.sample.origin,
+            serverId: s.topAlbum!.sample.serverId,
+            size: 40,
+          ),
+        ),
+    ];
+    if (cells.isEmpty) return const [];
+    final rows = <Widget>[];
+    for (var i = 0; i < cells.length; i += 2) {
+      if (rows.isNotEmpty) rows.add(const SizedBox(height: 10));
+      rows.add(Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(child: cells[i]),
+          const SizedBox(width: 12),
+          Expanded(
+            child: i + 1 < cells.length ? cells[i + 1] : const SizedBox(),
+          ),
+        ],
+      ));
+    }
+    return [
+      const SizedBox(height: 12),
+      Divider(color: context.outlineStrong.withOpacity(0.3), height: 1),
+      const SizedBox(height: 12),
+      ...rows,
+    ];
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final stats = ref.watch(homeStatsProvider);
@@ -328,76 +414,7 @@ class _StatsDashboard extends ConsumerWidget {
                       icon: Icons.local_fire_department),
                 ],
               ),
-              if (s.topTrack != null ||
-                  s.topArtist != null ||
-                  s.topGenre != null ||
-                  s.topAlbum != null) ...[
-                const SizedBox(height: 12),
-                Divider(
-                    color: context.outlineStrong.withOpacity(0.3), height: 1),
-                const SizedBox(height: 12),
-              ],
-              if (s.topTrack != null)
-                _TopRow(
-                  label: 'TOP TRACK',
-                  title: s.topTrack!.title,
-                  subtitle: s.topTrack!.displayArtist,
-                  artwork: Artwork(
-                    coverArt: s.topTrack!.coverArt,
-                    origin: s.topTrack!.origin,
-                    size: 40,
-                  ),
-                ),
-              if (s.topArtist != null) ...[
-                const SizedBox(height: 8),
-                _TopRow(
-                  label: 'TOP ARTIST',
-                  title: s.topArtist!,
-                  subtitle: '${s.topArtistPlays} plays',
-                  artwork: CircleAvatar(
-                    radius: 20,
-                    backgroundColor: const Color(0xFF1E1E22),
-                    child: Text(
-                      // Index by rune so artists whose name begins with an
-                      // emoji or other astral-plane character don't render
-                      // as a lone-surrogate tofu glyph.
-                      s.topArtist!.isNotEmpty
-                          ? String.fromCharCode(s.topArtist!.runes.first)
-                              .toUpperCase()
-                          : '?',
-                      style: const TextStyle(fontWeight: FontWeight.w800),
-                    ),
-                  ),
-                ),
-              ],
-              if (s.topGenre != null) ...[
-                const SizedBox(height: 8),
-                _TopRow(
-                  label: 'TOP GENRE',
-                  title: s.topGenre!,
-                  subtitle: '${s.topGenrePlays} plays',
-                  artwork: const CircleAvatar(
-                    radius: 20,
-                    backgroundColor: Color(0xFF1E1E22),
-                    child: Icon(Icons.label_outline,
-                        size: 20, color: _accent),
-                  ),
-                ),
-              ],
-              if (s.topAlbum != null) ...[
-                const SizedBox(height: 8),
-                _TopRow(
-                  label: 'TOP ALBUM',
-                  title: s.topAlbum!.name,
-                  subtitle: '${s.topAlbum!.count} plays',
-                  artwork: Artwork(
-                    coverArt: s.topAlbum!.sample.coverArt,
-                    origin: s.topAlbum!.sample.origin,
-                    serverId: s.topAlbum!.sample.serverId,
-                    size: 40,
-                  ),
-                ),
-              ],
+              ..._topGrid(context, s),
             ],
           ),
         );

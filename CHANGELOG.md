@@ -7,6 +7,15 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.30.41] — 2026-06-01
+
+### Changed (Home stats card — tops in a 2×2 grid)
+- The four top rows (track / artist / genre / album) used to stack
+  vertically in a single column — too tall once we added genre and
+  album. Now arranged as a 2×2 grid via two `Row(Expanded × 2)`. Null
+  tops (e.g. genre on a freshly installed library) are skipped; an
+  odd count leaves a blank Expanded so the left column stays aligned.
+
 ## [0.30.40] — 2026-06-01
 
 ### Fixed (mini player + Now Playing nav icon stacked the screen N times)
