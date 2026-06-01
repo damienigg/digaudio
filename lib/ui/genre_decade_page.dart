@@ -7,8 +7,6 @@ import 'widgets/mini_player.dart';
 import 'widgets/theme_ext.dart';
 import 'widgets/track_tile.dart';
 
-const _accent = brandAccent;
-
 /// Shared scaffold for genre / decade detail pages — fetches a track
 /// list from [SubsonicLibraryCache], shows a Play-all + Shuffle header,
 /// then a scrollable TrackTile list. Used by both routes; the only
@@ -20,7 +18,7 @@ class _BrowsePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final accent = ref.watch(accentTintProvider).valueOrNull ?? _accent;
+    final accent = ref.watch(accentTintProvider).valueOrNull ?? brandAccent;
     return Scaffold(
       bottomNavigationBar: const MiniPlayer(),
       appBar: AppBar(title: Text(title)),

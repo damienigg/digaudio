@@ -1,8 +1,8 @@
-# Features — digaudio (v0.30.0)
+# Features — digaudio (v1.0.0)
 
-What's shipped, where to find it. Each row gives the entry point + a one-line description. `TEST_PLAN.md` covers acceptance tests (the validation pass that gates v1.0.0).
+What's shipped, where to find it. Each row gives the entry point + a one-line description. `TEST_PLAN.md` covers acceptance tests.
 
-**Release status (2026-05-27)**: feature set is complete. The remaining gate to v1.0.0 is a real-device validation walk-through of `TEST_PLAN.md`. Post-1.0, **i18n FR** is the only open optional polish — pursued only if the user explicitly wants the app in French.
+**Release status (2026-06-01)**: **v1.0.0 released**. The 0.30.x line closed out with the dynamic accent tint (every UI surface follows the cover), 5-star ratings (TrackTile star + Library Rated tab + smart-playlist filter), Stats v2 (Top Genres / Top Albums + sub-100 ms load via batch resolve), a Library Genres tab served by the live Subsonic `getGenres` endpoint (Navidrome's `getAlbum` returns `genres: []` per child), the back-arrow keyboard fix and the smart-playlist router bug. Post-1.0, **i18n FR** is the only open optional polish — pursued only if explicitly requested.
 
 ---
 

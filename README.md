@@ -61,9 +61,30 @@ No ads. GPL-3.0.
   on the active Subsonic server is built once via paginated `getAlbumList2`
   + `getAlbum`. AutoQueue scores against the whole library, not a random
   sample. Re-sync on demand from Settings → Playback.
-- **Dark, content-first UI** inspired by Spotify / Symfonium — artwork-led,
-  one vivid accent (`#1ED760`), minimal chrome, persistent mini-player
-  above the bottom nav.
+- **5-star ratings** — long-press a track → ⋮ → tap a star. Written
+  to Subsonic (Navidrome / Airsonic / …) and mirrored to the local
+  cache so the values are usable offline. Surfaces:
+  - a small star indicator in every TrackTile,
+  - a "Rated" tab in Library (sorted stars-desc),
+  - a `rating` field in smart-playlist rules (`≥ 4 stars`, etc.).
+- **Listening stats** — 30 / 90 / all-time windows: total plays,
+  unique tracks, listening days, current + longest streak, a GitHub-
+  contributions-style 365-day heatmap, Top Tracks / Artists / Genres
+  / Albums (all tappable), "On this day", monthly + yearly tops.
+  The same 30-day snapshot also drives a compact card on Home.
+- **Smart playlists** — rules-based on cached metadata + activity
+  (genre / year / artist / album / title / duration / rating /
+  favourite / pinned / cached / `playCount30d` / `playCountAll` /
+  `lastPlayedDaysAgo`), with `match all` / `match any` and a
+  configurable `orderBy` + `limit`. Four built-ins seeded on first
+  launch (All-time random, 80s revival, 90s revival, Recent).
+- **Dark, content-first UI** inspired by Spotify / Symfonium —
+  artwork-led, minimal chrome, persistent mini-player above the
+  bottom nav. The accent colour is brand green `#1ED760` by default;
+  with the "Colour tint" toggle on, every accent surface (mini-
+  player progress, stats card, queue highlight, shuffle / repeat,
+  TabBars, Play-all buttons, favourite hearts, rating stars…) re-
+  paints in lockstep with the current track's cover-derived tint.
 
 ## How it picks the next song
 
@@ -146,17 +167,22 @@ lib/
 ├── domain.dart                # Track / Album / Artist / Playlist /
 │                              # PlaylistEntry sealed type
 ├── core/
-│   ├── db.dart                # drift database (schema v3)
+│   ├── db.dart                # drift database (schema v9)
+│   ├── dbg.dart               # gated [digaudio.dbg] verbose logger
 │   ├── settings.dart          # multi-server config + Keystore-backed creds
+│   ├── display_prefs.dart     # theme / tint / debug / recent-searches
 │   └── playback_prefs.dart    # EQ + auto-queue persisted prefs
 ├── subsonic/client.dart       # Subsonic API client (salt+token auth)
 ├── library/
 │   ├── local.dart             # local library via our own MediaStore channel
 │   ├── downloads.dart         # offline cache manager
 │   ├── collections.dart       # Favorites + LocalPlaylists + TrackResolver
+│   ├── ratings.dart           # 5-star rating manager (Subsonic + cache mirror)
 │   ├── similarity.dart        # metadata-based scoring
 │   ├── auto_queue.dart        # appends a similar track at queue end
-│   ├── subsonic_cache.dart    # per-server full library index (drift)
+│   ├── subsonic_cache.dart    # per-server full library index (drift, FTS5)
+│   ├── play_history.dart      # listening stats + streaks + on-this-day
+│   ├── smart_playlists.dart   # rules-based playlists (v2: int / bool / joins)
 │   ├── importer.dart          # M3U / digaudio JSON → playlist + missing
 │   └── wishlist.dart          # wishlist CRUD + Lidarr hook (stub)
 ├── audio/

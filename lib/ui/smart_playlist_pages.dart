@@ -12,8 +12,6 @@ import 'widgets/mini_player.dart';
 import 'widgets/theme_ext.dart';
 import 'widgets/track_tile.dart';
 
-const _accent = brandAccent;
-
 // =====================================================================
 // VIEWER PAGE — runs the rules + displays the matching tracks.
 // =====================================================================
@@ -130,7 +128,7 @@ class _SmartPlaylistBodyState extends ConsumerState<_SmartPlaylistBody> {
                     style: TextStyle(color: context.textMuted)));
           }
           final accent =
-              ref.watch(accentTintProvider).valueOrNull ?? _accent;
+              ref.watch(accentTintProvider).valueOrNull ?? brandAccent;
           return ListView.builder(
             itemCount: tracks.length + 1,
             itemBuilder: (_, i) {

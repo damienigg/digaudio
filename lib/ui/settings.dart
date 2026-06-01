@@ -12,8 +12,6 @@ import '../core/settings.dart';
 import '../subsonic/client.dart';
 import 'widgets/theme_ext.dart';
 
-const _accent = brandAccent;
-
 /// Top-level Settings hub. Subpages handle the actual configuration.
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -166,7 +164,7 @@ class _ServerTile extends ConsumerWidget {
     final status = server.isConfigured
         ? (active ? 'Active' : 'Tap to activate')
         : 'Credentials missing — tap to set';
-    final accent = ref.watch(accentTintProvider).valueOrNull ?? _accent;
+    final accent = ref.watch(accentTintProvider).valueOrNull ?? brandAccent;
     final color = active ? accent : context.textMuted;
     return ListTile(
       leading: Icon(active ? Icons.cloud_done : Icons.cloud_outlined, color: color),
@@ -479,7 +477,7 @@ class DisplayPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final current = ref.watch(themeModeProvider);
-    final accent = ref.watch(accentTintProvider).valueOrNull ?? _accent;
+    final accent = ref.watch(accentTintProvider).valueOrNull ?? brandAccent;
     Widget tile(ThemeMode m, IconData icon, String label, String hint) =>
         RadioListTile<ThemeMode>(
           value: m,
@@ -1278,7 +1276,7 @@ class _CrossfadePicker extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final accent = ref.watch(accentTintProvider).valueOrNull ?? _accent;
+    final accent = ref.watch(accentTintProvider).valueOrNull ?? brandAccent;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1343,7 +1341,7 @@ class _BtEqCardState extends ConsumerState<_BtEqCard> {
   Widget build(BuildContext context) {
     final active = ref.watch(btActiveDeviceProvider).valueOrNull;
     final prefs = ref.read(playbackPrefsProvider);
-    final accent = ref.watch(accentTintProvider).valueOrNull ?? _accent;
+    final accent = ref.watch(accentTintProvider).valueOrNull ?? brandAccent;
     final entries = _profiles.entries.toList()
       ..sort((a, b) => a.key.compareTo(b.key));
     return Column(
@@ -1449,7 +1447,7 @@ class _ListenBrainzCardState extends ConsumerState<_ListenBrainzCard> {
   @override
   Widget build(BuildContext context) {
     final active = widget.token.isNotEmpty;
-    final accent = ref.watch(accentTintProvider).valueOrNull ?? _accent;
+    final accent = ref.watch(accentTintProvider).valueOrNull ?? brandAccent;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1591,7 +1589,7 @@ class _LastfmCardState extends ConsumerState<_LastfmCard> {
     final client = ref.watch(lastfmScrobbleClientProvider);
     final connected = client.enabled;
     final pending = _pendingToken != null;
-    final accent = ref.watch(accentTintProvider).valueOrNull ?? _accent;
+    final accent = ref.watch(accentTintProvider).valueOrNull ?? brandAccent;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1789,7 +1787,7 @@ class _EqPresets extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final accent = ref.watch(accentTintProvider).valueOrNull ?? _accent;
+    final accent = ref.watch(accentTintProvider).valueOrNull ?? brandAccent;
     return Wrap(
       spacing: 8,
       runSpacing: 4,

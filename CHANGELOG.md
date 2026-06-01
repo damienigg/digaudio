@@ -7,6 +7,116 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.0.0] — 2026-06-01
+
+**Stable release.** Consolidates the 0.30.32 → 0.30.46 patch chain.
+Schema is v9 (drift). Minimum Flutter 3.24+ / Dart 3.5+. Android
+`minSdk 29` (Android 10+).
+
+The patch entries below stay verbatim as the per-step history; the
+bullets here are the user-visible delta from the last tagged release
+(v0.30.31, 2026-05-27).
+
+### Added
+- **5-star ratings** wired end-to-end: long-press a track → ⋮ → tap
+  a star. Written to Subsonic *and* mirrored to the local cache so
+  the value is usable offline. Three surfaces consume it: a star
+  indicator in every TrackTile, a new "Rated" tab in Library, and
+  a `rating` field in smart-playlist rules.
+- **Stats Top Genres / Top Albums** on both the Home compact card
+  (4 top rows in a 2×2 grid) and the full Stats page. The Stats
+  dashboard load went from multi-second (~120 sequential `getSong`
+  HTTP requests) to sub-100 ms typical: one batch SQL `WHERE
+  song_id IN (…)` against the cache + parallel HTTP fallback for
+  any misses (`TrackResolver.resolveKeys`).
+- **Library → Rated** tab — every cached track with `userRating ≥ 1`,
+  sorted by stars desc.
+- **Smart playlist `rating` field** in the rules dropdown
+  (`=`, `≠`, `>`, `≥`, `<`, `≤`, `between`).
+- **Top genres** correctly populated: sync now does a second pass
+  via `getGenres` + `getSongsByGenre` to back-fill the per-song
+  `cached_subsonic_songs.genre` column that Navidrome's `getAlbum`
+  leaves as `genres: []`.
+- **Library → Genres** tab now hits the live Subsonic `getGenres` /
+  `getSongsByGenre` endpoints (server's own genre index), so the
+  tab is non-empty regardless of cache state.
+- **Permanent search bar** in the Home AppBar (replaces the icon +
+  title + tagline hero) with strict keyboard rules: the keyboard
+  pops only on a deliberate tap of the home search bar, the
+  bottom-nav search icon, or directly inside the TextField — never
+  as a side effect of cold-start, route pop or coming back from
+  /now-playing.
+- **Submit-only recent searches**: the recents list only persists
+  on Enter / voice / chip-reuse — the previous per-keystroke
+  debounced persistence polluted history with half-typed garbage.
+- **Queue highlight** on the current track in Now Playing → Queue:
+  bold accent title + centered play-arrow overlay on the artwork.
+- **Diagnostics** for smart playlists (`[smart]` / `[smart-ui]`
+  dbg traces gated on the Settings → Display → Debug logs toggle)
+  and for unmapped Subsonic genre fields (`[firstGenre]` null
+  trace listing every JSON key on the song).
+
+### Changed
+- **Colour tint is now app-wide.** The "Colour tint" toggle used to
+  recolour only the Now Playing controls; the rest of the app
+  stayed locked to brand `#1ED760`. Now every accent surface
+  (mini-player progress bar, shuffle / repeat / FAB / skip,
+  TabBars on Library + Now Playing, queue highlight, stats card
+  + Top rows, favourite hearts, rating stars, Play-all buttons on
+  Album / Genre / Decade / Smart playlist / On This Day, the
+  Last.fm / ListenBrainz "connected" check marks, the Library
+  Favorites avatar, Settings switches + chips, etc.) repaints in
+  lockstep with the current track's cover-derived tint. Off →
+  byte-identical to the previous brand-green behaviour.
+- **Home page** drops the icon + title + tagline hero strip and
+  promotes the search bar to the AppBar title; saves ~110 px of
+  vertical real estate.
+- **Mini-player** taps no longer stack Now Playing screens — both
+  the mini-player and the bottom-nav Now Playing icon route
+  through `openNowPlaying()` which short-circuits when already
+  on `/now-playing` and unfocuses the primary widget so popping
+  /now-playing no longer raises the keyboard.
+- **Stats page heatmap** colours correctly now — the local-vs-UTC
+  date mismatch that left every cell empty post-sync is fixed at
+  both ends (SQL `date(played_at, 'unixepoch', 'localtime')` +
+  matching local-DateTime cell keys).
+- **Stats page** Top Track / Top Artist rows are tappable
+  (queue + play); avatar initial uses `runes.first` so emoji-
+  prefixed artists don't render as a tofu glyph.
+
+### Fixed
+- **Lockscreen / notification artwork** no longer freezes on the
+  previous track. `WidgetArtFetcher` now writes per-track
+  filenames so Android's MediaSession (which caches bitmaps by
+  URI string) actually invalidates on each track change. LRU
+  prune caps the tmp dir at 16 files.
+- **Smart playlists** opening on a blank gray screen — the catch-
+  all `/playlist/:origin/:id` route was declared before
+  `/playlist/smart/:id`, so go-router was routing
+  `/playlist/smart/1` to `PlaylistPage(origin: 'smart')` and the
+  bogus `MediaOrigin` parse silently crashed. Routes reordered;
+  in-file comment added.
+- **Library Genres** tab on Navidrome (and any server that emits
+  `genres: []` in `getAlbum`) now works — live API path replaces
+  the empty cache-derived path.
+- **Home stats card** correctly encloses its content on first
+  paint. The `Ink(decoration: …)` it used to wrap had a known
+  Flutter foot-gun (decoration paint bounds freeze at the size
+  of the first build); replaced with `Material(shape:, color:)`
+  which resizes with its child.
+- **Eleven additional code-review findings** from the v0.30.32
+  pass (genre parser hardening, accent-overlap rendering, async
+  status leaks, layout edge cases — see the v0.30.32 entry
+  below).
+
+### Performance
+- **Sub-100 ms stats load** via one batched SQL resolve in place
+  of N+1 HTTP per track. Also benefits favourites, playlists,
+  monthly leaderboards, On This Day — every single-track
+  resolve now consults the cache first.
+- `Future.wait` fan-out for the nine independent SQL aggregates
+  that feed Stats.
+
 ## [0.30.46] — 2026-06-01
 
 ### Fixed (TabBar labels still rendered in brand green)

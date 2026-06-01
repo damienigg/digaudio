@@ -18,8 +18,6 @@ import 'widgets/mini_player.dart';
 import 'widgets/theme_ext.dart';
 import 'widgets/track_tile.dart';
 
-const _accent = brandAccent;
-
 class NowPlayingPage extends ConsumerWidget {
   const NowPlayingPage({super.key});
 
@@ -29,7 +27,7 @@ class NowPlayingPage extends ConsumerWidget {
     if (track == null) {
       return const Scaffold(body: Center(child: Text('Nothing playing.')));
     }
-    final accent = ref.watch(accentTintProvider).valueOrNull ?? _accent;
+    final accent = ref.watch(accentTintProvider).valueOrNull ?? brandAccent;
     return DefaultTabController(
       length: 3,
       child: Scaffold(
@@ -124,7 +122,7 @@ class _PlayerTab extends ConsumerWidget {
     final engine = ref.watch(audioEngineProvider);
     final state = ref.watch(playerStateProvider);
     final playing = state.playing;
-    final accent = ref.watch(accentTintProvider).valueOrNull ?? _accent;
+    final accent = ref.watch(accentTintProvider).valueOrNull ?? brandAccent;
     final shuffle = ref.watch(shuffleProvider);
     final loop = ref.watch(loopProvider);
 
@@ -504,7 +502,7 @@ class _SyncedLyricsViewState extends ConsumerState<_SyncedLyricsView> {
   @override
   Widget build(BuildContext context) {
     final lines = widget.lyrics.lines;
-    final accent = ref.watch(accentTintProvider).valueOrNull ?? _accent;
+    final accent = ref.watch(accentTintProvider).valueOrNull ?? brandAccent;
     return ListView.builder(
       controller: _ctrl,
       padding: const EdgeInsets.symmetric(vertical: 80, horizontal: 24),
@@ -701,7 +699,7 @@ class _FavoriteToggle extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final favKeys = ref.watch(favoriteKeysProvider).valueOrNull ?? const [];
     final isFav = favKeys.contains(track.uniqueKey);
-    final accent = ref.watch(accentTintProvider).valueOrNull ?? _accent;
+    final accent = ref.watch(accentTintProvider).valueOrNull ?? brandAccent;
     return IconButton(
       tooltip: isFav ? 'Remove from favorites' : 'Add to favorites',
       iconSize: 28,
@@ -734,7 +732,7 @@ class _ScrubberAndTimes extends ConsumerWidget {
     final engine = ref.watch(audioEngineProvider);
     final position = ref.watch(positionProvider);
     final duration = ref.watch(durationProvider) ?? Duration.zero;
-    final accent = ref.watch(accentTintProvider).valueOrNull ?? _accent;
+    final accent = ref.watch(accentTintProvider).valueOrNull ?? brandAccent;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -862,7 +860,7 @@ class _SpeedAction extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final speed = ref.watch(playbackSpeedProvider);
     final active = speed != 1.0;
-    final accent = ref.watch(accentTintProvider).valueOrNull ?? _accent;
+    final accent = ref.watch(accentTintProvider).valueOrNull ?? brandAccent;
     return TextButton(
       onPressed: () => _show(context, ref, speed, accent),
       style: TextButton.styleFrom(
@@ -920,7 +918,7 @@ class _SleepAction extends ConsumerWidget {
     final endOfTrack = ref.watch(sleepEndOfTrackProvider).valueOrNull ?? false;
     final albumArmed = ref.watch(albumModeArmedProvider).valueOrNull ?? false;
     final active = remaining != null || endOfTrack || albumArmed;
-    final accent = ref.watch(accentTintProvider).valueOrNull ?? _accent;
+    final accent = ref.watch(accentTintProvider).valueOrNull ?? brandAccent;
     return TextButton(
       onPressed: () => _show(context, ref),
       style: TextButton.styleFrom(

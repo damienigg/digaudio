@@ -8,8 +8,6 @@ import 'widgets/mini_player.dart';
 import 'widgets/theme_ext.dart';
 import 'widgets/track_tile.dart';
 
-const _accent = brandAccent;
-
 class AlbumPage extends ConsumerWidget {
   final String origin;
   final String id;
@@ -116,8 +114,8 @@ class _AlbumPlayButton extends ConsumerWidget {
                 .watch(coverAccentProvider(
                     (serverId: album.serverId, coverArt: album.coverArt!)))
                 .valueOrNull ??
-            _accent)
-        : _accent;
+            brandAccent)
+        : brandAccent;
     return FilledButton.icon(
       icon: const Icon(Icons.play_arrow),
       label: const Text('Play'),
