@@ -183,14 +183,15 @@ final favoritesProvider = Provider<FavoritesManager>((ref) =>
 final playlistsProvider = Provider<LocalPlaylistsManager>((ref) =>
     LocalPlaylistsManager(ref.watch(dbProvider)));
 
+final subsonicCacheProvider = Provider<SubsonicLibraryCache>((ref) =>
+    SubsonicLibraryCache(ref.watch(dbProvider)));
+
 final trackResolverProvider = Provider<TrackResolver>((ref) => TrackResolver(
       local: ref.watch(localLibraryProvider),
       subsonic: () => ref.read(subsonicProvider),
       playlists: ref.watch(playlistsProvider),
+      cache: ref.watch(subsonicCacheProvider),
     ));
-
-final subsonicCacheProvider = Provider<SubsonicLibraryCache>((ref) =>
-    SubsonicLibraryCache(ref.watch(dbProvider)));
 
 /// Last.fm client — `--dart-define=LASTFM_API_KEY=...` at build time
 /// (sourced from a GitHub repo secret in CI). With no key, [enabled]

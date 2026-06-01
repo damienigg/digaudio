@@ -101,6 +101,21 @@ class SubsonicLibraryCache {
     return rows.map(_toTrack).toList(growable: false);
   }
 
+  /// Batch lookup by song id — one SQL `WHERE song_id IN (…)` instead
+  /// of N per-track HTTP requests. Server-agnostic (returns the first
+  /// row per id across all cached servers); id collisions across
+  /// distinct Subsonic servers are astronomically rare in practice.
+  /// Used by [TrackResolver.resolveKeys] to short-circuit the stats
+  /// page's huge resolve fan-out.
+  Future<Map<String, Track>> byIds(Iterable<String> ids) async {
+    final list = ids.toList(growable: false);
+    if (list.isEmpty) return const {};
+    final rows = await (_db.select(_db.cachedSubsonicSongs)
+          ..where((s) => s.songId.isIn(list)))
+        .get();
+    return {for (final r in rows) r.songId: _toTrack(r)};
+  }
+
   /// Distinct genres present in the cache, sorted by track count desc.
   /// Returns `(genre, trackCount)` pairs. Empty if cache not yet synced.
   Future<List<({String genre, int count})>> genres(String serverId) async {

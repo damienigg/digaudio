@@ -7,6 +7,31 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.30.34] — 2026-06-01
+
+### Fixed (Stats page — load was unnecessarily slow)
+- `StatsPage._load` previously issued ~120 sequential `getSong` HTTP
+  requests to resolve the trackKeys it returned from the play-history
+  DB (50 top, 36 monthly, 25+ yearly, 10 on-this-day) — easily a
+  multi-second freeze even on a fast LAN, and far worse on cellular.
+  - **New batch path**: `TrackResolver.resolveKeys` collects every
+    needed key, hits `SubsonicLibraryCache.byIds` in **one** SQL
+    `WHERE song_id IN (…)` query, and only falls back to HTTP for any
+    cache misses — those misses are then issued in parallel via
+    `Future.wait`. Local-origin keys are resolved in parallel against
+    the LocalLibrary in the same phase.
+  - **SQL aggregates parallelised**: `totalPlays`, `uniqueTracks`,
+    `listeningDays`, `streaks`, `dailyCounts`, `topTracks`,
+    `topPerMonth`, `topPerYear`, `onThisDay` now fan out via
+    `Future.wait` instead of nine back-to-back awaits.
+  - `TrackResolver.resolve` also now consults the cache first, so
+    every single-track resolve elsewhere in the app (favorites,
+    playlists, "On this day", monthly leaderboards…) gets the same
+    speedup for free.
+- Net effect with a synced library: dashboard load drops from
+  multi-second-with-spinner to sub-100 ms typical (cache hits) or
+  one parallel HTTP round-trip at worst.
+
 ## [0.30.33] — 2026-06-01
 
 ### Fixed (Stats — heatmap never colored)

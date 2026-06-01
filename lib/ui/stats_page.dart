@@ -36,24 +36,60 @@ class _StatsState extends ConsumerState<StatsPage> {
     setState(() => _future = _load(history, resolver, _sinceDays));
   }
 
-  /// Single round-trip: pull top 50 trackKeys, resolve them once, then
-  /// derive top-tracks (first 10) AND top-artists (group all 50). This
-  /// is the same payload powering the "Most played" smart-mix button.
-  /// Streaks / year heatmap / monthly tops are window-independent
-  /// (always full history / last 365 days / last 12 months).
+  /// One load = one SQL fan-out + one batch resolve. Previously this
+  /// path issued ~120 *sequential* `getSong` HTTP requests (one per
+  /// trackKey across top tracks, monthly, yearly, on-this-day) — easily
+  /// 5-10s on a Tailscale-local server, longer on cellular. Now every
+  /// trackKey is gathered first, then [TrackResolver.resolveKeys]
+  /// answers them in a single `WHERE song_id IN (…)` against the local
+  /// cache, with parallelised HTTP fallback only for any cache misses.
   static Future<_StatsData> _load(
       PlayHistoryManager h, TrackResolver r, int? sinceDays) async {
-    final total = await h.totalPlays(sinceDays: sinceDays);
-    final unique = await h.uniqueTracks(sinceDays: sinceDays);
-    final days = await h.listeningDays(sinceDays: sinceDays);
-    final streaks = await h.streaks();
-    final heatmap = await h.dailyCounts(days: 365);
-    final tops = await h.topTracks(sinceDays: sinceDays, limit: 50);
-    final tracks = <(Track, int)>[];
-    for (final e in tops) {
-      final t = await r.resolve(e.trackKey);
-      if (t != null) tracks.add((t, e.count));
-    }
+    // Phase 1 — independent SQL aggregates. Drift serialises at the
+    // SQLite layer but issuing them via Future.wait still lets each
+    // one start the moment the previous one returns control, removing
+    // the round-trip latency between awaits.
+    final results = await Future.wait<dynamic>([
+      h.totalPlays(sinceDays: sinceDays),
+      h.uniqueTracks(sinceDays: sinceDays),
+      h.listeningDays(sinceDays: sinceDays),
+      h.streaks(),
+      h.dailyCounts(days: 365),
+      h.topTracks(sinceDays: sinceDays, limit: 50),
+      h.topPerMonth(12),
+      h.topPerYear(perYear: 5),
+      h.onThisDay(limit: 10),
+    ]);
+    final total = results[0] as int;
+    final unique = results[1] as int;
+    final days = results[2] as int;
+    final streaks = results[3] as ({int current, int longest});
+    final heatmap = results[4] as Map<DateTime, int>;
+    final tops = results[5] as List<({String trackKey, int count})>;
+    final rawMonthly =
+        results[6] as Map<String, List<({String trackKey, int count})>>;
+    final rawYearly =
+        results[7] as Map<String, List<({String trackKey, int count})>>;
+    final onThisDayKeys = results[8] as List<String>;
+
+    // Phase 2 — collect every trackKey we'll need, then resolve in ONE
+    // batch (cache-first, HTTP fallback parallelised).
+    final allKeys = <String>{
+      for (final e in tops) e.trackKey,
+      for (final entries in rawMonthly.values)
+        for (final e in entries.take(3)) e.trackKey,
+      for (final entries in rawYearly.values)
+        for (final e in entries) e.trackKey,
+      ...onThisDayKeys,
+    };
+    final byKey = await r.resolveKeys(allKeys);
+    Track? lookup(String k) => byKey[k];
+
+    // Phase 3 — assemble per-section shape via pure map lookups (sync).
+    final tracks = [
+      for (final e in tops)
+        if (lookup(e.trackKey) != null) (lookup(e.trackKey)!, e.count),
+    ];
     final artistCounts = <String, int>{};
     for (final (t, c) in tracks) {
       final a = t.displayArtist;
@@ -62,45 +98,30 @@ class _StatsState extends ConsumerState<StatsPage> {
     final topArtists = artistCounts.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
 
-    // Resolve monthly tops once. For each month, take the top 3 trackKeys
-    // and resolve to Tracks — only 36 lookups for a year of history.
-    final rawMonthly = await h.topPerMonth(12);
     final monthly = <(String month, List<(Track track, int count)>)>[];
     final monthKeys = rawMonthly.keys.toList()..sort((a, b) => b.compareTo(a));
     for (final m in monthKeys) {
-      final entries = rawMonthly[m]!.take(3).toList();
-      final resolved = <(Track, int)>[];
-      for (final e in entries) {
-        final t = await r.resolve(e.trackKey);
-        if (t != null) resolved.add((t, e.count));
-      }
+      final resolved = [
+        for (final e in rawMonthly[m]!.take(3))
+          if (lookup(e.trackKey) != null) (lookup(e.trackKey)!, e.count),
+      ];
       if (resolved.isNotEmpty) monthly.add((m, resolved));
     }
 
-    // "On this day" — distinct tracks played on the same MM-DD in prior
-    // years. Empty for fresh installs (< 1 year of history) — UI shows
-    // a hint in that case.
-    final onThisDayKeys = await h.onThisDay(limit: 10);
-    final onThisDay = <Track>[];
-    for (final k in onThisDayKeys) {
-      final t = await r.resolve(k);
-      if (t != null) onThisDay.add(t);
-    }
-
-    // Year-by-year tops — one block per year present in history, top 5
-    // tracks each. Same resolve-once-then-render pattern as monthly.
-    final rawYearly = await h.topPerYear(perYear: 5);
     final yearly = <(String year, List<(Track, int)>)>[];
     final yearKeys = rawYearly.keys.toList()..sort((a, b) => b.compareTo(a));
     for (final y in yearKeys) {
-      final entries = rawYearly[y]!;
-      final resolved = <(Track, int)>[];
-      for (final e in entries) {
-        final t = await r.resolve(e.trackKey);
-        if (t != null) resolved.add((t, e.count));
-      }
+      final resolved = [
+        for (final e in rawYearly[y]!)
+          if (lookup(e.trackKey) != null) (lookup(e.trackKey)!, e.count),
+      ];
       if (resolved.isNotEmpty) yearly.add((y, resolved));
     }
+
+    final onThisDay = [
+      for (final k in onThisDayKeys)
+        if (lookup(k) != null) lookup(k)!,
+    ];
 
     return _StatsData(
       totalPlays: total,

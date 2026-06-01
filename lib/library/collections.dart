@@ -5,6 +5,7 @@ import 'package:drift/drift.dart';
 import '../core/db.dart';
 import '../domain.dart';
 import '../library/local.dart';
+import '../library/subsonic_cache.dart';
 import '../subsonic/client.dart';
 
 const String _missingPrefix = 'missing:';
@@ -193,7 +194,13 @@ class TrackResolver {
   final LocalLibrary local;
   final SubsonicClient? Function() subsonic;
   final LocalPlaylistsManager playlists;
-  TrackResolver({required this.local, required this.subsonic, required this.playlists});
+  final SubsonicLibraryCache? cache;
+  TrackResolver({
+    required this.local,
+    required this.subsonic,
+    required this.playlists,
+    this.cache,
+  });
 
   Future<Track?> resolve(String key) async {
     if (isMissingKey(key)) return null; // missing entries aren't playable
@@ -202,7 +209,15 @@ class TrackResolver {
     final origin = key.substring(0, i);
     final id = key.substring(i + 1);
     if (origin == MediaOrigin.local.name) return local.getSongById(id);
-    if (origin == MediaOrigin.subsonic.name) return subsonic()?.getSong(id);
+    if (origin == MediaOrigin.subsonic.name) {
+      // Local cache short-circuit (one SQL row vs an HTTP round-trip).
+      // Falls back to the live client on miss / no-cache.
+      if (cache != null) {
+        final hit = (await cache!.byIds([id]))[id];
+        if (hit != null) return hit;
+      }
+      return subsonic()?.getSong(id);
+    }
     return null;
   }
 
@@ -214,6 +229,75 @@ class TrackResolver {
     for (final k in keys) {
       final t = await resolve(k);
       if (t != null) out.add(t);
+    }
+    return out;
+  }
+
+  /// Batch resolve — for fan-out call sites like the stats page that
+  /// would otherwise issue N HTTP `getSong` requests sequentially.
+  ///
+  /// Subsonic ids go through a single `WHERE song_id IN (…)` against
+  /// the local cache; any cache misses fall back to **parallelised**
+  /// `getSong` HTTP requests. Local ids are resolved in parallel via
+  /// the LocalLibrary. Returns a `key → Track` map; keys that resolve
+  /// to null (missing, unreachable, unknown origin) are absent.
+  ///
+  /// Order of input is irrelevant — callers reassemble per-section
+  /// shape by lookup against the returned map.
+  Future<Map<String, Track>> resolveKeys(Iterable<String> keys) async {
+    final unique = <String>{};
+    for (final k in keys) {
+      if (!isMissingKey(k)) unique.add(k);
+    }
+    if (unique.isEmpty) return const {};
+
+    final subsonicIds = <String>[];
+    final localIds = <String>[];
+    for (final k in unique) {
+      final sep = k.indexOf(':');
+      if (sep < 0) continue;
+      final origin = k.substring(0, sep);
+      final id = k.substring(sep + 1);
+      if (origin == MediaOrigin.subsonic.name) {
+        subsonicIds.add(id);
+      } else if (origin == MediaOrigin.local.name) {
+        localIds.add(id);
+      }
+    }
+
+    // Subsonic cache (single SQL) + local sub-batch run in parallel.
+    final cacheF =
+        cache == null ? Future.value(<String, Track>{}) : cache!.byIds(subsonicIds);
+    final localF = Future.wait(localIds.map(local.getSongById));
+    final cached = await cacheF;
+    final localResolved = await localF;
+
+    // HTTP fallback only for ids the cache didn't carry (typically rare
+    // once a sync has run). Parallelise — a Tailscale-local server
+    // handles a dozen concurrent GETs fine; if the link is congested
+    // it's still strictly better than N serial trips.
+    final missing = [
+      for (final id in subsonicIds)
+        if (!cached.containsKey(id)) id,
+    ];
+    if (missing.isNotEmpty) {
+      final s = subsonic();
+      if (s != null) {
+        final tracks = await Future.wait(missing.map(s.getSong));
+        for (var i = 0; i < missing.length; i++) {
+          final t = tracks[i];
+          if (t != null) cached[missing[i]] = t;
+        }
+      }
+    }
+
+    final out = <String, Track>{};
+    for (final entry in cached.entries) {
+      out['${MediaOrigin.subsonic.name}:${entry.key}'] = entry.value;
+    }
+    for (var i = 0; i < localIds.length; i++) {
+      final t = localResolved[i];
+      if (t != null) out['${MediaOrigin.local.name}:${localIds[i]}'] = t;
     }
     return out;
   }
