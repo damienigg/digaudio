@@ -4,8 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../audio/providers.dart';
 import '../../domain.dart';
 
-const _accent = Color(0xFF1ED760);
-
 /// Bulk-action toolbar that appears above the mini-player whenever any
 /// track is selected via long-press. Five actions:
 ///   - Cancel (X)         — clear the selection, exit selection mode
@@ -21,6 +19,7 @@ class SelectionBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final accent = ref.watch(accentTintProvider).valueOrNull ?? brandAccent;
     final sel = ref.watch(selectionProvider);
     final tracks = sel.values.toList();
     return Material(
@@ -100,7 +99,7 @@ class SelectionBar extends ConsumerWidget {
               icon: const Icon(Icons.play_arrow, size: 18),
               label: const Text('Play'),
               style: FilledButton.styleFrom(
-                backgroundColor: _accent,
+                backgroundColor: accent,
                 foregroundColor: Colors.black,
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 minimumSize: const Size(0, 36),

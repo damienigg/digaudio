@@ -7,6 +7,47 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.30.44] — 2026-06-01
+
+### Changed (Colour tint is now app-wide — every green follows the cover)
+Previously the "Colour tint" toggle only re-painted the slider / play
+FAB / heart on the Now Playing screen. The rest of the brand-green
+accent (mini-player progress bar, shuffle / repeat icons in the Now
+Playing transport, queue-highlight star, the four `_StatTile` numbers
+and icons on Home, the stats-page heatmap fill, Top Track / Genre /
+Album row counts, the favourite hearts in every TrackTile, the
+download-pinned check, rating stars, Library → Genres / Decades /
+Rated tab indicator, the Play-all buttons on Genre / Decade / Smart
+playlist, the selection-bar Play action, the active radio buttons +
+chips in Settings, the Last.fm / ListenBrainz "connected" check
+marks…) all stayed locked to the brand `#1ED760`.
+
+Now every one of those surfaces watches a single new
+`accentTintProvider`. When the toggle is on AND the current track has
+a Subsonic cover, the provider yields the cover's vibrant colour and
+every green pixel in the app flips to it in lockstep with the track
+change. When the toggle is off (or the track has no cover, or palette
+extraction fails) the provider yields null and every surface falls
+back to brand green — the previous behaviour, byte-identical.
+
+Mechanics:
+- `audio/providers.dart`: moved `coverAccentProvider` (per-cover
+  palette extraction, family-cached) out of `now_playing.dart` and
+  added the new top-level `accentTintProvider` that follows
+  `currentTrackProvider`. Also exposes a `brandAccent` constant so
+  call sites stop redeclaring per-file `_accent` copies.
+- Migrated every consumer to
+  `ref.watch(accentTintProvider).valueOrNull ?? brandAccent`. Several
+  leaf widgets (`_RangePicker`, `_Metric`, `_StreakChip`,
+  `_YearHeatmap`, `_TopTrackRow`, `_TopGenreRow`, `_TopAlbumRow`,
+  `_ServerTile`, `_CrossfadePicker`, `_ListenBrainzCard`, `_EqPresets`)
+  graduated from `StatelessWidget` to `ConsumerWidget` /
+  `ConsumerStatefulWidget` to get `ref` access.
+- Album page Play button still derives its accent from the **album's
+  own** cover (`coverAccentProvider`) — it's a per-album affordance,
+  not a global theme element. Same coverAccentProvider, just keyed by
+  the page's album rather than the playing track.
+
 ## [0.30.43] — 2026-06-01
 
 ### Fixed (Keyboard popped up when leaving Now Playing)

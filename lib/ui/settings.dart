@@ -12,7 +12,7 @@ import '../core/settings.dart';
 import '../subsonic/client.dart';
 import 'widgets/theme_ext.dart';
 
-const _accent = Color(0xFF1ED760);
+const _accent = brandAccent;
 
 /// Top-level Settings hub. Subpages handle the actual configuration.
 class SettingsPage extends StatelessWidget {
@@ -155,18 +155,19 @@ class _EmptyHint extends StatelessWidget {
       );
 }
 
-class _ServerTile extends StatelessWidget {
+class _ServerTile extends ConsumerWidget {
   final ServerConfig server;
   final bool active;
   final VoidCallback onActivate;
   const _ServerTile({required this.server, required this.active, required this.onActivate});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final status = server.isConfigured
         ? (active ? 'Active' : 'Tap to activate')
         : 'Credentials missing — tap to set';
-    final color = active ? _accent : context.textMuted;
+    final accent = ref.watch(accentTintProvider).valueOrNull ?? _accent;
+    final color = active ? accent : context.textMuted;
     return ListTile(
       leading: Icon(active ? Icons.cloud_done : Icons.cloud_outlined, color: color),
       title: Row(
@@ -478,11 +479,12 @@ class DisplayPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final current = ref.watch(themeModeProvider);
+    final accent = ref.watch(accentTintProvider).valueOrNull ?? _accent;
     Widget tile(ThemeMode m, IconData icon, String label, String hint) =>
         RadioListTile<ThemeMode>(
           value: m,
           groupValue: current,
-          activeColor: _accent,
+          activeColor: accent,
           secondary: Icon(icon),
           title: Text(label),
           subtitle: Text(hint, style: const TextStyle(fontSize: 11)),
@@ -1262,7 +1264,7 @@ class _StorageCard extends StatelessWidget {
 /// straight from PlaybackPrefs; the engine reads `prefs.crossfadeMs`
 /// every position tick + on every track switch, so picker changes take
 /// effect at the next transition.
-class _CrossfadePicker extends StatelessWidget {
+class _CrossfadePicker extends ConsumerWidget {
   final int currentMs;
   final ValueChanged<int> onChanged;
   const _CrossfadePicker({required this.currentMs, required this.onChanged});
@@ -1275,38 +1277,41 @@ class _CrossfadePicker extends StatelessWidget {
   ];
 
   @override
-  Widget build(BuildContext context) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Crossfade',
-              style: TextStyle(fontWeight: FontWeight.w700)),
-          const SizedBox(height: 4),
-          Text(
-            'Fades the end of one track into the start of the next. '
-            'Pseudo-crossfade — no overlap, but the perceived effect is '
-            'the same for typical music. Gapless playback (no silent '
-            'gap between tracks of the same album) is always on.',
-            style: TextStyle(color: context.textMuted, fontSize: 12),
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            children: [
-              for (final o in _options)
-                ChoiceChip(
-                  label: Text(o.$2),
-                  selected: currentMs == o.$1,
-                  onSelected: (_) => onChanged(o.$1),
-                  selectedColor: _accent,
-                  labelStyle: TextStyle(
-                      color: currentMs == o.$1
-                          ? Colors.black
-                          : context.textSecondary),
-                ),
-            ],
-          ),
-        ],
-      );
+  Widget build(BuildContext context, WidgetRef ref) {
+    final accent = ref.watch(accentTintProvider).valueOrNull ?? _accent;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Crossfade',
+            style: TextStyle(fontWeight: FontWeight.w700)),
+        const SizedBox(height: 4),
+        Text(
+          'Fades the end of one track into the start of the next. '
+          'Pseudo-crossfade — no overlap, but the perceived effect is '
+          'the same for typical music. Gapless playback (no silent '
+          'gap between tracks of the same album) is always on.',
+          style: TextStyle(color: context.textMuted, fontSize: 12),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          children: [
+            for (final o in _options)
+              ChoiceChip(
+                label: Text(o.$2),
+                selected: currentMs == o.$1,
+                onSelected: (_) => onChanged(o.$1),
+                selectedColor: accent,
+                labelStyle: TextStyle(
+                    color: currentMs == o.$1
+                        ? Colors.black
+                        : context.textSecondary),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
 }
 
 /// Per-Bluetooth-device EQ override. Shows the currently-connected BT
@@ -1338,6 +1343,7 @@ class _BtEqCardState extends ConsumerState<_BtEqCard> {
   Widget build(BuildContext context) {
     final active = ref.watch(btActiveDeviceProvider).valueOrNull;
     final prefs = ref.read(playbackPrefsProvider);
+    final accent = ref.watch(accentTintProvider).valueOrNull ?? _accent;
     final entries = _profiles.entries.toList()
       ..sort((a, b) => a.key.compareTo(b.key));
     return Column(
@@ -1356,7 +1362,7 @@ class _BtEqCardState extends ConsumerState<_BtEqCard> {
         if (active != null)
           Row(
             children: [
-              const Icon(Icons.bluetooth_audio, size: 16, color: _accent),
+              Icon(Icons.bluetooth_audio, size: 16, color: accent),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(active.split('|').first,
@@ -1416,15 +1422,15 @@ class _BtEqCardState extends ConsumerState<_BtEqCard> {
 /// "playing_now" + "single" listens to listenbrainz.org alongside the
 /// Subsonic server scrobble. Get a token from
 /// https://listenbrainz.org/profile/ → "User token".
-class _ListenBrainzCard extends StatefulWidget {
+class _ListenBrainzCard extends ConsumerStatefulWidget {
   final String token;
   final ValueChanged<String> onChanged;
   const _ListenBrainzCard({required this.token, required this.onChanged});
   @override
-  State<_ListenBrainzCard> createState() => _ListenBrainzCardState();
+  ConsumerState<_ListenBrainzCard> createState() => _ListenBrainzCardState();
 }
 
-class _ListenBrainzCardState extends State<_ListenBrainzCard> {
+class _ListenBrainzCardState extends ConsumerState<_ListenBrainzCard> {
   late final TextEditingController _ctrl;
   bool _obscure = true;
 
@@ -1443,6 +1449,7 @@ class _ListenBrainzCardState extends State<_ListenBrainzCard> {
   @override
   Widget build(BuildContext context) {
     final active = widget.token.isNotEmpty;
+    final accent = ref.watch(accentTintProvider).valueOrNull ?? _accent;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1452,7 +1459,7 @@ class _ListenBrainzCardState extends State<_ListenBrainzCard> {
                 style: TextStyle(fontWeight: FontWeight.w700)),
             const SizedBox(width: 8),
             if (active)
-              const Icon(Icons.check_circle, size: 14, color: _accent),
+              Icon(Icons.check_circle, size: 14, color: accent),
           ],
         ),
         const SizedBox(height: 4),
@@ -1584,6 +1591,7 @@ class _LastfmCardState extends ConsumerState<_LastfmCard> {
     final client = ref.watch(lastfmScrobbleClientProvider);
     final connected = client.enabled;
     final pending = _pendingToken != null;
+    final accent = ref.watch(accentTintProvider).valueOrNull ?? _accent;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1593,7 +1601,7 @@ class _LastfmCardState extends ConsumerState<_LastfmCard> {
             const Text('Last.fm', style: TextStyle(fontWeight: FontWeight.w700)),
             const SizedBox(width: 8),
             if (connected)
-              const Icon(Icons.check_circle, size: 14, color: _accent),
+              Icon(Icons.check_circle, size: 14, color: accent),
             if (connected) ...[
               const SizedBox(width: 6),
               Text(prefs.lastfmUsername,
@@ -1643,7 +1651,7 @@ class _LastfmCardState extends ConsumerState<_LastfmCard> {
                   FilledButton.icon(
                     onPressed: _busy ? null : _finish,
                     style: FilledButton.styleFrom(
-                      backgroundColor: _accent,
+                      backgroundColor: accent,
                       foregroundColor: Colors.black,
                     ),
                     icon: _busy
@@ -1676,7 +1684,7 @@ class _LastfmCardState extends ConsumerState<_LastfmCard> {
           FilledButton.icon(
             onPressed: _busy ? null : _connect,
             style: FilledButton.styleFrom(
-              backgroundColor: _accent,
+              backgroundColor: accent,
               foregroundColor: Colors.black,
             ),
             icon: _busy
@@ -1753,7 +1761,7 @@ class _RgPicker extends StatelessWidget {
 /// "Loudness" is the Fletcher-Munson compensation curve (AES/ITU
 /// reference for perceived flatness at low listening levels — boost
 /// bass + a touch of treble when the volume is quiet).
-class _EqPresets extends StatelessWidget {
+class _EqPresets extends ConsumerWidget {
   final bool enabled;
   final int bandCount;
   final ValueChanged<List<double>> onApply;
@@ -1780,39 +1788,42 @@ class _EqPresets extends StatelessWidget {
   ];
 
   @override
-  Widget build(BuildContext context) => Wrap(
-        spacing: 8,
-        runSpacing: 4,
-        children: [
-          for (final p in _presets)
-            ActionChip(
-              label: Text(p.$1, style: const TextStyle(fontSize: 12)),
-              onPressed: enabled
-                  ? () => onApply(p.$2.map((e) => e.toDouble()).toList())
-                  : null,
-            ),
-          // User-saved presets render as InputChips so the user can
-          // delete them via the trailing X. The label rounds to the
-          // same chip look so they read as peers of the built-ins,
-          // not as a separate type of thing.
-          for (final p in customPresets)
-            InputChip(
-              label: Text(p.name, style: const TextStyle(fontSize: 12)),
-              onPressed: enabled ? () => onApply(p.gains) : null,
-              onDeleted: () => onDelete(p),
-              deleteIconColor: const Color(0xFF1ED760),
-            ),
-          // "Save current curve as preset" — always tappable while
-          // the eq is configured (params resolved), even when the
-          // user has the eq toggle off. Saving the gains shouldn't
-          // require the eq to be live.
+  Widget build(BuildContext context, WidgetRef ref) {
+    final accent = ref.watch(accentTintProvider).valueOrNull ?? _accent;
+    return Wrap(
+      spacing: 8,
+      runSpacing: 4,
+      children: [
+        for (final p in _presets)
           ActionChip(
-            avatar: const Icon(Icons.add, size: 16),
-            label: const Text('Save…', style: TextStyle(fontSize: 12)),
-            onPressed: onSave,
+            label: Text(p.$1, style: const TextStyle(fontSize: 12)),
+            onPressed: enabled
+                ? () => onApply(p.$2.map((e) => e.toDouble()).toList())
+                : null,
           ),
-        ],
-      );
+        // User-saved presets render as InputChips so the user can
+        // delete them via the trailing X. The label rounds to the
+        // same chip look so they read as peers of the built-ins,
+        // not as a separate type of thing.
+        for (final p in customPresets)
+          InputChip(
+            label: Text(p.name, style: const TextStyle(fontSize: 12)),
+            onPressed: enabled ? () => onApply(p.gains) : null,
+            onDeleted: () => onDelete(p),
+            deleteIconColor: accent,
+          ),
+        // "Save current curve as preset" — always tappable while
+        // the eq is configured (params resolved), even when the
+        // user has the eq toggle off. Saving the gains shouldn't
+        // require the eq to be live.
+        ActionChip(
+          avatar: const Icon(Icons.add, size: 16),
+          label: const Text('Save…', style: TextStyle(fontSize: 12)),
+          onPressed: onSave,
+        ),
+      ],
+    );
+  }
 }
 
 class _BandRow extends StatelessWidget {

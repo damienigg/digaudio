@@ -10,8 +10,6 @@ import 'widgets/artwork.dart';
 import 'widgets/mini_player.dart';
 import 'widgets/theme_ext.dart';
 
-const _accent = Color(0xFF1ED760);
-
 /// Listening stats + "Most played" smart mix. Time window switchable
 /// (30 d / 90 d / all time). Top-tracks list is also the seed for the
 /// smart-mix button — one query, two surfaces.
@@ -365,20 +363,21 @@ class _StatsData {
   });
 }
 
-class _RangePicker extends StatelessWidget {
+class _RangePicker extends ConsumerWidget {
   final int? value;
   final ValueChanged<int?> onChanged;
   const _RangePicker({required this.value, required this.onChanged});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final accent = ref.watch(accentTintProvider).valueOrNull ?? brandAccent;
     Widget chip(String label, int? days) => Padding(
           padding: const EdgeInsets.only(right: 8),
           child: ChoiceChip(
             label: Text(label),
             selected: value == days,
             onSelected: (_) => onChanged(days),
-            selectedColor: _accent,
+            selectedColor: accent,
             labelStyle: TextStyle(color: value == days ? Colors.black : context.textSecondary),
           ),
         );
@@ -399,25 +398,28 @@ class _Totals extends StatelessWidget {
       );
 }
 
-class _Metric extends StatelessWidget {
+class _Metric extends ConsumerWidget {
   final String value;
   final String label;
   const _Metric({required this.value, required this.label});
   @override
-  Widget build(BuildContext context) => Expanded(
-        child: Column(
-          children: [
-            Text(value,
-                style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w800,
-                    color: _accent,
-                    fontFeatures: [FontFeature.tabularFigures()])),
-            Text(label,
-                style: TextStyle(color: context.textTertiary, fontSize: 11)),
-          ],
-        ),
-      );
+  Widget build(BuildContext context, WidgetRef ref) {
+    final accent = ref.watch(accentTintProvider).valueOrNull ?? brandAccent;
+    return Expanded(
+      child: Column(
+        children: [
+          Text(value,
+              style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                  color: accent,
+                  fontFeatures: const [FontFeature.tabularFigures()])),
+          Text(label,
+              style: TextStyle(color: context.textTertiary, fontSize: 11)),
+        ],
+      ),
+    );
+  }
 }
 
 /// Two compact streak counters (current / longest), styled like the
@@ -437,38 +439,41 @@ class _Streaks extends StatelessWidget {
       );
 }
 
-class _StreakChip extends StatelessWidget {
+class _StreakChip extends ConsumerWidget {
   final String label;
   final int days;
   const _StreakChip({required this.label, required this.days});
   @override
-  Widget build(BuildContext context) => Expanded(
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-          decoration: BoxDecoration(
-            color: context.dividerSoft,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(
-            children: [
-              const Icon(Icons.local_fire_department, color: _accent, size: 22),
-              const SizedBox(width: 8),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('$days d',
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 16,
-                          fontFeatures: [FontFeature.tabularFigures()])),
-                  Text(label,
-                      style: TextStyle(color: context.textTertiary, fontSize: 10)),
-                ],
-              ),
-            ],
-          ),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final accent = ref.watch(accentTintProvider).valueOrNull ?? brandAccent;
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+        decoration: BoxDecoration(
+          color: context.dividerSoft,
+          borderRadius: BorderRadius.circular(8),
         ),
-      );
+        child: Row(
+          children: [
+            Icon(Icons.local_fire_department, color: accent, size: 22),
+            const SizedBox(width: 8),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('$days d',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
+                        fontFeatures: [FontFeature.tabularFigures()])),
+                Text(label,
+                    style: TextStyle(color: context.textTertiary, fontSize: 10)),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 /// GitHub-contributions-style year heatmap. 7 rows × ~53 cols; rows
@@ -480,7 +485,7 @@ class _StreakChip extends StatelessWidget {
 /// Width is 53 × ~7dp ≈ 370dp — fits a phone in portrait without
 /// horizontal scroll, just barely. If a future device is narrower
 /// we'd swap to a SingleChildScrollView wrapper.
-class _YearHeatmap extends StatelessWidget {
+class _YearHeatmap extends ConsumerWidget {
   final Map<DateTime, int> counts;
   const _YearHeatmap({required this.counts});
 
@@ -488,7 +493,8 @@ class _YearHeatmap extends StatelessWidget {
   static const _gap = 1.5;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final accent = ref.watch(accentTintProvider).valueOrNull ?? brandAccent;
     final maxCount = counts.values.fold<int>(0, (a, b) => b > a ? b : a);
     final now = DateTime.now();
     // Cell keys are LOCAL midnight DateTimes — must match the keys
@@ -536,7 +542,7 @@ class _YearHeatmap extends StatelessWidget {
                               color: c == 0
                                   ? context.dividerSoft
                                   : Color.lerp(
-                                      context.outlineStrong, _accent, t),
+                                      context.outlineStrong, accent, t),
                               borderRadius: BorderRadius.circular(1.5),
                             ),
                           );
@@ -562,51 +568,54 @@ class _OnThisDay extends ConsumerWidget {
   const _OnThisDay({required this.tracks});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          FilledButton.icon(
-            onPressed: () => ref.read(audioEngineProvider).setQueue(tracks),
-            icon: const Icon(Icons.play_arrow),
-            label: Text('Play all (${tracks.length} tracks)'),
-            style: FilledButton.styleFrom(
-              backgroundColor: _accent,
-              foregroundColor: Colors.black,
-              minimumSize: const Size.fromHeight(40),
-            ),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final accent = ref.watch(accentTintProvider).valueOrNull ?? brandAccent;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        FilledButton.icon(
+          onPressed: () => ref.read(audioEngineProvider).setQueue(tracks),
+          icon: const Icon(Icons.play_arrow),
+          label: Text('Play all (${tracks.length} tracks)'),
+          style: FilledButton.styleFrom(
+            backgroundColor: accent,
+            foregroundColor: Colors.black,
+            minimumSize: const Size.fromHeight(40),
           ),
-          const SizedBox(height: 8),
-          for (final t in tracks)
-            InkWell(
-              onTap: () => ref.read(audioEngineProvider).playSingle(t),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Row(
-                  children: [
-                    Artwork(coverArt: t.coverArt, origin: t.origin, size: 40),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(t.title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontSize: 13)),
-                          Text(t.displayArtist,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                  color: context.textTertiary, fontSize: 11)),
-                        ],
-                      ),
+        ),
+        const SizedBox(height: 8),
+        for (final t in tracks)
+          InkWell(
+            onTap: () => ref.read(audioEngineProvider).playSingle(t),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                children: [
+                  Artwork(coverArt: t.coverArt, origin: t.origin, size: 40),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(t.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 13)),
+                        Text(t.displayArtist,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                color: context.textTertiary, fontSize: 11)),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
-        ],
-      );
+          ),
+      ],
+    );
+  }
 }
 
 /// One month's leaderboard: title row (Mar 2026) + the 3 most-played
@@ -632,72 +641,78 @@ class _MonthBlock extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) => Padding(
-        padding: const EdgeInsets.only(bottom: 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(_label(),
-                style: TextStyle(
-                    color: context.textSecondary,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700)),
-            const SizedBox(height: 4),
-            for (final (t, c) in tracks)
-              InkWell(
-                onTap: () => ref.read(audioEngineProvider).playSingle(t),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(t.title,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(fontSize: 13)),
-                            Text(t.displayArtist,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                    color: context.textTertiary,
-                                    fontSize: 11)),
-                          ],
-                        ),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final accent = ref.watch(accentTintProvider).valueOrNull ?? brandAccent;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(_label(),
+              style: TextStyle(
+                  color: context.textSecondary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700)),
+          const SizedBox(height: 4),
+          for (final (t, c) in tracks)
+            InkWell(
+              onTap: () => ref.read(audioEngineProvider).playSingle(t),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(t.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontSize: 13)),
+                          Text(t.displayArtist,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                  color: context.textTertiary,
+                                  fontSize: 11)),
+                        ],
                       ),
-                      Text('$c×',
-                          style: const TextStyle(
-                              color: _accent,
-                              fontWeight: FontWeight.w700,
-                              fontFeatures: [FontFeature.tabularFigures()])),
-                    ],
-                  ),
+                    ),
+                    Text('$c×',
+                        style: TextStyle(
+                            color: accent,
+                            fontWeight: FontWeight.w700,
+                            fontFeatures: const [FontFeature.tabularFigures()])),
+                  ],
                 ),
               ),
-          ],
-        ),
-      );
+            ),
+        ],
+      ),
+    );
+  }
 }
 
 class _PlayMixButton extends ConsumerWidget {
   final List<Track> seed;
   const _PlayMixButton({required this.seed});
   @override
-  Widget build(BuildContext context, WidgetRef ref) => FilledButton.icon(
-        icon: const Icon(Icons.play_arrow),
-        label: Text('Play "Most played" (${seed.length} tracks)'),
-        onPressed: () => ref.read(audioEngineProvider).setQueue(seed),
-        style: FilledButton.styleFrom(
-          backgroundColor: _accent,
-          foregroundColor: Colors.black,
-          minimumSize: const Size.fromHeight(44),
-        ),
-      );
+  Widget build(BuildContext context, WidgetRef ref) {
+    final accent = ref.watch(accentTintProvider).valueOrNull ?? brandAccent;
+    return FilledButton.icon(
+      icon: const Icon(Icons.play_arrow),
+      label: Text('Play "Most played" (${seed.length} tracks)'),
+      onPressed: () => ref.read(audioEngineProvider).setQueue(seed),
+      style: FilledButton.styleFrom(
+        backgroundColor: accent,
+        foregroundColor: Colors.black,
+        minimumSize: const Size.fromHeight(44),
+      ),
+    );
+  }
 }
 
-class _TopTrackRow extends StatelessWidget {
+class _TopTrackRow extends ConsumerWidget {
   final Track track;
   final int count;
   final VoidCallback onTap;
@@ -707,22 +722,25 @@ class _TopTrackRow extends StatelessWidget {
     required this.onTap,
   });
   @override
-  Widget build(BuildContext context) => ListTile(
-        contentPadding: EdgeInsets.zero,
-        onTap: onTap,
-        leading: Artwork(coverArt: track.coverArt, origin: track.origin, size: 48),
-        title: Text(track.title, maxLines: 1, overflow: TextOverflow.ellipsis),
-        subtitle: Text(track.displayArtist,
-            maxLines: 1, overflow: TextOverflow.ellipsis),
-        trailing: Text('$count×',
-            style: const TextStyle(
-                color: _accent,
-                fontWeight: FontWeight.w700,
-                fontFeatures: [FontFeature.tabularFigures()])),
-      );
+  Widget build(BuildContext context, WidgetRef ref) {
+    final accent = ref.watch(accentTintProvider).valueOrNull ?? brandAccent;
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      onTap: onTap,
+      leading: Artwork(coverArt: track.coverArt, origin: track.origin, size: 48),
+      title: Text(track.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+      subtitle: Text(track.displayArtist,
+          maxLines: 1, overflow: TextOverflow.ellipsis),
+      trailing: Text('$count×',
+          style: TextStyle(
+              color: accent,
+              fontWeight: FontWeight.w700,
+              fontFeatures: const [FontFeature.tabularFigures()])),
+    );
+  }
 }
 
-class _TopGenreRow extends StatelessWidget {
+class _TopGenreRow extends ConsumerWidget {
   final String name;
   final int count;
   final VoidCallback onTap;
@@ -732,23 +750,26 @@ class _TopGenreRow extends StatelessWidget {
     required this.onTap,
   });
   @override
-  Widget build(BuildContext context) => ListTile(
-        contentPadding: EdgeInsets.zero,
-        onTap: onTap,
-        leading: const CircleAvatar(
-          backgroundColor: Color(0xFF1E1E22),
-          child: Icon(Icons.label_outline, size: 18, color: _accent),
-        ),
-        title: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis),
-        trailing: Text('$count×',
-            style: const TextStyle(
-                color: _accent,
-                fontWeight: FontWeight.w700,
-                fontFeatures: [FontFeature.tabularFigures()])),
-      );
+  Widget build(BuildContext context, WidgetRef ref) {
+    final accent = ref.watch(accentTintProvider).valueOrNull ?? brandAccent;
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      onTap: onTap,
+      leading: CircleAvatar(
+        backgroundColor: const Color(0xFF1E1E22),
+        child: Icon(Icons.label_outline, size: 18, color: accent),
+      ),
+      title: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis),
+      trailing: Text('$count×',
+          style: TextStyle(
+              color: accent,
+              fontWeight: FontWeight.w700,
+              fontFeatures: const [FontFeature.tabularFigures()])),
+    );
+  }
 }
 
-class _TopAlbumRow extends StatelessWidget {
+class _TopAlbumRow extends ConsumerWidget {
   final ({
     String id,
     String name,
@@ -760,21 +781,24 @@ class _TopAlbumRow extends StatelessWidget {
   final VoidCallback onTap;
   const _TopAlbumRow({required this.album, required this.onTap});
   @override
-  Widget build(BuildContext context) => ListTile(
-        contentPadding: EdgeInsets.zero,
-        onTap: onTap,
-        leading: Artwork(
-            coverArt: album.coverArt,
-            origin: album.origin,
-            serverId: album.serverId,
-            size: 48),
-        title: Text(album.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-        trailing: Text('${album.count}×',
-            style: const TextStyle(
-                color: _accent,
-                fontWeight: FontWeight.w700,
-                fontFeatures: [FontFeature.tabularFigures()])),
-      );
+  Widget build(BuildContext context, WidgetRef ref) {
+    final accent = ref.watch(accentTintProvider).valueOrNull ?? brandAccent;
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      onTap: onTap,
+      leading: Artwork(
+          coverArt: album.coverArt,
+          origin: album.origin,
+          serverId: album.serverId,
+          size: 48),
+      title: Text(album.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+      trailing: Text('${album.count}×',
+          style: TextStyle(
+              color: accent,
+              fontWeight: FontWeight.w700,
+              fontFeatures: const [FontFeature.tabularFigures()])),
+    );
+  }
 }
 
 class _TopArtistRow extends StatelessWidget {

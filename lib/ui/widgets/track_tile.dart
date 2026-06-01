@@ -52,6 +52,7 @@ class TrackTile extends ConsumerWidget {
     final selection = ref.watch(selectionProvider);
     final selecting = selection.isNotEmpty;
     final isSelected = selection.containsKey(t.uniqueKey);
+    final accent = ref.watch(accentTintProvider).valueOrNull ?? brandAccent;
     final openActions = onMore ?? () => showTrackActions(context, ref, t);
 
     // Long-press always toggles selection (standard mobile pattern;
@@ -68,7 +69,7 @@ class TrackTile extends ConsumerWidget {
             },
       onLongPress: () => ref.read(selectionProvider.notifier).toggle(t),
       child: Container(
-        color: isSelected ? const Color(0x331ED760) : null,
+        color: isSelected ? accent.withOpacity(0.20) : null,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         child: Row(
           children: [
@@ -86,9 +87,7 @@ class TrackTile extends ConsumerWidget {
                       ? Icons.check_circle
                       : Icons.radio_button_unchecked,
                   size: 36,
-                  color: isSelected
-                      ? const Color(0xFF1ED760)
-                      : context.textTertiary,
+                  color: isSelected ? accent : context.textTertiary,
                 ),
               )
             else
@@ -128,21 +127,22 @@ class TrackTile extends ConsumerWidget {
                   Row(
                     children: [
                       if (isFav) ...[
-                        const Icon(Icons.favorite, size: 12, color: Color(0xFF1ED760)),
+                        Icon(Icons.favorite, size: 12, color: accent),
                         const SizedBox(width: 4),
                       ],
                       if (cachePinned != null) ...[
                         Icon(Icons.download_done_rounded,
                             size: 12,
-                            color: cachePinned ? const Color(0xFF1ED760) : context.textDisabled),
+                            color: cachePinned
+                                ? accent
+                                : context.textDisabled),
                         const SizedBox(width: 4),
                       ],
                       if (rating > 0) ...[
-                        const Icon(Icons.star_rounded,
-                            size: 13, color: Color(0xFF1ED760)),
+                        Icon(Icons.star_rounded, size: 13, color: accent),
                         Text('$rating',
-                            style: const TextStyle(
-                                color: Color(0xFF1ED760),
+                            style: TextStyle(
+                                color: accent,
                                 fontSize: 11,
                                 fontWeight: FontWeight.w700)),
                         const SizedBox(width: 4),
@@ -156,9 +156,7 @@ class TrackTile extends ConsumerWidget {
                                   ? FontWeight.w800
                                   : FontWeight.w600,
                               fontSize: 15,
-                              color: isPlaying
-                                  ? const Color(0xFF1ED760)
-                                  : null,
+                              color: isPlaying ? accent : null,
                             )),
                       ),
                     ],

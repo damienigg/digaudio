@@ -13,6 +13,7 @@ class DownloadBanner extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final accent = ref.watch(accentTintProvider).valueOrNull ?? brandAccent;
     final state = ref.watch(downloadQueueStateProvider).valueOrNull;
     final progressMap = ref.watch(downloadProgressProvider).valueOrNull ?? const {};
     if (state == null || !state.isActive) return const SizedBox.shrink();
@@ -31,15 +32,15 @@ class DownloadBanner extends ConsumerWidget {
               value: progressForCurrent,
               minHeight: 2,
               backgroundColor: const Color(0xFF333339),
-              valueColor: const AlwaysStoppedAnimation(Color(0xFF1ED760)),
+              valueColor: AlwaysStoppedAnimation(accent),
             ),
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             child: Row(
               children: [
-                const Icon(Icons.download_for_offline,
-                    size: 16, color: Color(0xFF1ED760)),
+                Icon(Icons.download_for_offline,
+                    size: 16, color: accent),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(

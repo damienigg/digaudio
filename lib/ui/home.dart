@@ -8,8 +8,6 @@ import 'widgets/album_card.dart';
 import 'widgets/artwork.dart';
 import 'widgets/theme_ext.dart';
 
-const _accent = Color(0xFF1ED760);
-
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
 
@@ -247,14 +245,15 @@ class _StatsDashboard extends ConsumerWidget {
   // Material's shape-based background resizes correctly with its child,
   // and the InkWell ripple still paints inside the shape via the
   // Material ink layer.
-  Widget _shell(BuildContext context, {required Widget body, VoidCallback? onTap}) =>
+  Widget _shell(BuildContext context, Color accent,
+          {required Widget body, VoidCallback? onTap}) =>
       Padding(
         padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
         child: Material(
           color: context.dividerSoft,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
-            side: BorderSide(color: _accent.withOpacity(0.18), width: 1),
+            side: BorderSide(color: accent.withOpacity(0.18), width: 1),
           ),
           child: InkWell(
             onTap: onTap,
@@ -266,7 +265,7 @@ class _StatsDashboard extends ConsumerWidget {
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.insights, size: 18, color: _accent),
+                      Icon(Icons.insights, size: 18, color: accent),
                       const SizedBox(width: 6),
                       const Text('Your 30-day stats',
                           style: TextStyle(
@@ -292,7 +291,7 @@ class _StatsDashboard extends ConsumerWidget {
   /// — null tops (e.g. genre on a freshly-installed library) are
   /// skipped, and an odd count leaves a blank Expanded so the grid
   /// stays aligned to the left column.
-  List<Widget> _topGrid(BuildContext context, HomeStats s) {
+  List<Widget> _topGrid(BuildContext context, HomeStats s, Color accent) {
     final cells = <Widget>[
       if (s.topTrack != null)
         _TopRow(
@@ -330,10 +329,10 @@ class _StatsDashboard extends ConsumerWidget {
           label: 'TOP GENRE',
           title: s.topGenre!,
           subtitle: '${s.topGenrePlays} plays',
-          artwork: const CircleAvatar(
+          artwork: CircleAvatar(
             radius: 20,
-            backgroundColor: Color(0xFF1E1E22),
-            child: Icon(Icons.label_outline, size: 20, color: _accent),
+            backgroundColor: const Color(0xFF1E1E22),
+            child: Icon(Icons.label_outline, size: 20, color: accent),
           ),
         ),
       if (s.topAlbum != null)
@@ -375,8 +374,9 @@ class _StatsDashboard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final stats = ref.watch(homeStatsProvider);
+    final accent = ref.watch(accentTintProvider).valueOrNull ?? brandAccent;
     return stats.when(
-      loading: () => _shell(context,
+      loading: () => _shell(context, accent,
           body: SizedBox(
             height: 32,
             child: Align(
@@ -385,36 +385,44 @@ class _StatsDashboard extends ConsumerWidget {
                   style: TextStyle(color: context.textTertiary, fontSize: 12)),
             ),
           )),
-      error: (_, __) => _shell(context,
+      error: (_, __) => _shell(context, accent,
           onTap: () => context.push('/stats'),
           body: const Text('Stats unavailable — tap to open the full page.',
               style: TextStyle(color: Colors.redAccent, fontSize: 12))),
       data: (s) {
         if (s.isEmpty) {
-          return _shell(context,
+          return _shell(context, accent,
               onTap: () => context.push('/stats'),
               body: Text(
                 'Play a few tracks and your top picks + streak will land here.',
                 style: TextStyle(color: context.textTertiary, fontSize: 12),
               ));
         }
-        return _shell(context,
+        return _shell(context, accent,
           onTap: () => context.push('/stats'),
           body: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  _StatTile(value: '${s.plays}', label: 'plays'),
-                  _StatTile(value: '${s.uniqueTracks}', label: 'tracks'),
-                  _StatTile(value: '${s.listeningDays}', label: 'days'),
+                  _StatTile(
+                      value: '${s.plays}', label: 'plays', accent: accent),
+                  _StatTile(
+                      value: '${s.uniqueTracks}',
+                      label: 'tracks',
+                      accent: accent),
+                  _StatTile(
+                      value: '${s.listeningDays}',
+                      label: 'days',
+                      accent: accent),
                   _StatTile(
                       value: '${s.currentStreak}',
                       label: 'streak',
-                      icon: Icons.local_fire_department),
+                      icon: Icons.local_fire_department,
+                      accent: accent),
                 ],
               ),
-              ..._topGrid(context, s),
+              ..._topGrid(context, s, accent),
             ],
           ),
         );
@@ -427,7 +435,13 @@ class _StatTile extends StatelessWidget {
   final String value;
   final String label;
   final IconData? icon;
-  const _StatTile({required this.value, required this.label, this.icon});
+  final Color accent;
+  const _StatTile({
+    required this.value,
+    required this.label,
+    required this.accent,
+    this.icon,
+  });
   @override
   Widget build(BuildContext context) => Expanded(
         child: Column(
@@ -441,15 +455,17 @@ class _StatTile extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   if (icon != null) ...[
-                    Icon(icon, size: 18, color: _accent),
+                    Icon(icon, size: 18, color: accent),
                     const SizedBox(width: 2),
                   ],
                   Text(value,
-                      style: const TextStyle(
+                      style: TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.w900,
-                          color: _accent,
-                          fontFeatures: [FontFeature.tabularFigures()])),
+                          color: accent,
+                          fontFeatures: const [
+                            FontFeature.tabularFigures()
+                          ])),
                 ],
               ),
             ),

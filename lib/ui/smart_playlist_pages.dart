@@ -12,7 +12,7 @@ import 'widgets/mini_player.dart';
 import 'widgets/theme_ext.dart';
 import 'widgets/track_tile.dart';
 
-const _accent = Color(0xFF1ED760);
+const _accent = brandAccent;
 
 // =====================================================================
 // VIEWER PAGE — runs the rules + displays the matching tracks.
@@ -129,6 +129,8 @@ class _SmartPlaylistBodyState extends ConsumerState<_SmartPlaylistBody> {
                 child: Text('No tracks match the current rules.',
                     style: TextStyle(color: context.textMuted)));
           }
+          final accent =
+              ref.watch(accentTintProvider).valueOrNull ?? _accent;
           return ListView.builder(
             itemCount: tracks.length + 1,
             itemBuilder: (_, i) {
@@ -144,7 +146,7 @@ class _SmartPlaylistBodyState extends ConsumerState<_SmartPlaylistBody> {
                           icon: const Icon(Icons.play_arrow),
                           label: Text('Play all (${tracks.length})'),
                           style: FilledButton.styleFrom(
-                            backgroundColor: _accent,
+                            backgroundColor: accent,
                             foregroundColor: Colors.black,
                           ),
                         ),

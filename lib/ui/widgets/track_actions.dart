@@ -24,6 +24,7 @@ class _TrackActionsSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final accent = ref.watch(accentTintProvider).valueOrNull ?? brandAccent;
     final favKeys = ref.watch(favoriteKeysProvider).valueOrNull ?? const [];
     final isFav = favKeys.contains(track.uniqueKey);
     final engine = ref.watch(audioEngineProvider);
@@ -41,7 +42,7 @@ class _TrackActionsSheet extends ConsumerWidget {
             Divider(height: 1, color: context.dividerSoft),
             ListTile(
               leading: Icon(isFav ? Icons.favorite : Icons.favorite_border,
-                  color: isFav ? const Color(0xFF1ED760) : null),
+                  color: isFav ? accent : null),
               title: Text(isFav ? 'Remove from favorites' : 'Add to favorites'),
               onTap: () async {
                 final scaffoldMessenger = ScaffoldMessenger.of(context);
@@ -299,11 +300,12 @@ class _RatingRow extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(ratingsChangesProvider); // rebuild on any rating change
+    final accent = ref.watch(accentTintProvider).valueOrNull ?? brandAccent;
     final mgr = ref.read(ratingsManagerProvider);
     final current = mgr.ratingOf(track);
     return ListTile(
       leading: Icon(current == 0 ? Icons.star_border : Icons.star,
-          color: current == 0 ? null : const Color(0xFF1ED760)),
+          color: current == 0 ? null : accent),
       title: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -314,7 +316,7 @@ class _RatingRow extends ConsumerWidget {
               tooltip: i == current ? 'Clear rating' : 'Rate $i star${i == 1 ? '' : 's'}',
               icon: Icon(
                 i <= current ? Icons.star : Icons.star_border,
-                color: i <= current ? const Color(0xFF1ED760) : context.textTertiary,
+                color: i <= current ? accent : context.textTertiary,
               ),
               // Tap on the current rating clears it; otherwise sets to i.
               onPressed: () async {

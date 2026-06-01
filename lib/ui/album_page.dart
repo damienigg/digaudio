@@ -3,13 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../audio/providers.dart';
 import '../domain.dart';
-import 'now_playing.dart' show coverAccentProvider;
 import 'widgets/artwork.dart';
 import 'widgets/mini_player.dart';
 import 'widgets/theme_ext.dart';
 import 'widgets/track_tile.dart';
 
-const _accent = Color(0xFF1ED760);
+const _accent = brandAccent;
 
 class AlbumPage extends ConsumerWidget {
   final String origin;

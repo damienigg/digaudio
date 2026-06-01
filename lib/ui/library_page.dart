@@ -37,16 +37,17 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
 
   @override
   Widget build(BuildContext context) {
+    final accent = ref.watch(accentTintProvider).valueOrNull ?? brandAccent;
     return DefaultTabController(
       length: 6,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Library'),
           actions: const [_LibrarySourceToggle()],
-          bottom: const TabBar(
+          bottom: TabBar(
             isScrollable: true,
-            indicatorColor: Color(0xFF1ED760),
-            tabs: [
+            indicatorColor: accent,
+            tabs: const [
               Tab(text: 'Albums'),
               Tab(text: 'Artists'),
               Tab(text: 'Genres'),
@@ -270,15 +271,16 @@ class _PlaylistsTab extends ConsumerWidget {
   const _PlaylistsTab();
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final accent = ref.watch(accentTintProvider).valueOrNull ?? brandAccent;
     final subsonicState = ref.watch(subsonicPlaylistsProvider);
     final favKeys = ref.watch(favoriteKeysProvider).valueOrNull ?? const [];
     final localState = ref.watch(localPlaylistsProvider);
     return ListView(
       children: [
         ListTile(
-          leading: const CircleAvatar(
-            backgroundColor: Color(0xFF1ED760),
-            child: Icon(Icons.favorite, color: Colors.black),
+          leading: CircleAvatar(
+            backgroundColor: accent,
+            child: const Icon(Icons.favorite, color: Colors.black),
           ),
           title: const Text('Favorites'),
           subtitle: Text('${favKeys.length} tracks'),

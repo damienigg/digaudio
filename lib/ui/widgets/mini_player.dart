@@ -25,6 +25,8 @@ class MiniPlayer extends ConsumerWidget {
     final progress = (duration.inMilliseconds == 0)
         ? 0.0
         : (position.inMilliseconds / duration.inMilliseconds).clamp(0.0, 1.0);
+    final accent =
+        ref.watch(accentTintProvider).valueOrNull ?? brandAccent;
 
     return Material(
       color: const Color(0xFF18181B),
@@ -39,7 +41,7 @@ class MiniPlayer extends ConsumerWidget {
                 value: progress,
                 minHeight: 2,
                 backgroundColor: context.dividerSoft,
-                valueColor: const AlwaysStoppedAnimation(Color(0xFF1ED760)),
+                valueColor: AlwaysStoppedAnimation(accent),
               ),
             ),
             Padding(

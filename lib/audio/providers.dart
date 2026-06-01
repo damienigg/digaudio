@@ -1,8 +1,10 @@
 import 'dart:async';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:palette_generator/palette_generator.dart';
 
 import '../core/db.dart';
 import '../core/display_prefs.dart';
@@ -430,6 +432,71 @@ final ratingsManagerProvider = Provider<RatingsManager>((ref) {
 /// without re-fetching the underlying track.
 final ratingsChangesProvider = StreamProvider<void>((ref) =>
     ref.watch(ratingsManagerProvider).changes);
+
+/// The brand-green fallback every UI surface uses when no cover-derived
+/// tint is available. Kept here so consumers don't have to redeclare a
+/// per-file `_accent` constant or import theme.dart just for the value.
+const Color brandAccent = Color(0xFF1ED760);
+
+/// Key for [coverAccentProvider] — uniquely identifies a Subsonic cover
+/// by its originating server + coverArt id. Records are hashable /
+/// equatable in Dart 3 so they make a good family key.
+typedef CoverRef = ({String? serverId, String coverArt});
+
+/// Extracts an accent colour from any Subsonic cover. Family-cached so
+/// the palette is computed once per (server, coverArt) pair across the
+/// whole app — Now Playing, Album page, Home stats tile, mini player
+/// etc. all share the same result.
+///
+/// Prefers `vibrantColor` (max saturation, no light bias). Falls
+/// through to `lightVibrant`, then `muted`, then `dominant` when the
+/// preferred shade is absent from the palette.
+final coverAccentProvider =
+    FutureProvider.autoDispose.family<Color?, CoverRef>((ref, key) async {
+  final s = ref.watch(subsonicResolverProvider).forId(key.serverId);
+  if (s == null) return null;
+  try {
+    // CachedNetworkImageProvider reuses the cover already on disk
+    // (cached by the Artwork widget). NetworkImage would trigger a
+    // fresh fetch every time the tint provider ran.
+    final palette = await PaletteGenerator.fromImageProvider(
+      CachedNetworkImageProvider(
+        s.coverUri(key.coverArt).toString(),
+        cacheKey: 'subsonic:${key.serverId ?? "active"}:${key.coverArt}:bg',
+      ),
+      size: const Size(80, 80),
+      maximumColorCount: 8,
+    );
+    return palette.vibrantColor?.color ??
+        palette.lightVibrantColor?.color ??
+        palette.mutedColor?.color ??
+        palette.dominantColor?.color;
+  } catch (_) {
+    return null;
+  }
+});
+
+/// App-wide accent override based on the currently-playing track's
+/// cover art. When the user's "Colour tint" toggle is off, when there
+/// is no current track, when the track is local (no cover URL) or when
+/// palette extraction fails, this resolves to null and consumers fall
+/// back to [brandAccent].
+///
+/// Watched by every visible green-accent surface — mini-player
+/// progress bar, shuffle/repeat icons, queue highlight, stats card,
+/// favorite hearts, rating stars, top-row icons, etc. — so the whole
+/// UI hue follows the album cover instead of staying brand-green when
+/// the toggle is on.
+final accentTintProvider = FutureProvider.autoDispose<Color?>((ref) async {
+  final track = ref.watch(currentTrackProvider);
+  final enabled = ref.watch(displayPrefsProvider).nowPlayingTint;
+  if (!enabled || track == null) return null;
+  if (track.origin != MediaOrigin.subsonic || track.coverArt == null) {
+    return null;
+  }
+  return ref.watch(coverAccentProvider(
+      (serverId: track.serverId, coverArt: track.coverArt!)).future);
+});
 
 /// Periodic Subsonic ping + reachability flag. Started once at app boot
 /// (see [DigaudioApp.initState]) and lives as long as the container.

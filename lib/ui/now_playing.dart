@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:just_audio/just_audio.dart';
-import 'package:palette_generator/palette_generator.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../audio/audio_info.dart';
@@ -19,68 +18,7 @@ import 'widgets/mini_player.dart';
 import 'widgets/theme_ext.dart';
 import 'widgets/track_tile.dart';
 
-const _accent = Color(0xFF1ED760);
-
-/// Key for [coverAccentProvider] — uniquely identifies a Subsonic
-/// cover by its originating server + coverArt id. Records are
-/// hashable / equatable in Dart 3 so they make a good family key.
-typedef CoverRef = ({String? serverId, String coverArt});
-
-/// Extracts an accent colour from any Subsonic cover. Family-cached so
-/// the palette is computed once per (server, coverArt) pair across
-/// the app — both Now Playing (current track) and Album page (Play
-/// button) share the same result.
-///
-/// Prefers `vibrantColor` (max saturation, no light bias). The
-/// previous order put `lightVibrantColor` first but it tends to pick
-/// near-white shades on artworks with bright whites — fine behind a
-/// dark scrim but reads as "no tint applied" on the play FAB. Falls
-/// through to `lightVibrant`, then `muted`, then `dominant` when the
-/// preferred shade is absent from the palette.
-final coverAccentProvider =
-    FutureProvider.autoDispose.family<Color?, CoverRef>((ref, key) async {
-  final s = ref.watch(subsonicResolverProvider).forId(key.serverId);
-  if (s == null) return null;
-  try {
-    // CachedNetworkImageProvider — reuses the cover already on disk
-    // (cached by the Artwork widget + _BgArtwork). Previously
-    // NetworkImage triggered a fresh network fetch every time the
-    // tint provider ran, so the play FAB stayed brand-green for
-    // several hundred ms after each track change. Sharing the cache
-    // makes the palette extraction near-instant on repeat plays.
-    final palette = await PaletteGenerator.fromImageProvider(
-      CachedNetworkImageProvider(
-        s.coverUri(key.coverArt).toString(),
-        cacheKey: 'subsonic:${key.serverId ?? "active"}:${key.coverArt}:bg',
-      ),
-      size: const Size(80, 80),
-      maximumColorCount: 8,
-    );
-    return palette.vibrantColor?.color ??
-        palette.lightVibrantColor?.color ??
-        palette.mutedColor?.color ??
-        palette.dominantColor?.color;
-  } catch (_) {
-    return null;
-  }
-});
-
-/// Now-Playing tint colour — the dynamic accent for slider, play/pause
-/// FAB and heart toggle so those controls inherit a hue from the cover
-/// instead of staying fixed-brand green. Null when the "Now Playing
-/// colour tint" toggle is off, when the track has no Subsonic cover,
-/// or when palette extraction fails. Call sites use `?? _accent` to
-/// fall back to brand green cleanly.
-final nowPlayingTintProvider = FutureProvider.autoDispose<Color?>((ref) async {
-  final track = ref.watch(currentTrackProvider);
-  final enabled = ref.watch(displayPrefsProvider).nowPlayingTint;
-  if (!enabled || track == null) return null;
-  if (track.origin != MediaOrigin.subsonic || track.coverArt == null) {
-    return null;
-  }
-  return ref.watch(coverAccentProvider(
-      (serverId: track.serverId, coverArt: track.coverArt!)).future);
-});
+const _accent = brandAccent;
 
 class NowPlayingPage extends ConsumerWidget {
   const NowPlayingPage({super.key});
@@ -91,6 +29,7 @@ class NowPlayingPage extends ConsumerWidget {
     if (track == null) {
       return const Scaffold(body: Center(child: Text('Nothing playing.')));
     }
+    final accent = ref.watch(accentTintProvider).valueOrNull ?? _accent;
     return DefaultTabController(
       length: 3,
       child: Scaffold(
@@ -116,9 +55,9 @@ class NowPlayingPage extends ConsumerWidget {
             _SpeedAction(),
             _SleepAction(),
           ],
-          bottom: const TabBar(
-            indicatorColor: _accent,
-            tabs: [Tab(text: 'Player'), Tab(text: 'Queue'), Tab(text: 'Lyrics')],
+          bottom: TabBar(
+            indicatorColor: accent,
+            tabs: const [Tab(text: 'Player'), Tab(text: 'Queue'), Tab(text: 'Lyrics')],
           ),
         ),
         body: _TintBackground(
@@ -150,11 +89,11 @@ class _TintBackground extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // Single source of truth for the tint colour lives in
-    // [nowPlayingTintProvider]; this widget just renders the
+    // [accentTintProvider]; this widget just renders the
     // soft top-down gradient when the provider yields a non-null
     // colour. The same provider feeds slider / FAB / heart accents,
     // so the visual stays consistent across the screen.
-    final tint = ref.watch(nowPlayingTintProvider).valueOrNull;
+    final tint = ref.watch(accentTintProvider).valueOrNull;
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -184,7 +123,7 @@ class _PlayerTab extends ConsumerWidget {
     final engine = ref.watch(audioEngineProvider);
     final state = ref.watch(playerStateProvider);
     final playing = state.playing;
-    final accent = ref.watch(nowPlayingTintProvider).valueOrNull ?? _accent;
+    final accent = ref.watch(accentTintProvider).valueOrNull ?? _accent;
     final shuffle = ref.watch(shuffleProvider);
     final loop = ref.watch(loopProvider);
 
@@ -251,7 +190,8 @@ class _PlayerTab extends ConsumerWidget {
                   children: [
                     IconButton(
                       tooltip: shuffle ? 'Shuffle on' : 'Shuffle off',
-                      icon: Icon(Icons.shuffle, color: shuffle ? _accent : context.textSecondary),
+                      icon: Icon(Icons.shuffle,
+                          color: shuffle ? accent : context.textSecondary),
                       onPressed: () => engine.setShuffle(!shuffle),
                     ),
                     IconButton(
@@ -278,7 +218,9 @@ class _PlayerTab extends ConsumerWidget {
                           : (loop == LoopMode.all ? 'Repeat all' : 'Repeat off'),
                       icon: Icon(
                         loop == LoopMode.one ? Icons.repeat_one : Icons.repeat,
-                        color: loop == LoopMode.off ? context.textSecondary : _accent,
+                        color: loop == LoopMode.off
+                            ? context.textSecondary
+                            : accent,
                       ),
                       onPressed: () => engine.setRepeat(_cycleLoop(loop)),
                     ),
@@ -561,6 +503,7 @@ class _SyncedLyricsViewState extends ConsumerState<_SyncedLyricsView> {
   @override
   Widget build(BuildContext context) {
     final lines = widget.lyrics.lines;
+    final accent = ref.watch(accentTintProvider).valueOrNull ?? _accent;
     return ListView.builder(
       controller: _ctrl,
       padding: const EdgeInsets.symmetric(vertical: 80, horizontal: 24),
@@ -578,7 +521,7 @@ class _SyncedLyricsViewState extends ConsumerState<_SyncedLyricsView> {
             style: TextStyle(
               fontSize: active ? 19 : 15,
               fontWeight: active ? FontWeight.w800 : FontWeight.w500,
-              color: active ? _accent : ctx.textMuted,
+              color: active ? accent : ctx.textMuted,
             ),
           ),
         );
@@ -757,7 +700,7 @@ class _FavoriteToggle extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final favKeys = ref.watch(favoriteKeysProvider).valueOrNull ?? const [];
     final isFav = favKeys.contains(track.uniqueKey);
-    final accent = ref.watch(nowPlayingTintProvider).valueOrNull ?? _accent;
+    final accent = ref.watch(accentTintProvider).valueOrNull ?? _accent;
     return IconButton(
       tooltip: isFav ? 'Remove from favorites' : 'Add to favorites',
       iconSize: 28,
@@ -790,7 +733,7 @@ class _ScrubberAndTimes extends ConsumerWidget {
     final engine = ref.watch(audioEngineProvider);
     final position = ref.watch(positionProvider);
     final duration = ref.watch(durationProvider) ?? Duration.zero;
-    final accent = ref.watch(nowPlayingTintProvider).valueOrNull ?? _accent;
+    final accent = ref.watch(accentTintProvider).valueOrNull ?? _accent;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -918,10 +861,11 @@ class _SpeedAction extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final speed = ref.watch(playbackSpeedProvider);
     final active = speed != 1.0;
+    final accent = ref.watch(accentTintProvider).valueOrNull ?? _accent;
     return TextButton(
-      onPressed: () => _show(context, ref, speed),
+      onPressed: () => _show(context, ref, speed, accent),
       style: TextButton.styleFrom(
-        foregroundColor: active ? _accent : context.textSecondary,
+        foregroundColor: active ? accent : context.textSecondary,
         padding: const EdgeInsets.symmetric(horizontal: 8),
       ),
       child: Text('${_fmtSpeed(speed)}x',
@@ -929,7 +873,8 @@ class _SpeedAction extends ConsumerWidget {
     );
   }
 
-  Future<void> _show(BuildContext context, WidgetRef ref, double current) =>
+  Future<void> _show(
+          BuildContext context, WidgetRef ref, double current, Color accent) =>
       showModalBottomSheet(
         context: context,
         backgroundColor: const Color(0xFF18181B),
@@ -946,7 +891,7 @@ class _SpeedAction extends ConsumerWidget {
               for (final o in _speedOptions)
                 ListTile(
                   leading: Icon(o == current ? Icons.check : Icons.speed,
-                      color: o == current ? _accent : null),
+                      color: o == current ? accent : null),
                   title: Text('${_fmtSpeed(o)}x'),
                   onTap: () async {
                     Navigator.pop(context);
@@ -974,10 +919,11 @@ class _SleepAction extends ConsumerWidget {
     final endOfTrack = ref.watch(sleepEndOfTrackProvider).valueOrNull ?? false;
     final albumArmed = ref.watch(albumModeArmedProvider).valueOrNull ?? false;
     final active = remaining != null || endOfTrack || albumArmed;
+    final accent = ref.watch(accentTintProvider).valueOrNull ?? _accent;
     return TextButton(
       onPressed: () => _show(context, ref),
       style: TextButton.styleFrom(
-        foregroundColor: active ? _accent : context.textSecondary,
+        foregroundColor: active ? accent : context.textSecondary,
         padding: const EdgeInsets.symmetric(horizontal: 8),
       ),
       child: Row(
