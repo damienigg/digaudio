@@ -7,6 +7,53 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.30.42] — 2026-06-01
+
+### Added (Star ratings actually do something now)
+The 1–5 star UI in the per-track actions sheet was write-only — taps
+hit Subsonic but the value was never read back, displayed, or filtered
+on. Three surfaces now consume the rating:
+
+- **Star indicator in TrackTile**: a small accent-green star + number
+  appears next to the favorite / cache icons whenever
+  `RatingsManager.ratingOf(track) > 0`. Rebuilds on
+  `ratingsChangesProvider` so the indicator follows a set / clear from
+  the actions sheet immediately.
+- **New "Rated" tab in Library** (between Decades and Playlists).
+  Lists every cached track with `userRating ≥ 1`, sorted by stars
+  desc then title asc, served straight from the local cache.
+  Reloads on any rating change.
+- **Smart-playlist `rating` field**: new "Star rating" option in the
+  rules dropdown, comparable as an int (`= / ≠ / > / ≥ / < / ≤ /
+  between`). NULL ratings are coerced to 0 in the WHERE clause so
+  unrated tracks never satisfy a `≥ 1 star` predicate.
+
+### Changed (Rating now persisted to the local cache)
+- `cached_subsonic_songs` gains a nullable `user_rating` column
+  (schema v8 → v9 migration adds it; new installs get it on creation).
+  Sync populates the column from `Child.userRating` returned by
+  Navidrome's `getAlbum`. On every successful `RatingsManager.setRating`
+  the cache row is `UPDATE`d in lockstep — no re-sync needed for the
+  new ratings to drive the views above.
+
+### Added (Smart playlist diagnostics + serverId fix)
+The user reported "I tapped a smart playlist and nothing worked".
+Could not reproduce locally from the code path, so:
+
+- `SmartPlaylistsManager.executeRules` now emits a four-line
+  `[digaudio.dbg]` trace per run — playlist id + name + match mode,
+  the final SQL, the bound variables, and the row count. Gated on
+  `dbgEnabled`. Grep with `adb logcat | grep "\[smart"` while
+  tapping a playlist.
+- `_SmartPlaylistBodyState._reload` adds parallel `[smart-ui]`
+  traces — playlist payload, resolved active server, and the final
+  track count returned to the page.
+- Fixed: `_rowToTrack` was returning Tracks with `serverId: null`.
+  Single-server installs got away with the SubsonicResolver falling
+  back to the active client; multi-server (or ever-swapped) installs
+  would silently mis-route artwork + playback. Now wired through the
+  serverId passed from `executeRules`.
+
 ## [0.30.41] — 2026-06-01
 
 ### Changed (Home stats card — tops in a 2×2 grid)

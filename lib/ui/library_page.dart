@@ -6,10 +6,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../audio/providers.dart';
+import '../domain.dart';
 import 'widgets/album_card.dart';
 import 'widgets/alpha_scroll.dart';
 import 'widgets/artwork.dart';
 import 'widgets/theme_ext.dart';
+import 'widgets/track_tile.dart';
 
 class LibraryPage extends ConsumerStatefulWidget {
   const LibraryPage({super.key});
@@ -36,7 +38,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 5,
+      length: 6,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Library'),
@@ -49,6 +51,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
               Tab(text: 'Artists'),
               Tab(text: 'Genres'),
               Tab(text: 'Decades'),
+              Tab(text: 'Rated'),
               Tab(text: 'Playlists'),
             ],
           ),
@@ -58,6 +61,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
           _ArtistsTab(),
           _GenresTab(),
           _DecadesTab(),
+          _RatedTab(),
           _PlaylistsTab(),
         ]),
       ),
@@ -201,6 +205,61 @@ class _ArtistsTab extends ConsumerWidget {
             subtitle: a.albumCount != null ? Text('${a.albumCount} albums') : null,
             onTap: () => context.push('/artist/${a.origin.name}/${a.id}'),
           ),
+        );
+      },
+    );
+  }
+}
+
+/// Tracks the user has rated 1–5 stars via the per-track actions sheet,
+/// served straight from the local cache (column populated at sync time
+/// and on every successful Subsonic setRating). `ratingsChangesProvider`
+/// triggers a reload so a star tap is reflected immediately.
+class _RatedTab extends ConsumerStatefulWidget {
+  const _RatedTab();
+  @override
+  ConsumerState<_RatedTab> createState() => _RatedTabState();
+}
+
+class _RatedTabState extends ConsumerState<_RatedTab> {
+  Future<List<Track>>? _future;
+
+  void _load() {
+    final active = ref.read(activeServerProvider).valueOrNull;
+    setState(() {
+      _future = active == null
+          ? Future.value(const <Track>[])
+          : ref.read(subsonicCacheProvider).ratedTracks(active.id);
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Reload on every rating change so set/clear from the bottom-sheet
+    // updates this list without a tab switch.
+    ref.listen(ratingsChangesProvider, (_, __) => _load());
+    return FutureBuilder<List<Track>>(
+      future: _future,
+      builder: (context, snap) {
+        if (snap.connectionState != ConnectionState.done) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final tracks = snap.data ?? const [];
+        if (tracks.isEmpty) {
+          return const _Empty(
+              'No rated tracks — long-press a track, open the ⋮ menu, '
+              'and tap a star to rate it.');
+        }
+        return ListView.builder(
+          itemCount: tracks.length,
+          itemBuilder: (_, i) =>
+              TrackTile(queue: tracks, index: i),
         );
       },
     );

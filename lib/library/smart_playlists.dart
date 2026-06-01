@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:drift/drift.dart';
 
+import '../core/dbg.dart';
 import '../core/db.dart';
 import '../domain.dart';
 
@@ -124,6 +125,10 @@ class SmartPlaylistsManager {
         'WHERE s.server_id = ? $filterClause '
         'ORDER BY $orderClause LIMIT ${limit.clamp(1, 1000)}';
 
+    dbg('[smart] execute server=$serverId match=$match '
+        'orderBy=$orderBy limit=$limit rules=${ruleList.length}');
+    dbg('[smart] sql=$sql');
+    dbg('[smart] vars=${vars.map((v) => v.value).toList()}');
     final rows = await _db
         .customSelect(sql,
             variables: vars,
@@ -134,7 +139,8 @@ class SmartPlaylistsManager {
               _db.recentPlays,
             })
         .get();
-    return rows.map(_rowToTrack).toList();
+    dbg('[smart] rows=${rows.length}');
+    return rows.map((r) => _rowToTrack(r, serverId)).toList();
   }
 
   /// Returns null when the rule is malformed or the field/op is unknown
@@ -290,6 +296,11 @@ class SmartPlaylistsManager {
         return 's.duration_sec';
       case 'title':
         return 's.title';
+      case 'rating':
+        // NULL ratings should not satisfy any numeric comparator (a
+        // never-rated track is NOT "≥ 1 star"). COALESCE → 0 handles
+        // it deterministically inside the int LHS.
+        return 'COALESCE(s.user_rating, 0)';
     }
     return null;
   }
@@ -318,7 +329,7 @@ class SmartPlaylistsManager {
     return Variable<String>(v.toString());
   }
 
-  Track _rowToTrack(QueryRow r) => Track(
+  Track _rowToTrack(QueryRow r, String serverId) => Track(
         id: r.read<String>('song_id'),
         title: r.read<String>('title'),
         artist: r.readNullable<String>('artist'),
@@ -331,6 +342,12 @@ class SmartPlaylistsManager {
             ? null
             : Duration(seconds: r.read<int>('duration_sec')),
         genre: r.readNullable<String>('genre'),
+        userRating: r.readNullable<int>('user_rating'),
         origin: MediaOrigin.subsonic,
+        // Without this, Artwork + the SubsonicResolver fall back to the
+        // currently-active server, which breaks playback + cover art on
+        // multi-server installs and silently mis-routes single-server
+        // installs that have ever swapped credentials.
+        serverId: serverId,
       );
 }

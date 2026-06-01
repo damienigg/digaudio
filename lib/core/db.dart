@@ -119,6 +119,12 @@ class CachedSubsonicSongs extends Table {
   IntColumn get year => integer().nullable()();
   IntColumn get durationSec => integer().nullable()();
   TextColumn get genre => text().nullable()();
+  /// Subsonic 1–5 star user rating. NULL = unrated; 0 from the server
+  /// is normalised to NULL on write. Local-only column; written during
+  /// sync (from getAlbum's Child.userRating) and on every successful
+  /// RatingsManager.setRating so the rated views stay live without a
+  /// re-sync.
+  IntColumn get userRating => integer().nullable()();
   @override
   Set<Column> get primaryKey => {serverId, songId};
 }
@@ -139,7 +145,7 @@ class AppDb extends _$AppDb {
   AppDb() : super(_open());
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -187,6 +193,10 @@ class AppDb extends _$AppDb {
               SELECT server_id, song_id, title, artist, album, genre
               FROM cached_subsonic_songs
             ''');
+          }
+          if (from < 9) {
+            await m.addColumn(
+                cachedSubsonicSongs, cachedSubsonicSongs.userRating);
           }
         },
       );

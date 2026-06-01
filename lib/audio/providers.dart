@@ -418,7 +418,10 @@ final selectionProvider =
         (_) => SelectionNotifier());
 
 final ratingsManagerProvider = Provider<RatingsManager>((ref) {
-  final mgr = RatingsManager(() => ref.read(subsonicProvider));
+  final mgr = RatingsManager(
+    () => ref.read(subsonicProvider),
+    cache: ref.watch(subsonicCacheProvider),
+  );
   ref.onDispose(mgr.dispose);
   return mgr;
 });

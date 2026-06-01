@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../audio/providers.dart';
 import '../core/db.dart';
+import '../core/dbg.dart';
 import '../domain.dart';
 import 'widgets/mini_player.dart';
 import 'widgets/theme_ext.dart';
@@ -56,13 +57,19 @@ class _SmartPlaylistBodyState extends ConsumerState<_SmartPlaylistBody> {
   }
 
   void _reload() {
+    dbg('[smart-ui] _reload playlist=${widget.playlist.id} '
+        '"${widget.playlist.name}" rules=${widget.playlist.rulesJson}');
     final activeFuture = ref.read(settingsStoreProvider).active();
     setState(() {
-      _tracks = activeFuture.then((active) {
+      _tracks = activeFuture.then<List<Track>>((active) {
+        dbg('[smart-ui] active server=${active?.id ?? "<null>"}');
         if (active == null) return <Track>[];
         return ref
             .read(smartPlaylistsProvider)
             .execute(widget.playlist, active.id);
+      }).then<List<Track>>((tracks) {
+        dbg('[smart-ui] resolved tracks=${tracks.length}');
+        return tracks;
       });
     });
   }
@@ -400,6 +407,7 @@ class _RuleDraft {
   bool _isIntField() =>
       field == 'year' ||
       field == 'durationSec' ||
+      field == 'rating' ||
       _isComputedIntField();
 
   /// v2 fields backed by subquery COUNT / time-delta — int comparison
@@ -454,6 +462,7 @@ class _RuleRow extends StatelessWidget {
                 DropdownMenuItem(value: 'title', child: Text('Title')),
                 DropdownMenuItem(value: 'year', child: Text('Year')),
                 DropdownMenuItem(value: 'durationSec', child: Text('Duration s')),
+                DropdownMenuItem(value: 'rating', child: Text('Star rating')),
                 // v2 boolean joins
                 DropdownMenuItem(value: 'favourite', child: Text('Favourite')),
                 DropdownMenuItem(value: 'pinned', child: Text('Pinned')),

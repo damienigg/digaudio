@@ -1895,6 +1895,12 @@ class $CachedSubsonicSongsTable extends CachedSubsonicSongs
   late final GeneratedColumn<String> genre = GeneratedColumn<String>(
       'genre', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _userRatingMeta =
+      const VerificationMeta('userRating');
+  @override
+  late final GeneratedColumn<int> userRating = GeneratedColumn<int>(
+      'user_rating', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns => [
         serverId,
@@ -1907,7 +1913,8 @@ class $CachedSubsonicSongsTable extends CachedSubsonicSongs
         coverArt,
         year,
         durationSec,
-        genre
+        genre,
+        userRating
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1971,6 +1978,12 @@ class $CachedSubsonicSongsTable extends CachedSubsonicSongs
       context.handle(
           _genreMeta, genre.isAcceptableOrUnknown(data['genre']!, _genreMeta));
     }
+    if (data.containsKey('user_rating')) {
+      context.handle(
+          _userRatingMeta,
+          userRating.isAcceptableOrUnknown(
+              data['user_rating']!, _userRatingMeta));
+    }
     return context;
   }
 
@@ -2002,6 +2015,8 @@ class $CachedSubsonicSongsTable extends CachedSubsonicSongs
           .read(DriftSqlType.int, data['${effectivePrefix}duration_sec']),
       genre: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}genre']),
+      userRating: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}user_rating']),
     );
   }
 
@@ -2024,6 +2039,13 @@ class CachedSubsonicSong extends DataClass
   final int? year;
   final int? durationSec;
   final String? genre;
+
+  /// Subsonic 1–5 star user rating. NULL = unrated; 0 from the server
+  /// is normalised to NULL on write. Local-only column; written during
+  /// sync (from getAlbum's Child.userRating) and on every successful
+  /// RatingsManager.setRating so the rated views stay live without a
+  /// re-sync.
+  final int? userRating;
   const CachedSubsonicSong(
       {required this.serverId,
       required this.songId,
@@ -2035,7 +2057,8 @@ class CachedSubsonicSong extends DataClass
       this.coverArt,
       this.year,
       this.durationSec,
-      this.genre});
+      this.genre,
+      this.userRating});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -2066,6 +2089,9 @@ class CachedSubsonicSong extends DataClass
     if (!nullToAbsent || genre != null) {
       map['genre'] = Variable<String>(genre);
     }
+    if (!nullToAbsent || userRating != null) {
+      map['user_rating'] = Variable<int>(userRating);
+    }
     return map;
   }
 
@@ -2093,6 +2119,9 @@ class CachedSubsonicSong extends DataClass
           : Value(durationSec),
       genre:
           genre == null && nullToAbsent ? const Value.absent() : Value(genre),
+      userRating: userRating == null && nullToAbsent
+          ? const Value.absent()
+          : Value(userRating),
     );
   }
 
@@ -2111,6 +2140,7 @@ class CachedSubsonicSong extends DataClass
       year: serializer.fromJson<int?>(json['year']),
       durationSec: serializer.fromJson<int?>(json['durationSec']),
       genre: serializer.fromJson<String?>(json['genre']),
+      userRating: serializer.fromJson<int?>(json['userRating']),
     );
   }
   @override
@@ -2128,6 +2158,7 @@ class CachedSubsonicSong extends DataClass
       'year': serializer.toJson<int?>(year),
       'durationSec': serializer.toJson<int?>(durationSec),
       'genre': serializer.toJson<String?>(genre),
+      'userRating': serializer.toJson<int?>(userRating),
     };
   }
 
@@ -2142,7 +2173,8 @@ class CachedSubsonicSong extends DataClass
           Value<String?> coverArt = const Value.absent(),
           Value<int?> year = const Value.absent(),
           Value<int?> durationSec = const Value.absent(),
-          Value<String?> genre = const Value.absent()}) =>
+          Value<String?> genre = const Value.absent(),
+          Value<int?> userRating = const Value.absent()}) =>
       CachedSubsonicSong(
         serverId: serverId ?? this.serverId,
         songId: songId ?? this.songId,
@@ -2155,6 +2187,7 @@ class CachedSubsonicSong extends DataClass
         year: year.present ? year.value : this.year,
         durationSec: durationSec.present ? durationSec.value : this.durationSec,
         genre: genre.present ? genre.value : this.genre,
+        userRating: userRating.present ? userRating.value : this.userRating,
       );
   CachedSubsonicSong copyWithCompanion(CachedSubsonicSongsCompanion data) {
     return CachedSubsonicSong(
@@ -2170,6 +2203,8 @@ class CachedSubsonicSong extends DataClass
       durationSec:
           data.durationSec.present ? data.durationSec.value : this.durationSec,
       genre: data.genre.present ? data.genre.value : this.genre,
+      userRating:
+          data.userRating.present ? data.userRating.value : this.userRating,
     );
   }
 
@@ -2186,14 +2221,15 @@ class CachedSubsonicSong extends DataClass
           ..write('coverArt: $coverArt, ')
           ..write('year: $year, ')
           ..write('durationSec: $durationSec, ')
-          ..write('genre: $genre')
+          ..write('genre: $genre, ')
+          ..write('userRating: $userRating')
           ..write(')'))
         .toString();
   }
 
   @override
   int get hashCode => Object.hash(serverId, songId, title, artist, album,
-      albumId, artistId, coverArt, year, durationSec, genre);
+      albumId, artistId, coverArt, year, durationSec, genre, userRating);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -2208,7 +2244,8 @@ class CachedSubsonicSong extends DataClass
           other.coverArt == this.coverArt &&
           other.year == this.year &&
           other.durationSec == this.durationSec &&
-          other.genre == this.genre);
+          other.genre == this.genre &&
+          other.userRating == this.userRating);
 }
 
 class CachedSubsonicSongsCompanion extends UpdateCompanion<CachedSubsonicSong> {
@@ -2223,6 +2260,7 @@ class CachedSubsonicSongsCompanion extends UpdateCompanion<CachedSubsonicSong> {
   final Value<int?> year;
   final Value<int?> durationSec;
   final Value<String?> genre;
+  final Value<int?> userRating;
   final Value<int> rowid;
   const CachedSubsonicSongsCompanion({
     this.serverId = const Value.absent(),
@@ -2236,6 +2274,7 @@ class CachedSubsonicSongsCompanion extends UpdateCompanion<CachedSubsonicSong> {
     this.year = const Value.absent(),
     this.durationSec = const Value.absent(),
     this.genre = const Value.absent(),
+    this.userRating = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   CachedSubsonicSongsCompanion.insert({
@@ -2250,6 +2289,7 @@ class CachedSubsonicSongsCompanion extends UpdateCompanion<CachedSubsonicSong> {
     this.year = const Value.absent(),
     this.durationSec = const Value.absent(),
     this.genre = const Value.absent(),
+    this.userRating = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : serverId = Value(serverId),
         songId = Value(songId),
@@ -2266,6 +2306,7 @@ class CachedSubsonicSongsCompanion extends UpdateCompanion<CachedSubsonicSong> {
     Expression<int>? year,
     Expression<int>? durationSec,
     Expression<String>? genre,
+    Expression<int>? userRating,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -2280,6 +2321,7 @@ class CachedSubsonicSongsCompanion extends UpdateCompanion<CachedSubsonicSong> {
       if (year != null) 'year': year,
       if (durationSec != null) 'duration_sec': durationSec,
       if (genre != null) 'genre': genre,
+      if (userRating != null) 'user_rating': userRating,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -2296,6 +2338,7 @@ class CachedSubsonicSongsCompanion extends UpdateCompanion<CachedSubsonicSong> {
       Value<int?>? year,
       Value<int?>? durationSec,
       Value<String?>? genre,
+      Value<int?>? userRating,
       Value<int>? rowid}) {
     return CachedSubsonicSongsCompanion(
       serverId: serverId ?? this.serverId,
@@ -2309,6 +2352,7 @@ class CachedSubsonicSongsCompanion extends UpdateCompanion<CachedSubsonicSong> {
       year: year ?? this.year,
       durationSec: durationSec ?? this.durationSec,
       genre: genre ?? this.genre,
+      userRating: userRating ?? this.userRating,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -2349,6 +2393,9 @@ class CachedSubsonicSongsCompanion extends UpdateCompanion<CachedSubsonicSong> {
     if (genre.present) {
       map['genre'] = Variable<String>(genre.value);
     }
+    if (userRating.present) {
+      map['user_rating'] = Variable<int>(userRating.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -2369,6 +2416,7 @@ class CachedSubsonicSongsCompanion extends UpdateCompanion<CachedSubsonicSong> {
           ..write('year: $year, ')
           ..write('durationSec: $durationSec, ')
           ..write('genre: $genre, ')
+          ..write('userRating: $userRating, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -4159,6 +4207,7 @@ typedef $$CachedSubsonicSongsTableCreateCompanionBuilder
   Value<int?> year,
   Value<int?> durationSec,
   Value<String?> genre,
+  Value<int?> userRating,
   Value<int> rowid,
 });
 typedef $$CachedSubsonicSongsTableUpdateCompanionBuilder
@@ -4174,6 +4223,7 @@ typedef $$CachedSubsonicSongsTableUpdateCompanionBuilder
   Value<int?> year,
   Value<int?> durationSec,
   Value<String?> genre,
+  Value<int?> userRating,
   Value<int> rowid,
 });
 
@@ -4218,6 +4268,9 @@ class $$CachedSubsonicSongsTableFilterComposer
 
   ColumnFilters<String> get genre => $composableBuilder(
       column: $table.genre, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get userRating => $composableBuilder(
+      column: $table.userRating, builder: (column) => ColumnFilters(column));
 }
 
 class $$CachedSubsonicSongsTableOrderingComposer
@@ -4261,6 +4314,9 @@ class $$CachedSubsonicSongsTableOrderingComposer
 
   ColumnOrderings<String> get genre => $composableBuilder(
       column: $table.genre, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get userRating => $composableBuilder(
+      column: $table.userRating, builder: (column) => ColumnOrderings(column));
 }
 
 class $$CachedSubsonicSongsTableAnnotationComposer
@@ -4304,6 +4360,9 @@ class $$CachedSubsonicSongsTableAnnotationComposer
 
   GeneratedColumn<String> get genre =>
       $composableBuilder(column: $table.genre, builder: (column) => column);
+
+  GeneratedColumn<int> get userRating => $composableBuilder(
+      column: $table.userRating, builder: (column) => column);
 }
 
 class $$CachedSubsonicSongsTableTableManager extends RootTableManager<
@@ -4346,6 +4405,7 @@ class $$CachedSubsonicSongsTableTableManager extends RootTableManager<
             Value<int?> year = const Value.absent(),
             Value<int?> durationSec = const Value.absent(),
             Value<String?> genre = const Value.absent(),
+            Value<int?> userRating = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               CachedSubsonicSongsCompanion(
@@ -4360,6 +4420,7 @@ class $$CachedSubsonicSongsTableTableManager extends RootTableManager<
             year: year,
             durationSec: durationSec,
             genre: genre,
+            userRating: userRating,
             rowid: rowid,
           ),
           createCompanionCallback: ({
@@ -4374,6 +4435,7 @@ class $$CachedSubsonicSongsTableTableManager extends RootTableManager<
             Value<int?> year = const Value.absent(),
             Value<int?> durationSec = const Value.absent(),
             Value<String?> genre = const Value.absent(),
+            Value<int?> userRating = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               CachedSubsonicSongsCompanion.insert(
@@ -4388,6 +4450,7 @@ class $$CachedSubsonicSongsTableTableManager extends RootTableManager<
             year: year,
             durationSec: durationSec,
             genre: genre,
+            userRating: userRating,
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0

@@ -45,6 +45,10 @@ class TrackTile extends ConsumerWidget {
     final cacheState = ref.watch(cacheStateProvider).valueOrNull ?? const {};
     // null = uncached, false = auto-cached (LRU-evictable), true = pinned
     final cachePinned = cacheState[t.uniqueKey];
+    // Watch the ratings change-tick so star changes (set / clear via the
+    // actions sheet) redraw the tile immediately.
+    ref.watch(ratingsChangesProvider);
+    final rating = ref.read(ratingsManagerProvider).ratingOf(t);
     final selection = ref.watch(selectionProvider);
     final selecting = selection.isNotEmpty;
     final isSelected = selection.containsKey(t.uniqueKey);
@@ -131,6 +135,16 @@ class TrackTile extends ConsumerWidget {
                         Icon(Icons.download_done_rounded,
                             size: 12,
                             color: cachePinned ? const Color(0xFF1ED760) : context.textDisabled),
+                        const SizedBox(width: 4),
+                      ],
+                      if (rating > 0) ...[
+                        const Icon(Icons.star_rounded,
+                            size: 13, color: Color(0xFF1ED760)),
+                        Text('$rating',
+                            style: const TextStyle(
+                                color: Color(0xFF1ED760),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700)),
                         const SizedBox(width: 4),
                       ],
                       Expanded(

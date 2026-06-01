@@ -273,6 +273,13 @@ class SubsonicLibraryCache {
                 year: Value(t.year),
                 durationSec: Value(t.duration?.inSeconds),
                 genre: Value(t.genre),
+                // Normalise 0 → NULL so smart-playlist `rating > 0`
+                // filters and the Library Rated tab don't lump
+                // never-rated tracks in with cleared ratings.
+                userRating: Value(
+                    (t.userRating != null && t.userRating! > 0)
+                        ? t.userRating
+                        : null),
               ),
               mode: InsertMode.insertOrReplace,
             );
@@ -356,6 +363,37 @@ class SubsonicLibraryCache {
         coverArt: r.coverArt,
         year: r.year,
         genre: r.genre,
+        userRating: r.userRating,
         origin: MediaOrigin.subsonic,
+        serverId: r.serverId,
       );
+
+  /// Tracks rated at least [minStars] stars on [serverId], ordered by
+  /// rating desc then title asc. Drives the Library "Rated" tab and is
+  /// available to smart-playlist rating-filter rules.
+  Future<List<Track>> ratedTracks(String serverId, {int minStars = 1}) async {
+    final rows = await (_db.select(_db.cachedSubsonicSongs)
+          ..where((s) =>
+              s.serverId.equals(serverId) &
+              s.userRating.isBiggerOrEqualValue(minStars))
+          ..orderBy([
+            (s) => OrderingTerm.desc(s.userRating),
+            (s) => OrderingTerm.asc(s.title),
+          ]))
+        .get();
+    return rows.map(_toTrack).toList(growable: false);
+  }
+
+  /// Updates a single track's rating row. Called by RatingsManager
+  /// after a successful Subsonic.setRating so the local rated views
+  /// reflect the change without waiting for the next library sync.
+  /// `rating == 0` clears (stored as NULL).
+  Future<void> updateRating(
+      String serverId, String songId, int rating) async {
+    await (_db.update(_db.cachedSubsonicSongs)
+          ..where((s) =>
+              s.serverId.equals(serverId) & s.songId.equals(songId)))
+        .write(CachedSubsonicSongsCompanion(
+            userRating: Value(rating > 0 ? rating : null)));
+  }
 }
