@@ -165,14 +165,35 @@ class _StatsState extends ConsumerState<StatsPage> {
               const _SectionHeader('Top tracks'),
               if (data.topTracks.isEmpty)
                 const _EmptyHint('No plays in this window yet.')
-              else
-                ...data.topTracks.map((e) => _TopTrackRow(track: e.$1, count: e.$2)),
+              else ...[
+                for (var i = 0; i < data.topTracks.length; i++)
+                  _TopTrackRow(
+                    track: data.topTracks[i].$1,
+                    count: data.topTracks[i].$2,
+                    onTap: () => ref.read(audioEngineProvider).setQueue(
+                          [for (final (t, _) in data.topTracks) t],
+                          initialIndex: i,
+                        ),
+                  ),
+              ],
               const SizedBox(height: 16),
               const _SectionHeader('Top artists'),
               if (data.topArtists.isEmpty)
                 const _EmptyHint('No plays in this window yet.')
               else
-                ...data.topArtists.map((e) => _TopArtistRow(name: e.$1, count: e.$2)),
+                ...data.topArtists.map((e) => _TopArtistRow(
+                      name: e.$1,
+                      count: e.$2,
+                      onTap: () {
+                        final byArtist = [
+                          for (final t in data.mixSeed)
+                            if (t.displayArtist == e.$1) t,
+                        ];
+                        if (byArtist.isNotEmpty) {
+                          ref.read(audioEngineProvider).setQueue(byArtist);
+                        }
+                      },
+                    )),
               const SizedBox(height: 16),
               const _SectionHeader('On this day'),
               if (data.onThisDay.isEmpty)
@@ -365,7 +386,12 @@ class _YearHeatmap extends StatelessWidget {
   Widget build(BuildContext context) {
     final maxCount = counts.values.fold<int>(0, (a, b) => b > a ? b : a);
     final now = DateTime.now();
-    final today = DateTime.utc(now.year, now.month, now.day);
+    // Cell keys are LOCAL midnight DateTimes — must match the keys
+    // produced by PlayHistoryManager.dailyCounts (which buckets by
+    // local-time SQL `date()` and parses the YYYY-MM-DD result as a
+    // local DateTime). Using DateTime.utc here would silently fail
+    // every map lookup → every square renders empty.
+    final today = DateTime(now.year, now.month, now.day);
     final oldest = today.subtract(const Duration(days: 364));
     // Align the grid to Monday on the left so columns are clean weeks.
     final daysBackToMonday = (oldest.weekday - DateTime.monday) % 7;
@@ -569,10 +595,16 @@ class _PlayMixButton extends ConsumerWidget {
 class _TopTrackRow extends StatelessWidget {
   final Track track;
   final int count;
-  const _TopTrackRow({required this.track, required this.count});
+  final VoidCallback onTap;
+  const _TopTrackRow({
+    required this.track,
+    required this.count,
+    required this.onTap,
+  });
   @override
   Widget build(BuildContext context) => ListTile(
         contentPadding: EdgeInsets.zero,
+        onTap: onTap,
         leading: Artwork(coverArt: track.coverArt, origin: track.origin, size: 48),
         title: Text(track.title, maxLines: 1, overflow: TextOverflow.ellipsis),
         subtitle: Text(track.displayArtist,
@@ -588,13 +620,22 @@ class _TopTrackRow extends StatelessWidget {
 class _TopArtistRow extends StatelessWidget {
   final String name;
   final int count;
-  const _TopArtistRow({required this.name, required this.count});
+  final VoidCallback onTap;
+  const _TopArtistRow({
+    required this.name,
+    required this.count,
+    required this.onTap,
+  });
   @override
   Widget build(BuildContext context) => ListTile(
         contentPadding: EdgeInsets.zero,
+        onTap: onTap,
         leading: CircleAvatar(
           backgroundColor: const Color(0xFF1E1E22),
-          child: Text(name.isNotEmpty ? name[0].toUpperCase() : '?'),
+          // Rune-indexed initial so emoji-prefixed artists don't tofu.
+          child: Text(name.isNotEmpty
+              ? String.fromCharCode(name.runes.first).toUpperCase()
+              : '?'),
         ),
         title: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis),
         trailing: Text('$count plays',

@@ -116,10 +116,16 @@ class PlayHistoryManager {
   /// `date → play count` for the last [days] days. UI renders this as a
   /// heatmap row. Days with zero plays are absent from the map (the
   /// renderer defaults to 0 / white12).
+  /// Aggregates plays per **local** calendar day — what a user perceives
+  /// as "what I played on Monday". Both the SQL bucket (`localtime`
+  /// modifier) and the parsed DateTime keys are in local time so the
+  /// stats-page heatmap's local-DateTime cell lookups match. Keys
+  /// without plays are omitted; the renderer treats missing → 0.
   Future<Map<DateTime, int>> dailyCounts({int days = 30}) async {
     final cutoff = DateTime.now().subtract(Duration(days: days));
     final rows = await _db.customSelect(
-      "SELECT date(played_at, 'unixepoch') AS d, COUNT(*) AS c FROM recent_plays WHERE played_at >= ? GROUP BY d",
+      "SELECT date(played_at, 'unixepoch', 'localtime') AS d, COUNT(*) AS c "
+      "FROM recent_plays WHERE played_at >= ? GROUP BY d",
       variables: [Variable<int>(cutoff.millisecondsSinceEpoch ~/ 1000)],
       readsFrom: {_db.recentPlays},
     ).get();

@@ -7,6 +7,27 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.30.33] — 2026-06-01
+
+### Fixed (Stats — heatmap never colored)
+- `PlayHistoryManager.dailyCounts` aggregated plays with SQLite's
+  `date(played_at, 'unixepoch')` (UTC) but parsed the resulting
+  `YYYY-MM-DD` strings via `DateTime.parse` which yields **local**
+  DateTimes. The stats page heatmap then looked up cells with
+  `DateTime.utc(...)` keys — the two never matched, every map
+  lookup returned null, every square rendered as `dividerSoft`.
+  Aligned both sides to local time (`'localtime'` SQL modifier +
+  plain `DateTime` cell keys) so user-perceived days line up with
+  the buckets they actually live in.
+
+### Changed (Stats — top tracks / top artists tappable)
+- `_TopTrackRow` and `_TopArtistRow` now take a `VoidCallback onTap`
+  surfaced as `ListTile.onTap`. Tapping a top-track row queues the
+  full top-10 with that row as the initial index. Tapping a
+  top-artist row queues every mixSeed track whose `displayArtist`
+  matches the row's name. Also: artist avatar initial now uses
+  `runes.first` so emoji-prefixed names don't tofu.
+
 ## [0.30.32] — 2026-06-01
 
 ### Changed (Home — every pixel earns its keep)
