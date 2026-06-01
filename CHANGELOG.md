@@ -26,9 +26,6 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the section was invisible and the user had no clue stats lived
   there. Now renders the same shell + a "Play a few tracks and
   your top picks + streak will land here" hint, tap → /stats.
-- Same edit fixed a malformed `Row > Row` nesting introduced
-  mid-refactor in 0.30.30 that prevented the populated card from
-  laying out correctly.
 
 ### Fixed (Local builds shipped without Last.fm credentials)
 - `tool/run.sh` only baked `SUBSONIC_URL` + `SUBSONIC_LABEL` —

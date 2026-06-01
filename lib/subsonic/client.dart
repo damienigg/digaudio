@@ -320,18 +320,22 @@ class SubsonicClient {
   // --- Parsers -------------------------------------------------------------
 
   /// Resolves a song's genre from either the legacy `genre` string field
-  /// (Subsonic <1.10.2) or the OpenSubsonic `genres: [{name: ...}]` array
-  /// — recent Navidrome omits the legacy field, which used to leave the
-  /// Library → Genres tab empty even after a full sync.
+  /// (Subsonic <1.10.2) or the OpenSubsonic `genres` array — recent
+  /// Navidrome omits the legacy field, and forks emit `genres` as either
+  /// `[{name: ...}]` or `[...]<String>`. Tolerant of malformed entries:
+  /// scans the list for the first non-empty name instead of giving up on
+  /// `list.first`. Returns null if nothing usable is found.
   static String? _firstGenre(Map<String, dynamic> j) {
-    final legacy = j['genre'] as String?;
-    if (legacy != null && legacy.isNotEmpty) return legacy;
+    final legacy = j['genre'];
+    if (legacy is String && legacy.isNotEmpty) return legacy;
     final list = j['genres'];
-    if (list is List && list.isNotEmpty) {
-      final first = list.first;
-      if (first is Map) {
-        final name = first['name'];
-        if (name is String && name.isNotEmpty) return name;
+    if (list is List) {
+      for (final e in list) {
+        if (e is String && e.isNotEmpty) return e;
+        if (e is Map) {
+          final name = e['name'];
+          if (name is String && name.isNotEmpty) return name;
+        }
       }
     }
     return null;

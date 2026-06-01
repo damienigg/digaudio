@@ -1,10 +1,17 @@
 #!/usr/bin/env bash
 # Local build/run wrapper that bakes a default Subsonic *server URL* (no
-# credentials) into the APK via Dart compile-time defines.
+# credentials) and, optionally, Last.fm API credentials into the APK via
+# Dart compile-time defines.
 #
-# Copy this file to `tool/run.sh` (gitignored) and edit the URL/label for your
-# own server. Username and password are NEVER baked in — users fill them
-# through the Settings screen.
+# Copy this file to `tool/run.sh` (gitignored) and edit the URL/label for
+# your own server. Username and password are NEVER baked in — users fill
+# them through the Settings screen.
+#
+# Last.fm credentials are sourced from the environment so they don't end
+# up in git:
+#   export LASTFM_API_KEY=...
+#   export LASTFM_SHARED_SECRET=...
+# Unset → no --dart-define is passed (no regression vs. pure Subsonic).
 #
 # Usage:
 #   tool/run.sh build         # → debug APK with the baked URL
@@ -16,12 +23,15 @@ cd "$(dirname "$0")/.."
 SUBSONIC_URL='https://music.example.com'
 SUBSONIC_LABEL='My server'
 
+defines=(
+  --dart-define=SUBSONIC_URL="$SUBSONIC_URL"
+  --dart-define=SUBSONIC_LABEL="$SUBSONIC_LABEL"
+)
+[[ -n "${LASTFM_API_KEY:-}" ]] && defines+=(--dart-define=LASTFM_API_KEY="$LASTFM_API_KEY")
+[[ -n "${LASTFM_SHARED_SECRET:-}" ]] && defines+=(--dart-define=LASTFM_SHARED_SECRET="$LASTFM_SHARED_SECRET")
+
 case "${1:-build}" in
-  build) flutter build apk --debug \
-            --dart-define=SUBSONIC_URL="$SUBSONIC_URL" \
-            --dart-define=SUBSONIC_LABEL="$SUBSONIC_LABEL" ;;
-  run)   flutter run \
-            --dart-define=SUBSONIC_URL="$SUBSONIC_URL" \
-            --dart-define=SUBSONIC_LABEL="$SUBSONIC_LABEL" ;;
+  build) flutter build apk --debug "${defines[@]}" ;;
+  run)   flutter run "${defines[@]}" ;;
   *)     echo "usage: $0 build|run" >&2; exit 64 ;;
 esac

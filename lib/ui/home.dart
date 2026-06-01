@@ -247,39 +247,42 @@ class _TrackCard extends ConsumerWidget {
 class _StatsDashboard extends ConsumerWidget {
   const _StatsDashboard();
 
+  // Ink (not Container) carries the decoration so InkWell's splash paints
+  // on top of the background instead of being occluded by a solid color.
   Widget _shell(BuildContext context, {required Widget body, VoidCallback? onTap}) =>
       Padding(
         padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(14),
-          child: Container(
-            padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
-            decoration: BoxDecoration(
-              color: context.dividerSoft,
-              borderRadius: BorderRadius.circular(14),
-              border:
-                  Border.all(color: _accent.withOpacity(0.18), width: 1),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.insights, size: 18, color: _accent),
-                    const SizedBox(width: 6),
-                    const Text('Your 30-day stats',
-                        style: TextStyle(
-                            fontSize: 14, fontWeight: FontWeight.w800)),
-                    const Spacer(),
-                    if (onTap != null)
-                      Icon(Icons.chevron_right,
-                          color: context.textTertiary, size: 20),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                body,
-              ],
+        child: Ink(
+          decoration: BoxDecoration(
+            color: context.dividerSoft,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: _accent.withOpacity(0.18), width: 1),
+          ),
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(14),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.insights, size: 18, color: _accent),
+                      const SizedBox(width: 6),
+                      const Text('Your 30-day stats',
+                          style: TextStyle(
+                              fontSize: 14, fontWeight: FontWeight.w800)),
+                      const Spacer(),
+                      if (onTap != null)
+                        Icon(Icons.chevron_right,
+                            color: context.textTertiary, size: 20),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  body,
+                ],
+              ),
             ),
           ),
         ),
@@ -298,9 +301,10 @@ class _StatsDashboard extends ConsumerWidget {
                   style: TextStyle(color: context.textTertiary, fontSize: 12)),
             ),
           )),
-      error: (e, _) => _shell(context,
-          body: Text('Stats unavailable: $e',
-              style: const TextStyle(color: Colors.redAccent, fontSize: 12))),
+      error: (_, __) => _shell(context,
+          onTap: () => context.push('/stats'),
+          body: const Text('Stats unavailable — tap to open the full page.',
+              style: TextStyle(color: Colors.redAccent, fontSize: 12))),
       data: (s) {
         if (s.isEmpty) {
           return _shell(context,
@@ -353,8 +357,12 @@ class _StatsDashboard extends ConsumerWidget {
                     radius: 20,
                     backgroundColor: const Color(0xFF1E1E22),
                     child: Text(
+                      // Index by rune so artists whose name begins with an
+                      // emoji or other astral-plane character don't render
+                      // as a lone-surrogate tofu glyph.
                       s.topArtist!.isNotEmpty
-                          ? s.topArtist![0].toUpperCase()
+                          ? String.fromCharCode(s.topArtist!.runes.first)
+                              .toUpperCase()
                           : '?',
                       style: const TextStyle(fontWeight: FontWeight.w800),
                     ),
@@ -378,20 +386,26 @@ class _StatTile extends StatelessWidget {
   Widget build(BuildContext context) => Expanded(
         child: Column(
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (icon != null) ...[
-                  Icon(icon, size: 18, color: _accent),
-                  const SizedBox(width: 2),
+            // FittedBox(scaleDown) keeps 5-digit values legible inside the
+            // narrow Expanded slot — without it, RenderFlex overflows on
+            // ≤360dp phones for power users with thousands of plays.
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (icon != null) ...[
+                    Icon(icon, size: 18, color: _accent),
+                    const SizedBox(width: 2),
+                  ],
+                  Text(value,
+                      style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                          color: _accent,
+                          fontFeatures: [FontFeature.tabularFigures()])),
                 ],
-                Text(value,
-                    style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w900,
-                        color: _accent,
-                        fontFeatures: [FontFeature.tabularFigures()])),
-              ],
+              ),
             ),
             Text(label,
                 style: TextStyle(
