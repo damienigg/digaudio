@@ -21,15 +21,17 @@ class HomePage extends ConsumerWidget {
     final subsonicConfigured = ref.watch(subsonicProvider) != null;
 
     return Scaffold(
-      // Drop the opaque app-bar bandeau noir so the global
-      // AppBackground bleeds all the way up to the status bar. The
-      // settings gear stays accessible top-right, just floating over
-      // the background instead of sitting on a dark strip.
-      extendBodyBehindAppBar: true,
+      // Transparent AppBar: the global AppBackground still bleeds up to
+      // the status bar. extendBodyBehindAppBar is **off** now that the
+      // AppBar carries the permanent search affordance — letting the
+      // body extend behind would visually overlap the stats card with
+      // the search bar.
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
+        titleSpacing: 16,
+        title: const _HomeSearchBar(),
         actions: [
           IconButton(
             icon: const Icon(Icons.settings_outlined),
@@ -49,7 +51,6 @@ class HomePage extends ConsumerWidget {
               child: ListView(
                 padding: const EdgeInsets.only(bottom: 24),
                 children: [
-                  const _HomeHero(),
                   const _StatsDashboard(),
                   _Section(title: 'Newest releases', child: _AlbumRow(state: newestAlbums)),
                   // Section hides itself when there's no recent-play data
@@ -73,48 +74,39 @@ class HomePage extends ConsumerWidget {
   }
 }
 
-/// Top-of-home brand strip — icon (large) + name + tagline. Shown only
-/// when a Subsonic server is configured (the SetupHint already has its
-/// own hero). `cacheWidth: 192` decodes the 1024 source at ~2× the
-/// display size — sharp on retina without loading the full bitmap.
-class _HomeHero extends StatelessWidget {
-  const _HomeHero();
+/// Permanent search affordance sitting in the home AppBar. Looks like
+/// a search field but is non-editable — tapping it bumps
+/// [searchFocusRequestProvider] (so SearchPage focuses its real input
+/// on the next build) and switches to the /search branch. Cheap to
+/// render and never steals the keyboard on home.
+class _HomeSearchBar extends ConsumerWidget {
+  const _HomeSearchBar();
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
-        child: Row(
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: Image.asset(
-                'assets/icon/digaudio_icon.png',
-                width: 72,
-                height: 72,
-                cacheWidth: 192,
-              ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text('DIGaudio',
+  Widget build(BuildContext context, WidgetRef ref) => Material(
+        color: context.dividerSoft,
+        borderRadius: BorderRadius.circular(22),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(22),
+          onTap: () {
+            ref.read(searchFocusRequestProvider.notifier).state++;
+            context.go('/search');
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+            child: Row(
+              children: [
+                Icon(Icons.search, size: 20, color: context.textTertiary),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text('Search tracks, albums, artists…',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                          fontSize: 26,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: -0.5)),
-                  const SizedBox(height: 2),
-                  Text('Dig your audio.',
-                      style: TextStyle(
-                          color: context.textTertiary,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                          fontStyle: FontStyle.italic)),
-                ],
-              ),
+                          color: context.textTertiary, fontSize: 14)),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       );
 }

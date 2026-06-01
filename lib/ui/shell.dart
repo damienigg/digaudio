@@ -33,6 +33,7 @@ class AppShell extends ConsumerWidget {
     (icon: Icons.library_music_outlined, selected: Icons.library_music, label: 'Library'),
     (icon: Icons.play_circle_outline, selected: Icons.play_circle, label: 'Now Playing'),
   ];
+  static const _searchIndex = 1;
   static const _nowPlayingIndex = 3;
 
   @override
@@ -55,9 +56,16 @@ class AppShell extends ConsumerWidget {
             onDestinationSelected: (i) {
               if (i == _nowPlayingIndex) {
                 context.push('/now-playing');
-              } else {
-                shell.goBranch(i, initialLocation: i == shell.currentIndex);
+                return;
               }
+              // Bump *before* switching branches — guarantees the
+              // signal is set when SearchPage rebuilds and the
+              // ref.listen callback fires (or when its first-build
+              // path reads the counter).
+              if (i == _searchIndex) {
+                ref.read(searchFocusRequestProvider.notifier).state++;
+              }
+              shell.goBranch(i, initialLocation: i == shell.currentIndex);
             },
             destinations: [
               for (final it in _items)

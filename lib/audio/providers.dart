@@ -603,6 +603,13 @@ final libraryArtistsProvider = FutureProvider<List<Artist>>((ref) async {
 
 final searchQueryProvider = StateProvider<String>((_) => '');
 
+/// Bumped to ask SearchPage to focus its TextField (and pop the keyboard)
+/// on its next build. The home page's permanent search bar and the
+/// bottom-nav search icon bump this — the keyboard never appears
+/// otherwise, including when the user returns to /search from a child
+/// route. Counter (not bool) so successive taps each trigger.
+final searchFocusRequestProvider = StateProvider<int>((_) => 0);
+
 /// Multi-server, multi-origin search (v0.27.0, two-stage streaming since v0.30.29).
 ///
 /// Yields TWICE so the UI can render instantly off the local + FTS5 cache

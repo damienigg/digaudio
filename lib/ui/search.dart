@@ -29,8 +29,10 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   static const _pageSize = 20;
 
   final _ctrl = TextEditingController();
+  final _focus = FocusNode();
   Timer? _debounce;
   String _currentQuery = '';
+  bool _firstBuild = true;
 
   // Per-category extras fetched on "Show more". Reset whenever the
   // query string changes so we never mix results across searches.
@@ -48,6 +50,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   void dispose() {
     _debounce?.cancel();
     _ctrl.dispose();
+    _focus.dispose();
     super.dispose();
   }
 
@@ -63,10 +66,15 @@ class _SearchPageState extends ConsumerState<SearchPage> {
       _albumsExhausted = false;
       _artistsExhausted = false;
     });
-    // Persist anything that survives the 280 ms debounce — short
-    // enough that typos still slip in, but [touchRecentSearch]'s
-    // dedup keeps the list tidy as the user refines a query. Cap
-    // at 2 chars to skip accidental single-letter taps.
+  }
+
+  /// Live-typed queries fire [_applyQuery] (debounced) so results stream
+  /// in instantly, but only **submitted** queries — Enter key, voice
+  /// input, recent-chip reuse — are persisted to recents. Avoids the
+  /// half-typed garbage that polluted history before.
+  void _submitQuery(String v) {
+    _debounce?.cancel();
+    _applyQuery(v);
     final trimmed = v.trim();
     if (trimmed.length >= 2) {
       final prefs = ref.read(displayPrefsProvider);
@@ -79,8 +87,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   void _fillFromRecent(String q) {
     _ctrl.text = q;
     _ctrl.selection = TextSelection.collapsed(offset: q.length);
-    _debounce?.cancel();
-    _applyQuery(q);
+    _submitQuery(q);
   }
 
   Future<void> _removeRecent(String q) async {
@@ -107,9 +114,9 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     if (text == null || !mounted) return;
     _ctrl.text = text;
     _ctrl.selection = TextSelection.collapsed(offset: text.length);
-    // Bypass the 280 ms debounce — the user spoke a complete query.
-    _debounce?.cancel();
-    _applyQuery(text);
+    // Voice input is a complete query — bypass the debounce and treat
+    // it as a submission so it lands in recent searches.
+    _submitQuery(text);
   }
 
   /// Generic "load more" path — each call hits one category at offset
@@ -170,18 +177,36 @@ class _SearchPageState extends ConsumerState<SearchPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Focus + keyboard only ever pop up via this listener — bumped by the
+    // bottom-nav search icon and the home page's permanent search bar.
+    ref.listen<int>(searchFocusRequestProvider, (_, __) => _focus.requestFocus());
+    // On a cold first build, honor a counter that was already bumped
+    // before SearchPage mounted (typical when the user taps the home
+    // bar from a fresh start — ref.listen fires only on subsequent
+    // changes, so we have to handle the initial value ourselves).
+    if (_firstBuild) {
+      _firstBuild = false;
+      if (ref.read(searchFocusRequestProvider) > 0) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _focus.requestFocus();
+        });
+      }
+    }
     final results = ref.watch(searchResultsProvider);
     return Scaffold(
       appBar: AppBar(
         title: TextField(
           controller: _ctrl,
+          focusNode: _focus,
           autofocus: false,
+          textInputAction: TextInputAction.search,
           decoration: const InputDecoration(
             hintText: 'Search tracks, albums, artists…',
             prefixIcon: Icon(Icons.search),
             isDense: true,
           ),
           onChanged: _onChanged,
+          onSubmitted: _submitQuery,
         ),
         actions: [
           IconButton(
