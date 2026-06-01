@@ -7,6 +7,14 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.0.1] — 2026-06-01
+
+### Changed (App icon v4 — orange shovel)
+- New launcher icon (`assets/icon/digaudio_icon.png`): orange shovel
+  on a dark rounded-square plate. Regenerated the adaptive-icon
+  foreground via `tool/make_adaptive_fg.py` and all the Android
+  mipmap densities via `dart run flutter_launcher_icons`.
+
 ## [1.0.0] — 2026-06-01
 
 **Stable release.** Consolidates the 0.30.32 → 0.30.46 patch chain.
