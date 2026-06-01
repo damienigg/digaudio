@@ -239,16 +239,22 @@ class _TrackCard extends ConsumerWidget {
 class _StatsDashboard extends ConsumerWidget {
   const _StatsDashboard();
 
-  // Ink (not Container) carries the decoration so InkWell's splash paints
-  // on top of the background instead of being occluded by a solid color.
+  // Material(color:, shape:) carries the background + border instead of
+  // Ink(decoration:). The previous Ink approach had a known Flutter
+  // foot-gun: its painted decoration size froze on first paint, so when
+  // the body grew from "loading" to "data with top rows" the background
+  // didn't extend — only a tap (which triggers a relayout) corrected it.
+  // Material's shape-based background resizes correctly with its child,
+  // and the InkWell ripple still paints inside the shape via the
+  // Material ink layer.
   Widget _shell(BuildContext context, {required Widget body, VoidCallback? onTap}) =>
       Padding(
         padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
-        child: Ink(
-          decoration: BoxDecoration(
-            color: context.dividerSoft,
+        child: Material(
+          color: context.dividerSoft,
+          shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: _accent.withOpacity(0.18), width: 1),
+            side: BorderSide(color: _accent.withOpacity(0.18), width: 1),
           ),
           child: InkWell(
             onTap: onTap,
@@ -322,7 +328,10 @@ class _StatsDashboard extends ConsumerWidget {
                       icon: Icons.local_fire_department),
                 ],
               ),
-              if (s.topTrack != null || s.topArtist != null) ...[
+              if (s.topTrack != null ||
+                  s.topArtist != null ||
+                  s.topGenre != null ||
+                  s.topAlbum != null) ...[
                 const SizedBox(height: 12),
                 Divider(
                     color: context.outlineStrong.withOpacity(0.3), height: 1),
@@ -358,6 +367,34 @@ class _StatsDashboard extends ConsumerWidget {
                           : '?',
                       style: const TextStyle(fontWeight: FontWeight.w800),
                     ),
+                  ),
+                ),
+              ],
+              if (s.topGenre != null) ...[
+                const SizedBox(height: 8),
+                _TopRow(
+                  label: 'TOP GENRE',
+                  title: s.topGenre!,
+                  subtitle: '${s.topGenrePlays} plays',
+                  artwork: const CircleAvatar(
+                    radius: 20,
+                    backgroundColor: Color(0xFF1E1E22),
+                    child: Icon(Icons.label_outline,
+                        size: 20, color: _accent),
+                  ),
+                ),
+              ],
+              if (s.topAlbum != null) ...[
+                const SizedBox(height: 8),
+                _TopRow(
+                  label: 'TOP ALBUM',
+                  title: s.topAlbum!.name,
+                  subtitle: '${s.topAlbum!.count} plays',
+                  artwork: Artwork(
+                    coverArt: s.topAlbum!.sample.coverArt,
+                    origin: s.topAlbum!.sample.origin,
+                    serverId: s.topAlbum!.sample.serverId,
+                    size: 40,
                   ),
                 ),
               ],

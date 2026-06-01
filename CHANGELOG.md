@@ -7,6 +7,33 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.30.39] — 2026-06-01
+
+### Added (Home dashboard — Top genre + Top album rows)
+- `_StatsDashboard` card on Home now shows four "top" rows instead
+  of two: TOP TRACK, TOP ARTIST, TOP GENRE, TOP ALBUM. Same
+  styling pattern as the existing rows — labeled artwork left,
+  title + plays count right. Genre uses a label icon; album uses
+  the cover art of the most-played track from that album.
+- `HomeStats` carries the new fields; `homeStatsProvider` derives
+  them from the same top-20 track set so no extra SQL hit. Bonus:
+  the provider now batches the resolve via
+  `TrackResolver.resolveKeys` and fans out its SQL aggregates via
+  `Future.wait` — same shape as the stats-page perf fix from
+  v0.30.34, so a slow Home open will be a touch faster too.
+
+### Fixed (Home stats card didn't enclose its content on first paint)
+- The card's background was painted by `Ink(decoration:)` — Flutter
+  foot-gun where the decoration's paint bounds freeze at the size
+  of the first build. When the body went from "loading" (~32 px
+  text) to "data" (~200 px with four top rows), the background
+  stayed at 32 px, and the top rows spilled outside the card frame.
+  Tapping the card forced a relayout that corrected it.
+- Switched to `Material(color:, shape: RoundedRectangleBorder(…))`
+  which resizes correctly with its child. Same look (background +
+  rounded corners + accent border) plus the InkWell ripple still
+  works because it paints into the Material's ink layer.
+
 ## [0.30.38] — 2026-06-01
 
 ### Added (Stats — Top genres + Top albums sections)

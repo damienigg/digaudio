@@ -291,52 +291,94 @@ final smartPlaylistsListProvider = StreamProvider<List<SmartPlaylist>>((ref) =>
 final playHistoryProvider = Provider<PlayHistoryManager>((ref) =>
     PlayHistoryManager(ref.watch(dbProvider)));
 
-/// Compact 30-day snapshot for the Home dashboard tile. Pulls only what
-/// the high-level summary needs (4 counters + top track + top artist) —
-/// the full StatsPage owns the heatmap, monthly tops, year-by-year etc.
-/// Kept light so Home rendering isn't gated on the 365-day heatmap query.
+/// Compact 30-day snapshot for the Home dashboard tile. 4 counters +
+/// the top track / artist / genre / album of the window. Heatmap,
+/// monthly tops, year-by-year etc. live on the full StatsPage.
+///
+/// SQL aggregates fan out in parallel via Future.wait, and the top-20
+/// track list is resolved in **one** TrackResolver.resolveKeys batch —
+/// no per-track HTTP fan-out (we got burned by that on StatsPage,
+/// fixed in v0.30.34).
 final homeStatsProvider = FutureProvider<HomeStats>((ref) async {
   final h = ref.watch(playHistoryProvider);
   final r = ref.watch(trackResolverProvider);
   const window = 30;
-  final total = await h.totalPlays(sinceDays: window);
-  final unique = await h.uniqueTracks(sinceDays: window);
-  final days = await h.listeningDays(sinceDays: window);
-  final streaks = await h.streaks();
-  final tops = await h.topTracks(sinceDays: window, limit: 20);
-  Track? topTrack;
-  for (final e in tops) {
-    final t = await r.resolve(e.trackKey);
-    if (t != null) {
-      topTrack = t;
-      break;
-    }
-  }
-  // Top artist derived from the same top-20 set so a single resolve loop
-  // covers both surfaces. Falls back to null when the window is empty.
+  final results = await Future.wait<dynamic>([
+    h.totalPlays(sinceDays: window),
+    h.uniqueTracks(sinceDays: window),
+    h.listeningDays(sinceDays: window),
+    h.streaks(),
+    h.topTracks(sinceDays: window, limit: 20),
+  ]);
+  final total = results[0] as int;
+  final unique = results[1] as int;
+  final days = results[2] as int;
+  final streaks = results[3] as ({int current, int longest});
+  final tops = results[4] as List<({String trackKey, int count})>;
+
+  final byKey = await r.resolveKeys(tops.map((e) => e.trackKey));
+  final resolved = [
+    for (final e in tops)
+      if (byKey[e.trackKey] != null) (byKey[e.trackKey]!, e.count),
+  ];
+
   final artistCounts = <String, int>{};
-  for (final e in tops) {
-    final t = await r.resolve(e.trackKey);
-    if (t == null) continue;
-    final a = t.displayArtist;
-    artistCounts[a] = (artistCounts[a] ?? 0) + e.count;
-  }
-  String? topArtist;
-  int topArtistCount = 0;
-  for (final e in artistCounts.entries) {
-    if (e.value > topArtistCount) {
-      topArtistCount = e.value;
-      topArtist = e.key;
+  final genreCounts = <String, int>{};
+  final albumAgg = <String, ({String name, Track sample, int count})>{};
+  for (final (t, c) in resolved) {
+    artistCounts[t.displayArtist] = (artistCounts[t.displayArtist] ?? 0) + c;
+    final g = t.genre;
+    if (g != null && g.isNotEmpty) {
+      genreCounts[g] = (genreCounts[g] ?? 0) + c;
+    }
+    final albumKey = t.albumId ?? t.album;
+    if (albumKey != null) {
+      final prev = albumAgg[albumKey];
+      albumAgg[albumKey] = (
+        name: prev?.name ?? t.album ?? 'Unknown',
+        sample: prev?.sample ?? t,
+        count: (prev?.count ?? 0) + c,
+      );
     }
   }
+
+  ({String key, int count})? topOf(Map<String, int> m) {
+    String? key;
+    var best = 0;
+    for (final e in m.entries) {
+      if (e.value > best) {
+        best = e.value;
+        key = e.key;
+      }
+    }
+    return key == null ? null : (key: key, count: best);
+  }
+
+  final topA = topOf(artistCounts);
+  final topG = topOf(genreCounts);
+  ({String id, String name, Track sample, int count})? topAlbumEntry;
+  for (final e in albumAgg.entries) {
+    if (topAlbumEntry == null || e.value.count > topAlbumEntry.count) {
+      topAlbumEntry = (
+        id: e.key,
+        name: e.value.name,
+        sample: e.value.sample,
+        count: e.value.count,
+      );
+    }
+  }
+
   return HomeStats(
     plays: total,
     uniqueTracks: unique,
     listeningDays: days,
     currentStreak: streaks.current,
-    topTrack: topTrack,
-    topArtist: topArtist,
-    topArtistPlays: topArtistCount,
+    topTrack: resolved.isNotEmpty ? resolved.first.$1 : null,
+    topArtist: topA?.key,
+    topArtistPlays: topA?.count ?? 0,
+    topGenre: topG?.key,
+    topGenrePlays: topG?.count ?? 0,
+    topAlbum: topAlbumEntry,
   );
 });
 
@@ -348,6 +390,9 @@ class HomeStats {
   final Track? topTrack;
   final String? topArtist;
   final int topArtistPlays;
+  final String? topGenre;
+  final int topGenrePlays;
+  final ({String id, String name, Track sample, int count})? topAlbum;
   const HomeStats({
     required this.plays,
     required this.uniqueTracks,
@@ -356,6 +401,9 @@ class HomeStats {
     required this.topTrack,
     required this.topArtist,
     required this.topArtistPlays,
+    required this.topGenre,
+    required this.topGenrePlays,
+    required this.topAlbum,
   });
   bool get isEmpty => plays == 0;
 }
