@@ -23,8 +23,17 @@ import 'ui/wishlist_page.dart';
 /// then had to hit the back arrow N times to peel them off.
 /// Both call sites (`MiniPlayer.onTap` + `AppShell.onDestinationSelected`)
 /// route through this helper.
+///
+/// Also drops the primary focus before pushing — without this, if the
+/// search TextField was focused (e.g. the user just came from /home's
+/// permanent search bar which auto-focuses /search), Flutter would
+/// reopen the keyboard the moment the user pops /now-playing back.
+/// The rule is: keyboard pops only on a deliberate tap of the home
+/// search bar, the bottom-nav search icon, or directly inside the
+/// TextField — never as a side effect of returning from /now-playing.
 void openNowPlaying(BuildContext context) {
   if (GoRouterState.of(context).uri.path == '/now-playing') return;
+  FocusManager.instance.primaryFocus?.unfocus();
   context.push('/now-playing');
 }
 

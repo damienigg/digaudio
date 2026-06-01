@@ -7,6 +7,23 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.30.43] — 2026-06-01
+
+### Fixed (Keyboard popped up when leaving Now Playing)
+- Tapping the back arrow on `/now-playing` re-opened the keyboard.
+  Cause: if the user reached `/now-playing` from `/search` (or from
+  `/home` via the search bar, which routes through `/search` and
+  auto-focuses its TextField), the TextField kept its FocusNode
+  focused while `/now-playing` was on top. Pop → focused widget
+  came back → Flutter reopened the keyboard. The rule is: keyboard
+  pops only on a deliberate tap of the home search bar, the bottom-
+  nav search icon, or directly inside the TextField — never as a
+  side effect.
+- `openNowPlaying` now calls
+  `FocusManager.instance.primaryFocus?.unfocus()` before pushing,
+  so whatever was focused yields cleanly. Coming back from
+  `/now-playing` no longer raises the keyboard.
+
 ## [0.30.42] — 2026-06-01
 
 ### Added (Star ratings actually do something now)
