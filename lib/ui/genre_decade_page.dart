@@ -82,13 +82,16 @@ class GenrePage extends ConsumerWidget {
   const GenrePage({super.key, required this.genre});
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final activeAsync = ref.watch(activeServerProvider);
-    final active = activeAsync.valueOrNull;
+    // Live API instead of the cache — the per-song cache.genre column
+    // is unreliable on Navidrome (getAlbum returns `genres: []`).
+    // `getSongsByGenre` reads the server's own genre index, so we get
+    // the same set the Genres tab promised.
+    final client = ref.watch(subsonicProvider);
     return _BrowsePage(
       title: genre,
-      loader: () => active == null
+      loader: () => client == null
           ? Future.value(const [])
-          : ref.read(subsonicCacheProvider).tracksOfGenre(active.id, genre),
+          : client.getSongsByGenre(genre),
     );
   }
 }

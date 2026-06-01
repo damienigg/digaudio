@@ -157,6 +157,41 @@ class SubsonicClient {
     );
   }
 
+  /// Subsonic 1.9 — server-aggregated genre index. Used to populate the
+  /// Library → Genres tab live (Navidrome's getAlbum returns
+  /// `genres: []` per child even when the tags exist server-side, so
+  /// the per-song cache can't be relied on for this list). Returns
+  /// `(name, songCount, albumCount)` triples, sorted by the server.
+  /// Note: Subsonic puts the genre name in the `value` field (not
+  /// `name`) — historical API wart preserved by Navidrome.
+  Future<List<({String name, int songCount, int albumCount})>>
+      getGenres() async {
+    final r = await _get('getGenres');
+    final list = (r['genres']?['genre'] as List?) ?? const [];
+    return list.map((e) {
+      final j = e as Map<String, dynamic>;
+      return (
+        name: (j['value'] as String?) ?? '',
+        songCount: (j['songCount'] as num?)?.toInt() ?? 0,
+        albumCount: (j['albumCount'] as num?)?.toInt() ?? 0,
+      );
+    }).where((g) => g.name.isNotEmpty).toList();
+  }
+
+  /// Subsonic 1.9 — songs tagged with [genre]. Default Subsonic page
+  /// size is 10, far too small for a "play all" surface; we ask for a
+  /// generous [count] so the genre detail page is one round-trip.
+  Future<List<Track>> getSongsByGenre(String genre,
+      {int count = 500, int offset = 0}) async {
+    final r = await _get('getSongsByGenre', {
+      'genre': genre,
+      'count': '$count',
+      if (offset > 0) 'offset': '$offset',
+    });
+    final list = (r['songsByGenre']?['song'] as List?) ?? const [];
+    return list.map((e) => _parseSong(e as Map<String, dynamic>)).toList();
+  }
+
   Future<List<Playlist>> getPlaylists() async {
     final r = await _get('getPlaylists');
     final list = (r['playlists']?['playlist'] as List?) ?? const [];

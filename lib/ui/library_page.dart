@@ -65,28 +65,31 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
   }
 }
 
-/// Genres come from the Subsonic library cache. Empty list = cache not
-/// synced yet → show a hint pointing the user to Settings → Playback →
-/// Sync library.
+/// Genres come from the **live** Subsonic `getGenres` endpoint — not
+/// the local cache. Navidrome (and likely other servers) returns
+/// `genres: []` inside getAlbum's child songs even when the tags
+/// exist, so the per-song cache column stays NULL. `getGenres` reads
+/// the server's own genre index and just works.
 class _GenresTab extends ConsumerWidget {
   const _GenresTab();
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final activeAsync = ref.watch(activeServerProvider);
-    final active = activeAsync.valueOrNull;
-    if (active == null) {
+    final client = ref.watch(subsonicProvider);
+    if (client == null) {
       return const _Empty('No active Subsonic server.');
     }
-    return FutureBuilder<List<({String genre, int count})>>(
-      future: ref.read(subsonicCacheProvider).genres(active.id),
+    return FutureBuilder<List<({String name, int songCount, int albumCount})>>(
+      future: client.getGenres(),
       builder: (context, snap) {
         if (snap.connectionState != ConnectionState.done) {
           return const Center(child: CircularProgressIndicator());
         }
+        if (snap.hasError) {
+          return _Empty('Could not load genres: ${snap.error}');
+        }
         final list = snap.data ?? const [];
         if (list.isEmpty) {
-          return const _Empty(
-              'No genres — sync the library first (Settings → Playback → Sync library).');
+          return const _Empty('No genres tagged on the server.');
         }
         return ListView.separated(
           itemCount: list.length,
@@ -97,10 +100,11 @@ class _GenresTab extends ConsumerWidget {
               backgroundColor: Color(0xFF1E1E22),
               child: Icon(Icons.label_outline, size: 18),
             ),
-            title: Text(list[i].genre),
-            subtitle: Text('${list[i].count} tracks'),
+            title: Text(list[i].name),
+            subtitle: Text('${list[i].songCount} tracks · '
+                '${list[i].albumCount} albums'),
             onTap: () => context.push(
-                '/genre/${Uri.encodeComponent(list[i].genre)}'),
+                '/genre/${Uri.encodeComponent(list[i].name)}'),
           ),
         );
       },

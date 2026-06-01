@@ -7,6 +7,25 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.30.37] — 2026-06-01
+
+### Fixed (Library → Genres — empty for real on Navidrome)
+- Diagnosis (via the v0.30.35 dbg log): Navidrome populates the
+  OpenSubsonic `genres` array on a Child song **as an empty list**
+  inside `getAlbum` responses, even when the tags exist server-side
+  and the Navidrome web UI shows them. The per-song cache column was
+  therefore always NULL, the GROUP BY genre query returned nothing.
+- Fix: don't try to derive genres from the song cache. Use Subsonic's
+  native server-aggregated endpoints:
+  - `SubsonicClient.getGenres()` → `(name, songCount, albumCount)`.
+  - `SubsonicClient.getSongsByGenre(name, {count: 500})` → tracks.
+- Library → Genres tab and the per-genre detail page (`/genre/:name`)
+  now hit the live API on every open. Round-trip is single-digit ms
+  on a Tailscale-local Navidrome — cheaper than the previous
+  GROUP BY which was returning empty anyway. The "sync the library
+  first" hint is gone; an empty list now correctly means the server
+  has no genre tags.
+
 ## [0.30.36] — 2026-06-01
 
 ### Fixed (Lockscreen / notification artwork stuck on previous track)
