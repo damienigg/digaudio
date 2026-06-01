@@ -7,6 +7,21 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.30.36] — 2026-06-01
+
+### Fixed (Lockscreen / notification artwork stuck on previous track)
+- `WidgetArtFetcher` always wrote the prefetched cover to the SAME
+  tmp file (`widget_art.jpg`) and then re-published the MediaItem
+  with `Uri.file('/cache/widget_art.jpg')`. Android's MediaSession
+  caches bitmaps **by URI string** — a constant URI means a
+  permanently cached bitmap, even if we silently overwrote the
+  file's contents on every track change. Result: started Whitney
+  Houston, lockscreen kept Renaud's cover.
+- Per-track filenames now: `widget_art_<sanitised uniqueKey>.jpg`.
+  Each track change produces a distinct `Uri.file()` → MediaSession
+  invalidates its cache and reloads. Added an LRU prune (keep latest
+  16 files, oldest deleted) so the tmp dir doesn't grow unbounded.
+
 ## [0.30.35] — 2026-06-01
 
 ### Added (Sync diag — Library → Genres still empty?)
