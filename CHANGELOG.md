@@ -7,6 +7,22 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.30.45] — 2026-06-01
+
+### Fixed (Smart playlists landed on a blank gray screen)
+- Bug in `router.dart`: the catch-all `/playlist/:origin/:id` route was
+  declared **before** `/playlist/smart/:id`. go-router matches the
+  first hit top-down, so tapping any smart playlist routed to
+  `PlaylistPage(origin: 'smart', id: '<n>')` — a bogus `MediaOrigin`
+  that silently crashed inside the page build. Only symptom in
+  logcat was the cryptic `Another exception was thrown: Instance of
+  'DiagnosticsProperty<void>'` (the framework couldn't render the
+  underlying enum-parse error).
+- Reordered the routes: `/playlist/local/:id`,
+  `/playlist/smart/:id/edit`, and `/playlist/smart/:id` now precede
+  the generic `/playlist/:origin/:id`. Added an in-file comment so
+  the constraint is obvious to the next contributor.
+
 ## [0.30.44] — 2026-06-01
 
 ### Changed (Colour tint is now app-wide — every green follows the cover)

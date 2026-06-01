@@ -68,9 +68,27 @@ GoRouter buildRouter() => GoRouter(
           path: '/artist/:origin/:id',
           builder: (_, s) => ArtistPage(origin: s.pathParameters['origin']!, id: s.pathParameters['id']!),
         ),
+        // ORDER MATTERS — go-router scans routes top-to-bottom and the
+        // first pattern that matches wins. The smart-playlist routes
+        // share the `/playlist/` prefix with the catch-all
+        // `/playlist/:origin/:id`, so they have to come BEFORE it.
+        // Previously they sat below and `/playlist/smart/1` was being
+        // routed to `PlaylistPage(origin: 'smart', id: '1')` — a
+        // bogus MediaOrigin that landed users on a blank gray screen
+        // ("DiagnosticsProperty<void>" in logcat).
         GoRoute(
           path: '/playlist/local/:id',
           builder: (_, s) => LocalPlaylistPage(playlistId: int.parse(s.pathParameters['id']!)),
+        ),
+        GoRoute(
+          path: '/playlist/smart/:id/edit',
+          builder: (_, s) =>
+              SmartPlaylistEditPage(id: s.pathParameters['id']!),
+        ),
+        GoRoute(
+          path: '/playlist/smart/:id',
+          builder: (_, s) => SmartPlaylistViewPage(
+              id: int.parse(s.pathParameters['id']!)),
         ),
         GoRoute(
           path: '/playlist/:origin/:id',
@@ -88,16 +106,6 @@ GoRouter buildRouter() => GoRouter(
           path: '/decade/:year',
           builder: (_, s) =>
               DecadePage(decade: int.parse(s.pathParameters['year']!)),
-        ),
-        GoRoute(
-          path: '/playlist/smart/:id',
-          builder: (_, s) => SmartPlaylistViewPage(
-              id: int.parse(s.pathParameters['id']!)),
-        ),
-        GoRoute(
-          path: '/playlist/smart/:id/edit',
-          builder: (_, s) =>
-              SmartPlaylistEditPage(id: s.pathParameters['id']!),
         ),
       ],
     );
