@@ -17,6 +17,17 @@ import 'ui/smart_playlist_pages.dart';
 import 'ui/stats_page.dart';
 import 'ui/wishlist_page.dart';
 
+/// Push `/now-playing` exactly once no matter how many times the user
+/// taps the mini player or the bottom-nav Now Playing icon. Mashing
+/// either previously stacked one fullscreen-dialog per tap; the user
+/// then had to hit the back arrow N times to peel them off.
+/// Both call sites (`MiniPlayer.onTap` + `AppShell.onDestinationSelected`)
+/// route through this helper.
+void openNowPlaying(BuildContext context) {
+  if (GoRouterState.of(context).uri.path == '/now-playing') return;
+  context.push('/now-playing');
+}
+
 GoRouter buildRouter() => GoRouter(
       initialLocation: '/home',
       routes: [

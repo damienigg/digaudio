@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../audio/providers.dart';
+import '../router.dart';
 import 'widgets/download_banner.dart';
 import 'widgets/mini_player.dart';
 import 'widgets/selection_bar.dart';
@@ -55,7 +56,7 @@ class AppShell extends ConsumerWidget {
             selectedIndex: shell.currentIndex,
             onDestinationSelected: (i) {
               if (i == _nowPlayingIndex) {
-                context.push('/now-playing');
+                openNowPlaying(context);
                 return;
               }
               // Bump *before* switching branches — guarantees the

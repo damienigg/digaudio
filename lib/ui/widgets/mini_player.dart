@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../audio/providers.dart';
+import '../../router.dart';
 import 'artwork.dart';
 import 'theme_ext.dart';
 import '../../core/dbg.dart';
@@ -29,7 +29,7 @@ class MiniPlayer extends ConsumerWidget {
     return Material(
       color: const Color(0xFF18181B),
       child: InkWell(
-        onTap: () => context.push('/now-playing'),
+        onTap: () => openNowPlaying(context),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [

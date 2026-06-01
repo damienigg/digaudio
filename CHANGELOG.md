@@ -7,6 +7,18 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.30.40] — 2026-06-01
+
+### Fixed (mini player + Now Playing nav icon stacked the screen N times)
+- Tapping the mini player bar or the bottom-nav Now Playing icon
+  called `context.push('/now-playing')` unconditionally. Three taps
+  → three fullscreen Now Playing dialogs stacked → three back-arrow
+  presses to peel them off. Both call sites now route through a
+  shared `openNowPlaying(context)` helper in `router.dart` that
+  short-circuits when the current location is already
+  `/now-playing`. Mash the mini player 15 times: still exactly one
+  screen.
+
 ## [0.30.39] — 2026-06-01
 
 ### Added (Home dashboard — Top genre + Top album rows)
