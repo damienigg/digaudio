@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
 
+import '../core/dbg.dart';
 import '../domain.dart';
 
 /// Subsonic API client.
@@ -325,6 +326,14 @@ class SubsonicClient {
   /// `[{name: ...}]` or `[...]<String>`. Tolerant of malformed entries:
   /// scans the list for the first non-empty name instead of giving up on
   /// `list.first`. Returns null if nothing usable is found.
+  ///
+  /// When extraction fails, emits a `[digaudio.dbg]` line listing every
+  /// JSON key on the song along with the raw genre / genres values —
+  /// gated by the global debug flag so it doesn't spam normal users.
+  /// This is how we diagnose "Library → Genres is empty after sync"
+  /// reports against servers that bury the field under a non-standard
+  /// name (or omit it from getAlbum entirely while keeping it in
+  /// getSong).
   static String? _firstGenre(Map<String, dynamic> j) {
     final legacy = j['genre'];
     if (legacy is String && legacy.isNotEmpty) return legacy;
@@ -337,6 +346,11 @@ class SubsonicClient {
           if (name is String && name.isNotEmpty) return name;
         }
       }
+    }
+    if (dbgEnabled) {
+      dbg('[firstGenre] null id=${j['id']} title="${j['title']}" '
+          'genre=${j['genre']} genres=${j['genres']} '
+          'keys=${j.keys.toList()}');
     }
     return null;
   }

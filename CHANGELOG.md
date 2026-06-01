@@ -7,6 +7,18 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.30.35] — 2026-06-01
+
+### Added (Sync diag — Library → Genres still empty?)
+- `_firstGenre` now emits a `[digaudio.dbg]` line whenever it returns
+  null (no genre extracted), listing every JSON key on the song +
+  raw `genre` / `genres` values. Gated by Settings → Display → Debug
+  logs so non-debugging users don't see the spam. The line is
+  grep-friendly (`adb logcat | grep "firstGenre.*null"`) and
+  immediately reveals (a) whether Navidrome's getAlbum response
+  carries genre data at all and (b) under which field name. Kept
+  permanent per the project's instrumentation policy.
+
 ## [0.30.34] — 2026-06-01
 
 ### Fixed (Stats page — load was unnecessarily slow)
