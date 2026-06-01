@@ -285,6 +285,48 @@ class SubsonicLibraryCache {
       onAlbum?.call(done, albumIds.length);
     }
 
+    // Genre back-fill — Navidrome ships `genres: []` per Child in
+    // getAlbum responses even when the tags exist, so the column above
+    // is mostly NULL post-album-loop. Subsonic's native getSongsByGenre
+    // reads the server's own genre index correctly; one pass per genre
+    // hydrates the column. `genre.isNull()` in the WHERE clause gives
+    // first-genre-wins for multi-genre tracks (matches our single
+    // genre column shape, deterministic across re-syncs).
+    if (!(shouldCancel?.call() ?? false)) {
+      try {
+        final genres = await client.getGenres();
+        const pageSize = 500;
+        for (final g in genres) {
+          if (shouldCancel?.call() ?? false) break;
+          try {
+            for (var offset = 0;; offset += pageSize) {
+              final songs = await client.getSongsByGenre(g.name,
+                  count: pageSize, offset: offset);
+              if (songs.isEmpty) break;
+              await _db.batch((b) {
+                for (final t in songs) {
+                  b.update(
+                    _db.cachedSubsonicSongs,
+                    CachedSubsonicSongsCompanion(genre: Value(g.name)),
+                    where: (s) =>
+                        s.serverId.equals(serverId) &
+                        s.songId.equals(t.id) &
+                        s.genre.isNull(),
+                  );
+                }
+              });
+              if (songs.length < pageSize) break;
+            }
+          } catch (_) {
+            // Skip broken genres, keep walking the rest.
+          }
+        }
+      } catch (_) {
+        // Server doesn't support getGenres — fall through. Track.genre
+        // stays NULL for Subsonic; local tracks still carry their tag.
+      }
+    }
+
     final total = await count(serverId);
     final p = await SharedPreferences.getInstance();
     await p.setString('$_kLastSyncPrefix$serverId', DateTime.now().toIso8601String());

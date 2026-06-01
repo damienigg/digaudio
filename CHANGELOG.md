@@ -7,6 +7,30 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.30.38] — 2026-06-01
+
+### Added (Stats — Top genres + Top albums sections)
+- New "Top genres" and "Top albums" blocks in the dashboard, sitting
+  right after Top artists. Same aggregation pattern as Top artists:
+  derive from the resolved top-50 tracks of the active window.
+  - Genre row → tap queues every mixSeed track tagged with that
+    genre.
+  - Album row → tap deep-links to `/album/<origin>/<albumId>`, with
+    the album cover + title + play count on the card.
+
+### Fixed (Genres now actually populated in the cache)
+- `SubsonicLibraryCache.rebuild` now does a second pass after the
+  per-album loop: iterates `getGenres` and, for each genre,
+  paginates `getSongsByGenre` and UPDATEs cached rows with the
+  matching genre — but only where the column is still NULL, so the
+  first genre returned by the server wins for multi-genre tracks
+  (deterministic across re-syncs). Without this, Navidrome's empty
+  `genres: []` in getAlbum responses left the column NULL for every
+  track, breaking smart-playlist genre filters, similarity scoring,
+  and the new Top Genres section. Sync once after the upgrade to
+  back-fill — net cost is ~one extra HTTP per genre on the server
+  (Tailscale-local Navidrome: a few extra seconds).
+
 ## [0.30.37] — 2026-06-01
 
 ### Fixed (Library → Genres — empty for real on Navidrome)

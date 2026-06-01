@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../audio/providers.dart';
 import '../domain.dart';
@@ -91,12 +92,36 @@ class _StatsState extends ConsumerState<StatsPage> {
         if (lookup(e.trackKey) != null) (lookup(e.trackKey)!, e.count),
     ];
     final artistCounts = <String, int>{};
+    final genreCounts = <String, int>{};
+    final albumAgg = <String,
+        ({String name, String? coverArt, MediaOrigin origin, String? serverId, int count})>{};
     for (final (t, c) in tracks) {
-      final a = t.displayArtist;
-      artistCounts[a] = (artistCounts[a] ?? 0) + c;
+      artistCounts[t.displayArtist] = (artistCounts[t.displayArtist] ?? 0) + c;
+      final g = t.genre;
+      if (g != null && g.isNotEmpty) {
+        genreCounts[g] = (genreCounts[g] ?? 0) + c;
+      }
+      // Bucket by albumId when present (multi-disc / re-released albums
+      // collide on title alone); fall back to album name for tracks
+      // without an albumId. Skip tracks with no album info at all.
+      final key = t.albumId ?? t.album;
+      if (key != null) {
+        final prev = albumAgg[key];
+        albumAgg[key] = (
+          name: prev?.name ?? t.album ?? 'Unknown',
+          coverArt: prev?.coverArt ?? t.coverArt,
+          origin: prev?.origin ?? t.origin,
+          serverId: prev?.serverId ?? t.serverId,
+          count: (prev?.count ?? 0) + c,
+        );
+      }
     }
     final topArtists = artistCounts.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
+    final topGenres = genreCounts.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    final topAlbums = albumAgg.entries.toList()
+      ..sort((a, b) => b.value.count.compareTo(a.value.count));
 
     final monthly = <(String month, List<(Track track, int count)>)>[];
     final monthKeys = rawMonthly.keys.toList()..sort((a, b) => b.compareTo(a));
@@ -132,6 +157,18 @@ class _StatsState extends ConsumerState<StatsPage> {
       heatmap: heatmap,
       topTracks: tracks.take(10).toList(),
       topArtists: topArtists.take(10).map((e) => (e.key, e.value)).toList(),
+      topGenres: topGenres.take(10).map((e) => (e.key, e.value)).toList(),
+      topAlbums: topAlbums
+          .take(10)
+          .map((e) => (
+                id: e.key,
+                name: e.value.name,
+                coverArt: e.value.coverArt,
+                origin: e.value.origin,
+                serverId: e.value.serverId,
+                count: e.value.count,
+              ))
+          .toList(),
       mixSeed: tracks.map((e) => e.$1).toList(),
       monthlyTops: monthly,
       onThisDay: onThisDay,
@@ -216,6 +253,36 @@ class _StatsState extends ConsumerState<StatsPage> {
                       },
                     )),
               const SizedBox(height: 16),
+              const _SectionHeader('Top genres'),
+              if (data.topGenres.isEmpty)
+                const _EmptyHint(
+                    'No genres tagged on the tracks in this window — '
+                    'sync the library to back-fill genres from the server.')
+              else
+                ...data.topGenres.map((e) => _TopGenreRow(
+                      name: e.$1,
+                      count: e.$2,
+                      onTap: () {
+                        final byGenre = [
+                          for (final t in data.mixSeed)
+                            if (t.genre == e.$1) t,
+                        ];
+                        if (byGenre.isNotEmpty) {
+                          ref.read(audioEngineProvider).setQueue(byGenre);
+                        }
+                      },
+                    )),
+              const SizedBox(height: 16),
+              const _SectionHeader('Top albums'),
+              if (data.topAlbums.isEmpty)
+                const _EmptyHint('No albums in this window yet.')
+              else
+                ...data.topAlbums.map((a) => _TopAlbumRow(
+                      album: a,
+                      onTap: () =>
+                          context.push('/album/${a.origin.name}/${a.id}'),
+                    )),
+              const SizedBox(height: 16),
               const _SectionHeader('On this day'),
               if (data.onThisDay.isEmpty)
                 const _EmptyHint(
@@ -255,6 +322,21 @@ class _StatsData {
   final Map<DateTime, int> heatmap;
   final List<(Track, int)> topTracks;
   final List<(String, int)> topArtists;
+  /// `(genre, plays)` aggregated over the top 50 tracks. Empty for
+  /// servers that don't expose genres (cache.genre still NULL) — UI
+  /// hides the section in that case.
+  final List<(String, int)> topGenres;
+  /// Top albums aggregated over the top 50 tracks. Carries enough to
+  /// render artwork and deep-link to /album/<origin>/<id>.
+  final List<
+      ({
+        String id,
+        String name,
+        String? coverArt,
+        MediaOrigin origin,
+        String? serverId,
+        int count,
+      })> topAlbums;
   // Full 50-track seed for the "Most played" smart mix. Order = play-count
   // descending, so the queue is itself a rank-sorted mix.
   final List<Track> mixSeed;
@@ -274,6 +356,8 @@ class _StatsData {
     required this.heatmap,
     required this.topTracks,
     required this.topArtists,
+    required this.topGenres,
+    required this.topAlbums,
     required this.mixSeed,
     required this.monthlyTops,
     required this.onThisDay,
@@ -631,6 +715,61 @@ class _TopTrackRow extends StatelessWidget {
         subtitle: Text(track.displayArtist,
             maxLines: 1, overflow: TextOverflow.ellipsis),
         trailing: Text('$count×',
+            style: const TextStyle(
+                color: _accent,
+                fontWeight: FontWeight.w700,
+                fontFeatures: [FontFeature.tabularFigures()])),
+      );
+}
+
+class _TopGenreRow extends StatelessWidget {
+  final String name;
+  final int count;
+  final VoidCallback onTap;
+  const _TopGenreRow({
+    required this.name,
+    required this.count,
+    required this.onTap,
+  });
+  @override
+  Widget build(BuildContext context) => ListTile(
+        contentPadding: EdgeInsets.zero,
+        onTap: onTap,
+        leading: const CircleAvatar(
+          backgroundColor: Color(0xFF1E1E22),
+          child: Icon(Icons.label_outline, size: 18, color: _accent),
+        ),
+        title: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis),
+        trailing: Text('$count×',
+            style: const TextStyle(
+                color: _accent,
+                fontWeight: FontWeight.w700,
+                fontFeatures: [FontFeature.tabularFigures()])),
+      );
+}
+
+class _TopAlbumRow extends StatelessWidget {
+  final ({
+    String id,
+    String name,
+    String? coverArt,
+    MediaOrigin origin,
+    String? serverId,
+    int count,
+  }) album;
+  final VoidCallback onTap;
+  const _TopAlbumRow({required this.album, required this.onTap});
+  @override
+  Widget build(BuildContext context) => ListTile(
+        contentPadding: EdgeInsets.zero,
+        onTap: onTap,
+        leading: Artwork(
+            coverArt: album.coverArt,
+            origin: album.origin,
+            serverId: album.serverId,
+            size: 48),
+        title: Text(album.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+        trailing: Text('${album.count}×',
             style: const TextStyle(
                 color: _accent,
                 fontWeight: FontWeight.w700,
